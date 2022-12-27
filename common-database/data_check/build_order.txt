@@ -1,0 +1,3 @@
+schema
+check_not_blank_or_empty
+check_array_not_blank_or_empty
