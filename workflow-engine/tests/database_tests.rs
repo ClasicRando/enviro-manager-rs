@@ -1,23 +1,29 @@
-use std::path::PathBuf;
 use sqlx::PgPool;
-use tokio::{fs::{File, read_dir}, io::AsyncReadExt};
+use std::path::PathBuf;
+use tokio::{
+    fs::{read_dir, File},
+    io::AsyncReadExt,
+};
 
 use workflow_engine::create_we_db_pool;
 
-fn get_path_from_workspace(path: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+fn get_relative_path(path: &str, from_workspace: bool) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let cwd = std::env::current_dir()?;
-    let Some(workspace) = cwd.parent() else {
-        return Err("Could not find cwd parent directory".into())
+    let dir = if from_workspace {
+        match cwd.parent() {
+            Some(workspace) => workspace,
+            None => return Err("Could not find cwd parent directory".into()),
+        }
+    } else {
+        cwd.as_path()
     };
-    let mut result = PathBuf::from(workspace);
-    result.push(path);
+    let mut result = PathBuf::from(dir);
+    result.push(path.trim_start_matches('/'));
     Ok(result)
 }
 
 async fn execute_anonymous_block(block: &str, pool: &PgPool) -> Result<(), sqlx::Error> {
-    sqlx::query(block)
-        .execute(pool)
-        .await?;
+    sqlx::query(block).execute(pool).await?;
     Ok(())
 }
 
@@ -29,13 +35,14 @@ async fn read_file(path: PathBuf) -> Result<String, Box<dyn std::error::Error>> 
 }
 
 #[tokio::test]
-async fn run_database_tests() -> Result<(), Box<dyn std::error::Error>> {
+async fn run_data_check_database_tests() -> Result<(), Box<dyn std::error::Error>> {
     let pool = create_we_db_pool().await?;
-    let tests = get_path_from_workspace("common-database/data_check/tests")?;
+    let tests = get_relative_path("/common-database/data_check/tests", true)?;
     let mut entries = read_dir(tests).await?;
     while let Some(file) = entries.next_entry().await? {
         let block = read_file(file.path()).await?;
-        execute_anonymous_block(&block, &pool).await?;
+        let result = execute_anonymous_block(&block, &pool).await;
+        assert!(result.is_ok(), "Failed running test in {:?}\n{}", file.path(), result.unwrap_err())
     }
     Ok(())
 }
