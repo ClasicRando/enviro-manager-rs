@@ -7,7 +7,10 @@ use tokio::{
 
 use workflow_engine::create_we_db_pool;
 
-fn get_relative_path(path: &str, from_workspace: bool) -> Result<PathBuf, Box<dyn std::error::Error>> {
+fn get_relative_path(
+    path: &str,
+    from_workspace: bool,
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let cwd = std::env::current_dir()?;
     let dir = if from_workspace {
         match cwd.parent() {
@@ -41,8 +44,13 @@ async fn run_data_check_database_tests() -> Result<(), Box<dyn std::error::Error
     let mut entries = read_dir(tests).await?;
     while let Some(file) = entries.next_entry().await? {
         let block = read_file(file.path()).await?;
-        let result = execute_anonymous_block(&block, &pool).await;
-        assert!(result.is_ok(), "Failed running test in {:?}\n{}", file.path(), result.unwrap_err())
+        let result = execute_anonymous_block(block, &pool).await;
+        assert!(
+            result.is_ok(),
+            "Failed running test in {:?}\n{}",
+            file.path(),
+            result.unwrap_err()
+        )
     }
     Ok(())
 }
