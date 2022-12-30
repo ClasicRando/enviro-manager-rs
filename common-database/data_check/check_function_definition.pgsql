@@ -16,7 +16,7 @@ begin
     and    p.proname = $2;
 
     if v_count != $3 then
-        raise exception 'Function %I.%I was expected to have %s definition(s) but found %s', $1, $2, $3, v_count;
+        raise exception 'Function %.% was expected to have % definition(s) but found %', $1, $2, $3, v_count;
     end if;
 end;
 $$;
