@@ -1,4 +1,4 @@
-create function workflow_engine.all_executor_workflows(
+create or replace function workflow_engine.all_executor_workflows(
     executor_id bigint
 ) returns table(
     workflow_run_id bigint,
