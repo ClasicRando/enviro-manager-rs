@@ -3,13 +3,11 @@ task_rule
 are_valid_task_rules
 workflow_run_status
 task_status
-task_type --
 executor_status
-task_queue_record -- Function will return record type
-workflow_run_task ?? Removed task_type attribute
+workflow_run_task
 workflows
 task_services
-tasks ?? Removed task_type parameter
+tasks
 workflow_tasks
 registered_we_executors
 executors
@@ -37,7 +35,7 @@ post_executor_error_message
 shutdown_executor
 start_workflow_run_move
 complete_workflow_run_move
-workflow_task ?? Removed task_type attribute
+workflow_task
 all_workflows
 deprecate_workflow
 v_workflow_runs
