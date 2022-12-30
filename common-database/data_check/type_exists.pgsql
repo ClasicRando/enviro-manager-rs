@@ -1,4 +1,4 @@
-create function data_check.type_exists(
+create or replace function data_check.type_exists(
     schema_name text,
     type_name text
 ) returns boolean
