@@ -26,10 +26,11 @@ fn get_relative_path(
 }
 
 async fn execute_anonymous_block(block: String, pool: &PgPool) -> Result<(), sqlx::Error> {
-    let block = if block.starts_with("do $") {
-        block
-    } else {
-        format!("do $body$\n{}\n$body$;", block)
+    let block = match block.split_whitespace().next() {
+        Some("do") => block,
+        Some("begin" | "declare") => format!("do $body$\n{}\n$body$;", block),
+        Some(_) => format!("do $body$\nbegin\n{}\nend;\n$body$;", block),
+        None => block,
     };
     sqlx::query(&block).execute(pool).await?;
     Ok(())
