@@ -1,4 +1,4 @@
-create function workflow_engine.create_interval_job(
+create or replace function workflow_engine.create_interval_job(
     workflow_id bigint,
     maintainer text,
     job_interval interval,

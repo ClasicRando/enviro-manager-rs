@@ -1,4 +1,4 @@
-create procedure workflow_engine.complete_workflow_run_move(
+create or replace procedure workflow_engine.complete_workflow_run_move(
     workflow_run_id bigint
 )
 language sql

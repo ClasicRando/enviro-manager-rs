@@ -1,4 +1,4 @@
-create procedure workflow_engine.clean_executors()
+create or replace procedure workflow_engine.clean_executors()
 language sql
 as $$
 with executors as (

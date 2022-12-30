@@ -1,4 +1,4 @@
-create view workflow_engine.v_queued_jobs
+create or replace view workflow_engine.v_queued_jobs
     select job_id, next_run
     from   workflow_engine.jobs j
     where  not is_paused

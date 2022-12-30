@@ -1,8 +1,10 @@
-create type workflow_engine.executor_status as enum (
-    'Active',
-    'Canceled',
-    'Shutdown'
-);
+if not data_check.type_exists('workflow_engine','executor_status') then
+    create type workflow_engine.executor_status as enum (
+        'Active',
+        'Canceled',
+        'Shutdown'
+    );
+end if;
 
 comment on type workflow_engine.executor_status IS $$
 Various states that dictate the lifecycle of an executor. 'Active' is the default state when

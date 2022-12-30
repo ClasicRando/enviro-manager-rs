@@ -1,4 +1,4 @@
-create function workflow_engine.register_we_executor()
+create or replace function workflow_engine.register_we_executor()
 returns bigint
 language sql
 as $$

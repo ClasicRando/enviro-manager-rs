@@ -1,4 +1,4 @@
-create table workflow_engine.tasks (
+create table if not exists workflow_engine.tasks (
     task_id bigint primary key generated always as identity,
     name text not null check(data_check.check_not_blank_or_empty(name)),
     description text not null check(data_check.check_not_blank_or_empty(description)),
@@ -20,5 +20,5 @@ comment on column workflow_engine.tasks.name is 'Alias given to the task';
 comment on column workflow_engine.tasks.description is 'Brief description of the task and what it completes';
 comment on column workflow_engine.tasks.task_service_id is 'Id of the service hosting this task';
 comment on column workflow_engine.tasks.url is 'Extension url to execute the task on the parent service';
-comment on column workflow_engine.tasks.name_service_unq is 'Ensures that for each service, a name is unique';
-comment on column workflow_engine.tasks.url_service_unq is 'Ensures that for each service, a url extension is unique';
+comment on constraint workflow_engine.tasks.name_service_unq is 'Ensures that for each service, a name is unique';
+comment on constraint workflow_engine.tasks.url_service_unq is 'Ensures that for each service, a url extension is unique';

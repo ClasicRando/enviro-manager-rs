@@ -1,4 +1,4 @@
-create view workflow_engine.v_workflows as
+create or replace view workflow_engine.v_workflows as
 with w_tasks as (
     select wt.workflow_id,
            array_agg(row(

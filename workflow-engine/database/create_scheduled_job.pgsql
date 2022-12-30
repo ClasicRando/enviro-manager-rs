@@ -1,4 +1,4 @@
-create function workflow_engine.create_scheduled_job(
+create or replace function workflow_engine.create_scheduled_job(
     workflow_id bigint,
     maintainer text,
     job_schedule workflow_engine.schedule_entry[]

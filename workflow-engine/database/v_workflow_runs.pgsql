@@ -1,4 +1,4 @@
-create view workflow_engine.v_workflow_runs as
+create or replace view workflow_engine.v_workflow_runs as
 with tasks as (
     select tq.workflow_run_id,
            array_agg(

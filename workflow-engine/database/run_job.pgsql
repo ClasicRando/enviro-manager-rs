@@ -1,4 +1,4 @@
-create procedure workflow_engine.run_job(job_id bigint)
+create or replace procedure workflow_engine.run_job(job_id bigint)
 language plpgsql
 as $$
 declare

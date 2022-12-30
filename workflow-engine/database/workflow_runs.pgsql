@@ -1,4 +1,4 @@
-create function workflow_engine.workflow_run_status_event()
+create or replace function workflow_engine.workflow_run_status_event()
 returns trigger
 language plpgsql
 as $$
@@ -36,7 +36,7 @@ begin
 end;
 $$;
 
-create function workflow_engine.workflow_progress_event()
+create or replace function workflow_engine.workflow_progress_event()
 returns trigger
 language plpgsql
 as $$
@@ -47,7 +47,7 @@ begin
 end;
 $$;
 
-create table workflow_engine.workflow_runs (
+create table if not exists workflow_engine.workflow_runs (
     workflow_run_id bigint primary key generated always as identity,
     workflow_id bigint not null references workflow_engine.workflows match simple
         on delete restrict
@@ -59,12 +59,14 @@ create table workflow_engine.workflow_runs (
     progress smallint check(case when progress is not null then progress between 0 and 100 else true end)
 );
 
+drop trigger if exists workflow_run_status on workflow_engine.workflow_runs;
 create trigger workflow_run_status
     before update of status
     on workflow_engine.workflow_runs
     for each row
     execute function workflow_engine.workflow_run_status_event();
 
+drop trigger if exists workflow_run_progress on workflow_engine.workflow_runs;
 create trigger workflow_run_progress
     before update of progress
     on workflow_engine.workflow_runs

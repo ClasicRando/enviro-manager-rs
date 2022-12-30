@@ -1,4 +1,4 @@
-create procedure workflow_engine.close_we_executor(
+create or replace procedure workflow_engine.close_we_executor(
     executor_id bigint,
     is_cancelled boolean default false
 )
@@ -29,7 +29,7 @@ where  wr.workflow_run_id = tq.workflow_run_id
 and    tq.status = 'Running'::workflow_engine.task_status;
 $$;
 
-comment on function workflow_engine.close_we_executor IS $$
+comment on procedure workflow_engine.close_we_executor IS $$
 Close the operations of an executor, including child operations of a workflow run.
 
 task_queue and workflow_runs are updated if the executor still owns any workflow runs.

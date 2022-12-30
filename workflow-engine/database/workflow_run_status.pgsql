@@ -1,12 +1,14 @@
-create type workflow_engine.workflow_run_status as enum (
-    'Waiting',
-    'Scheduled',
-    'Running',
-    'Paused',
-    'Failed',
-    'Complete',
-    'Canceled'
-);
+if not data_check.type_exists('workflow_engine','workflow_run_status') then
+    create type workflow_engine.workflow_run_status as enum (
+        'Waiting',
+        'Scheduled',
+        'Running',
+        'Paused',
+        'Failed',
+        'Complete',
+        'Canceled'
+    );
+end if;
 
 comment on type workflow_engine.workflow_run_status IS $$
 Various states that dictate the lifecycle of a workflow. Starts with 'Waiting', 'Scheduled' when

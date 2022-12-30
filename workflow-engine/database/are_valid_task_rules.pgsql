@@ -28,7 +28,7 @@ begin
 end;
 $$;
 
-comment on type workflow_engine.task_rule IS $$
+comment on function workflow_engine.are_valid_task_rules IS $$
 Check to confirm array of task rules are valid. Returns false when the array is empty or any entry
 contains a null/blank/empty name or a null failed flag.
 $$;

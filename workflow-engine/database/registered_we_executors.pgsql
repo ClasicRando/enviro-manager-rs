@@ -1,4 +1,4 @@
-create function workflow_engine.we_executor_status()
+create or replace function workflow_engine.we_executor_status()
 returns trigger
 language plpgsql
 volatile
@@ -13,7 +13,7 @@ begin
 end;
 $$;
 
-create table workflow_engine.registered_we_executors (
+create if not exists table workflow_engine.registered_we_executors (
     executor_id bigint primary key generated always as identity,
     pid integer not null,
     username name not null,
@@ -26,6 +26,7 @@ create table workflow_engine.registered_we_executors (
     error_message text
 );
 
+drop trigger if exists status_event on workflow_engine.registered_we_executors;
 create trigger status_event
     before update of status
     on workflow_engine.registered_we_executors

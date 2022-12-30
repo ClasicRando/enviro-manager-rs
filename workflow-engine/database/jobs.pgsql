@@ -1,4 +1,4 @@
-create function workflow_engine.job_change()
+create or replace function workflow_engine.job_change()
 returns trigger
 language plpgsql
 as $$
@@ -8,7 +8,7 @@ begin
 end;
 $$;
 
-create table workflow_engine.jobs (
+create if not exists table workflow_engine.jobs (
     job_id bigint primary key generated always as identity,
     workflow_id bigint not null references workflow_engine.workflows match simple
         on delete restrict
@@ -36,6 +36,7 @@ create table workflow_engine.jobs (
         on update cascade
 );
 
+drop trigger if exists job_change_trig on workflow_engine.jobs;
 create trigger job_change_trig
     after update or insert or delete
     on workflow_engine.jobs

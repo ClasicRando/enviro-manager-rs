@@ -1,4 +1,4 @@
-create procedure workflow_engine.complete_workflow_run(
+create or replace procedure workflow_engine.complete_workflow_run(
     workflow_run_id bigint
 )
 language sql

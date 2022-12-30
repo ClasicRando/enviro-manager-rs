@@ -1,4 +1,4 @@
-create function workflow_engine.create_workflow(
+create or replace function workflow_engine.create_workflow(
     name text,
     tasks workflow_engine.workflow_task_request[]
 ) returns bigint

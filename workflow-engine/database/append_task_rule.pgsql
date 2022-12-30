@@ -1,4 +1,4 @@
-create procedure workflow_engine.append_task_rule(
+create or replace procedure workflow_engine.append_task_rule(
     workflow_run_id bigint,
     task_order integer,
     rule workflow_engine.task_rule

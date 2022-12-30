@@ -1,4 +1,4 @@
-create procedure workflow_engine.schedule_workflow_run(
+create or replace procedure workflow_engine.schedule_workflow_run(
     workflow_run_id bigint,
     executor_id bigint default null
 )

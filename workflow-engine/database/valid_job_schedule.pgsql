@@ -1,4 +1,4 @@
-create function workflow_engine.valid_job_schedule(
+create or replace function workflow_engine.valid_job_schedule(
     job_schedule workflow_engine.schedule_entry[]
 ) returns boolean
 immutable

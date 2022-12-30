@@ -1,12 +1,14 @@
-create type workflow_engine.task_status as enum (
-    'Waiting',
-    'Running',
-    'Paused',
-    'Failed',
-    'Rule Broken',
-    'Complete',
-    'Canceled'
-);
+if not data_check.type_exists('workflow_engine','task_status') then
+    create type workflow_engine.task_status as enum (
+        'Waiting',
+        'Running',
+        'Paused',
+        'Failed',
+        'Rule Broken',
+        'Complete',
+        'Canceled'
+    );
+end if;
 
 comment on type workflow_engine.task_status IS $$
 Various states that dictate the lifecycle of a task. Starts with 'Waiting', 'Running' when picked

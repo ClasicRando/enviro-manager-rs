@@ -1,4 +1,4 @@
-create view workflow_engine.v_executors as
+create or replace view workflow_engine.v_executors as
 select re.executor_id, re.pid, re.username, re.application_name,
        re.client_addr, re.client_port, re.exec_start,
        exists (

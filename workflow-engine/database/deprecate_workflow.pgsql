@@ -1,4 +1,4 @@
-create procedure workflow_engine.deprecate_workflow(
+create or replace procedure workflow_engine.deprecate_workflow(
     workflow_id bigint,
     new_workflow_id bigint default null
 )

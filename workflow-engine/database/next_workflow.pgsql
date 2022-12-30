@@ -1,4 +1,4 @@
-create function workflow_engine.next_workflow(
+create or replace function workflow_engine.next_workflow(
     executor_id bigint
 ) returns table(
     workflow_run_id bigint,

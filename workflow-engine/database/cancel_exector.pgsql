@@ -1,4 +1,4 @@
-create procedure workflow_engine.cancel_executor(
+create or replace procedure workflow_engine.cancel_executor(
     executor_id bigint
 )
 language sql

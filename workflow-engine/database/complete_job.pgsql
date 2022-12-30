@@ -1,6 +1,6 @@
-create function workflow_engine.complete_job(job_id bigint)
-returns text
-volatile
+create or replace function workflow_engine.complete_job(
+    job_id bigint
+) returns text
 language plpgsql
 as $$
 declare
@@ -81,7 +81,7 @@ begin
 end;
 $$;
 
-comment on procedure workflow_engine.complete_job IS $$
+comment on function workflow_engine.complete_job IS $$
 Attempts to complete the job specified. Will return an error message when:
     - the job_id does not match a record
     - the job is not active

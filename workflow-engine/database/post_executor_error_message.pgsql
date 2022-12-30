@@ -1,4 +1,4 @@
-create procedure workflow_engine.post_executor_error_message(
+create or replace procedure workflow_engine.post_executor_error_message(
     executor_id bigint,
     error_message text
 )

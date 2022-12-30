@@ -1,4 +1,4 @@
-create procedure workflow_engine.complete_task_run(
+create or replace procedure workflow_engine.complete_task_run(
     workflow_run_id bigint,
     task_order integer,
     is_paused boolean,

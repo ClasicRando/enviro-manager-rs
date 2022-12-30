@@ -1,4 +1,4 @@
-create table workflow_engine.task_services (
+create table if not exists workflow_engine.task_services (
     service_id bigint primary key generated always as identity,
     name text not null check(data_check.check_not_blank_or_empty(name)) unique,
     base_url text not null check(data_check.check_not_blank_or_empty(base_url))

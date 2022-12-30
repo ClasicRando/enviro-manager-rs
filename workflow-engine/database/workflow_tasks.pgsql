@@ -1,4 +1,4 @@
-create function workflow_engine.workflow_tasks_check()
+create or replace function workflow_engine.workflow_tasks_check()
 returns trigger
 language plpgsql
 stable
@@ -44,7 +44,7 @@ begin
 end;
 $$;
 
-create table workflow_engine.workflow_tasks (
+create table if not exists workflow_engine.workflow_tasks (
     workflow_id bigint not null references workflow_engine.workflows match simple
         on delete restrict
         on update cascade,
@@ -56,6 +56,7 @@ create table workflow_engine.workflow_tasks (
     constraint workflow_tasks_pk primary key(workflow_id, task_order)
 );
 
+drop trigger if exists verify_records on workflow_engine.workflow_tasks;
 create trigger verify_records
     after insert or update or delete
     on workflow_engine.workflow_tasks

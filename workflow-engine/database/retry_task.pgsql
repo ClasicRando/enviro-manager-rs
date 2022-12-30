@@ -1,4 +1,4 @@
-create procedure workflow_engine.retry_task(
+create or replace procedure workflow_engine.retry_task(
     workflow_run_id bigint,
     task_order integer
 )

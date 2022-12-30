@@ -1,4 +1,4 @@
-create procedure workflow_engine.complete_task(
+create or replace procedure workflow_engine.complete_task(
     workflow_run_id bigint,
     task_order integer
 )

@@ -1,4 +1,4 @@
-create view workflow_engine.v_jobs as
+create or replace view workflow_engine.v_jobs as
     select j.job_id, j.workflow_id, w.name workflow_name, j.job_type,
            j.maintainer, j.job_schedule, j.job_interval, j.is_paused, j.next_run,
            j.current_workflow_run_id, wr.status workflow_run_status, wr.progress,

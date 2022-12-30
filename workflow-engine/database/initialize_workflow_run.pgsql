@@ -1,4 +1,4 @@
-create function workflow_engine.initialize_workflow_run(
+create or replace function workflow_engine.initialize_workflow_run(
     workflow_id bigint
 ) returns bigint
 language plpgsql
