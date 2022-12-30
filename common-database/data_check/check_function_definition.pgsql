@@ -21,7 +21,7 @@ begin
 end;
 $$;
 
-comment on function data_check.check_function_definition IS $$
+comment on procedure data_check.check_function_definition IS $$
 Checks pg catalog tables to ensure that a given schema qualified function only has the expected
 number of definitions. Raises an exception if count does not match.
 
