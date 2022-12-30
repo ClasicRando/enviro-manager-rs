@@ -21,8 +21,8 @@ begin
     )
     select string_agg(
             case
-                when dl.enumlabel is null then format('Database missing label "%s"')
-                else format('Extra label "%s" found in database definition')
+                when dl.enumlabel is null then format('Database missing label "%s"', cl.enumlabel)
+                else format('Extra label "%s" found in database definition', dl.enumlabel)
             end,
             ', '
            )
