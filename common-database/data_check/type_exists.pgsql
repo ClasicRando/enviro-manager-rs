@@ -1,6 +1,6 @@
 create function data_check.type_exists(
-    type_name text,
-    schema_name text
+    schema_name text,
+    type_name text
 ) returns boolean
 returns null on null input
 stable
