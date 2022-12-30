@@ -6,7 +6,6 @@ with w_tasks as (
                 t.task_id,
                 t.name,
                 t.description,
-                t.task_type,
                 wt.parameters,
                 ts.name,
                 rtrim(ts.base_url,'/') || '/' || ltrim(t.url,'/')

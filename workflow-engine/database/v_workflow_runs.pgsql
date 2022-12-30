@@ -7,7 +7,6 @@ with tasks as (
                 tq.task_id,
                 t.name,
                 t.description,
-                t.task_type,
                 tq.status,
                 tq.parameters,
                 tq.output,
