@@ -1,7 +1,7 @@
 create or replace procedure data_check.check_function_definition(
     schema_name text,
     function_name text,
-    expected_count integer
+    expected_count integer default 1
 )
 language plpgsql
 as $$
