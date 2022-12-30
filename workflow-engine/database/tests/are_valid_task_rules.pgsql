@@ -1,4 +1,3 @@
-do $$
 declare
     v_value workflow_engine.task_rule[];
     v_check boolean;
@@ -66,4 +65,3 @@ begin
         raise exception 'When input is valid rules, should return true';
     end if;
 end;
-$$;
