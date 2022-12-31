@@ -37,7 +37,7 @@ begin
     where  task_order != rn;
 
     if v_errors is not null then
-        raise exception 'Task order values are not correct. See these instances:'||chr(10)||'%s', v_errors;
+        raise exception 'Task order values are not correct. See these instances: %s', v_errors;
     end if;
 
     return null;
