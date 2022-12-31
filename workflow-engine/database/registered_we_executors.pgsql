@@ -44,4 +44,4 @@ comment on column workflow_engine.registered_we_executors.username is 'Name of t
 comment on column workflow_engine.registered_we_executors.application_name is 'Name of the application running the executor';
 comment on column workflow_engine.registered_we_executors.client_addr is 'IP address of the client connected as the executor';
 comment on column workflow_engine.registered_we_executors.client_port is 'Port of the client connected as the exector';
-comment on trigger workflow_engine.registered_we_executors.status_event is 'Trigger run during status updates to notify the required listeners of changes';
+comment on trigger status_event on workflow_engine.registered_we_executors is 'Trigger run during status updates to notify the required listeners of changes';

@@ -83,5 +83,5 @@ comment on column workflow_engine.workflow_runs.workflow_id is 'Id of the templa
 comment on column workflow_engine.workflow_runs.status is 'Current status of the workflow run';
 comment on column workflow_engine.workflow_runs.executor_id is 'Id of the executor that owns this workflow run. Is null until picked up by executor';
 comment on column workflow_engine.workflow_runs.progress is 'Optional progress that the worker reports as iterations/subtasks are completed';
-comment on trigger workflow_engine.workflow_runs.workflow_run_status is 'Trigger run during status updates to notify the required listeners of changes';
-comment on trigger workflow_engine.workflow_runs.workflow_run_progress is 'Trigger run during progress updates to notify the required listeners of changes';
+comment on trigger workflow_run_status on workflow_engine.workflow_runs is 'Trigger run during status updates to notify the required listeners of changes';
+comment on trigger workflow_run_progress on workflow_engine.workflow_runs is 'Trigger run during progress updates to notify the required listeners of changes';

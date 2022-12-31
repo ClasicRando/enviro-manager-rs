@@ -27,4 +27,4 @@ comment on column workflow_engine.task_queue.output is 'Message output as result
 comment on column workflow_engine.task_queue.rules is 'Collection of all rules checked/run during task. Failed rules will halt workflow run';
 comment on column workflow_engine.task_queue.task_start is 'Timestamp when task starts';
 comment on column workflow_engine.task_queue.task_end is 'Timestamp of when task ends. Only populated when done but status values other than ''Complete'' can have a value here';
-comment on constraint workflow_engine.task_queue.task_queue_pk is 'Records in task queue are unique for a task order per workflow run';
+comment on constraint task_queue_pk on workflow_engine.task_queue is 'Records in task queue are unique for a task order per workflow run';

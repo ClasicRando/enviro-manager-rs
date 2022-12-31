@@ -57,4 +57,4 @@ comment on column workflow_engine.jobs.job_schedule is 'Schedule within a week a
 comment on column workflow_engine.jobs.is_paused is 'Indicates a user flagged this job to be paused or the most recent job failed and the job is automatically set to paused to avoid re-run issues';
 comment on column workflow_engine.jobs.next_run is 'Next time the job should be run. Decided by the schedule/interval';
 comment on column workflow_engine.jobs.current_workflow_run_id is 'If the job is currently running, this will link to a workflow_run record';
-comment on trigger workflow_engine.jobs.job_change_trig is 'Trigger run during any change to the records to notify the job worker of new changes.';
+comment on trigger job_change_trig on workflow_engine.jobs is 'Trigger run during any change to the records to notify the job worker of new changes.';
