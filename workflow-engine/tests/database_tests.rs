@@ -60,3 +60,21 @@ async fn run_data_check_database_tests() -> Result<(), Box<dyn std::error::Error
     }
     Ok(())
 }
+
+#[tokio::test]
+async fn run_workflow_engine_database_tests() -> Result<(), Box<dyn std::error::Error>> {
+    let pool = create_we_db_pool().await?;
+    let tests = get_relative_path("/database/tests", false)?;
+    let mut entries = read_dir(tests).await?;
+    while let Some(file) = entries.next_entry().await? {
+        let block = read_file(file.path()).await?;
+        let result = execute_anonymous_block(block, &pool).await;
+        assert!(
+            result.is_ok(),
+            "Failed running test in {:?}\n{}",
+            file.path(),
+            result.unwrap_err()
+        )
+    }
+    Ok(())
+}
