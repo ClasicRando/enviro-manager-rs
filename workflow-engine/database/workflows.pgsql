@@ -3,7 +3,7 @@ create table if not exists workflow_engine.workflows (
     name text not null check(data_check.check_not_blank_or_empty(name)) unique,
     is_deprecated boolean not null default false,
     new_workflow bigint references workflow_engine.workflows match simple
-        on delete null
+        on delete set null
         on update cascade,
     constraint deprecation_check check (
         case when new_workflow is not null then is_deprecated else true end
