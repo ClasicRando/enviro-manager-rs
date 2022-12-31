@@ -13,7 +13,7 @@ begin
 end;
 $$;
 
-create if not exists table workflow_engine.registered_we_executors (
+create table if not exists workflow_engine.registered_we_executors (
     executor_id bigint primary key generated always as identity,
     pid integer not null,
     username name not null,

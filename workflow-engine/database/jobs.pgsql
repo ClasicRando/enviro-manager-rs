@@ -8,7 +8,7 @@ begin
 end;
 $$;
 
-create if not exists table workflow_engine.jobs (
+create table if not exists workflow_engine.jobs (
     job_id bigint primary key generated always as identity,
     workflow_id bigint not null references workflow_engine.workflows match simple
         on delete restrict

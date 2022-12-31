@@ -1,4 +1,4 @@
-create if not exists table workflow_engine.task_queue_archive (
+create table if not exists workflow_engine.task_queue_archive (
     workflow_run_id bigint not null,
     task_order int not null,
     task_id bigint not null,
