@@ -89,4 +89,6 @@ comment on column workflow_engine.workflow_tasks.workflow_id is 'Id of the paren
 comment on column workflow_engine.workflow_tasks.task_order is 'Order within the workflow. Must be sequential with no gaps';
 comment on column workflow_engine.workflow_tasks.task_id is 'Id of the task to be executed in the parent workflow at this order position';
 comment on column workflow_engine.workflow_tasks.parameters is 'Parameters to be passed to the executing service to customize behaviour';
-comment on trigger workflow_engine.workflow_tasks.verify_records is 'Trigger to guarentee that a single workflow_id is impacted and the task_order values the sequential with no gaps';
+comment on trigger verify_insert_records on workflow_engine.workflow_tasks is 'Trigger to guarentee that a single workflow_id is inserted and the task_order values the sequential with no gaps';
+comment on trigger verify_update_records on workflow_engine.workflow_tasks is 'Trigger to guarentee that a single workflow_id is updated and the task_order values the sequential with no gaps';
+comment on trigger verify_delete_records on workflow_engine.workflow_tasks is 'Trigger to guarentee that a single workflow_id is deleted and the task_order values the sequential with no gaps';
