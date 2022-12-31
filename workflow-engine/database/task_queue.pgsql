@@ -8,7 +8,7 @@ create table if not exists workflow_engine.task_queue (
         on update cascade,
     status workflow_engine.task_status not null default 'Waiting'::workflow_engine.task_status,
     parameters jsonb,
-    output text check(workflow_engine.check_not_blank_or_empty(output)),
+    output text check(data_check.check_not_blank_or_empty(output)),
     rules workflow_engine.task_rule[] check(workflow_engine.are_valid_task_rules(rules)),
     task_start timestamp without time zone,
     task_end timestamp without time zone,
