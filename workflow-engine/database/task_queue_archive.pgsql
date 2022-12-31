@@ -4,7 +4,7 @@ create if not exists table workflow_engine.task_queue_archive (
     task_id bigint not null,
     status workflow_engine.task_status not null default 'Waiting'::workflow_engine.task_status,
     parameters jsonb,
-    output text check(workflow_engine.check_not_blank_or_empty(output)),
+    output text check(data_check.check_not_blank_or_empty(output)),
     rules workflow_engine.task_rule[] check(rules != '{}'::workflow_engine.task_rule[]),
     task_start timestamp without time zone,
     task_end timestamp without time zone

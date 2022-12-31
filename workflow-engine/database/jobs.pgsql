@@ -14,7 +14,7 @@ create if not exists table workflow_engine.jobs (
         on delete restrict
         on update cascade,
     job_type workflow_engine.job_type not null,
-    maintainer text not null check(workflow_engine.check_not_blank_or_empty(maintainer)),
+    maintainer text not null check(data_check.check_not_blank_or_empty(maintainer)),
     job_interval interval check(
         case
             when job_type = 'Interval'::workflow_engine.job_type

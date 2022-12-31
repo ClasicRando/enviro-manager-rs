@@ -18,7 +18,7 @@ begin
     foreach task_rule in array $1
     loop
         if $1.name is null or 
-            not workflow_engine.check_not_blank_or_empty($1.name) or
+            not data_check.check_not_blank_or_empty($1.name) or
             $1.failed is null
         then
             return false;
