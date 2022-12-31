@@ -7,8 +7,8 @@ as $$
 update workflow_engine.registered_we_executors
 set    exec_end = now() at time zone 'UTC',
        status = case
-                    when $2 then 'Canceled'::workflow_engine.task_status
-                    else 'Shutdown'::workflow_engine.task_status
+                    when $2 then 'Canceled'::workflow_engine.executor_status
+                    else 'Shutdown'::workflow_engine.executor_status
                 end
 where  executor_id = $1;
 
