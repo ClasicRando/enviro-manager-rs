@@ -10,8 +10,8 @@ select exists(
     select 1
     from   pg_namespace n
     join   pg_type t on n.oid = t.typnamespace
-    where  n.nspname = $2
-    and    t.typname = $1
+    where  n.nspname = $1
+    and    t.typname = $2
 )
 $$;
 
