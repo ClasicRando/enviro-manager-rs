@@ -1,7 +1,0 @@
-schema
-check_not_blank_or_empty
-check_array_not_blank_or_empty
-type_exists
-trigger_exists
-check_function_definition
-check_enum_definition
