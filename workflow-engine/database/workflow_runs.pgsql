@@ -20,8 +20,8 @@ begin
         from   workflow_engine.jobs
         where  current_workflow_run_id = new.workflow_run_id
     ) and new.status not in (
-        'Scheduled'::workflow_engine.executor_status,
-        'Running'::workflow_engine.executor_status
+        'Scheduled'::workflow_engine.workflow_run_status,
+        'Running'::workflow_engine.workflow_run_status
     ) then
         perform pg_notify(
             'jobs',

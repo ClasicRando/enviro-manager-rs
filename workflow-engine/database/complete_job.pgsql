@@ -36,8 +36,8 @@ begin
     where  workflow_run_id = v_workflow_run_id;
 
     if v_status in (
-        'Scheduled'::workflow_engine.executor_status,
-        'Running'::workflow_engine.executor_status
+        'Scheduled'::workflow_engine.workflow_run_status,
+        'Running'::workflow_engine.workflow_run_status
     ) then
         rollback;
         return 'Workflow must be done to complete job';
