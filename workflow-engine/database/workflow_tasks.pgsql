@@ -56,11 +56,27 @@ create table if not exists workflow_engine.workflow_tasks (
     constraint workflow_tasks_pk primary key(workflow_id, task_order)
 );
 
-drop trigger if exists verify_records on workflow_engine.workflow_tasks;
-create trigger verify_records
-    after insert or update or delete
+drop trigger if exists verify_insert_records on workflow_engine.workflow_tasks;
+create trigger verify_insert_records
+    after insert
     on workflow_engine.workflow_tasks
-    referencing new table as new_table old table as old_table
+    referencing new table as new_table
+    for each statement
+    execute function workflow_engine.workflow_tasks_check();
+
+drop trigger if exists verify_update_records on workflow_engine.workflow_tasks;
+create trigger verify_update_records
+    after update
+    on workflow_engine.workflow_tasks
+    referencing new table as new_table
+    for each statement
+    execute function workflow_engine.workflow_tasks_check();
+
+drop trigger if exists verify_delete_records on workflow_engine.workflow_tasks;
+create trigger verify_delete_records
+    after delete
+    on workflow_engine.workflow_tasks
+    referencing old table as old_table
     for each statement
     execute function workflow_engine.workflow_tasks_check();
 
