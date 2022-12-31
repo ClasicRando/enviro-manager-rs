@@ -10,9 +10,9 @@ create table if not exists workflow_engine.task_queue_archive (
     task_end timestamp without time zone
 );
 
-create index if not exists on workflow_engine.task_queue_archive(workflow_run_id);
-create index if not exists on workflow_engine.task_queue_archive(workflow_run_id,task_order);
-create index if not exists on workflow_engine.task_queue_archive(workflow_run_id,task_id);
+create index if not exists wr_id on workflow_engine.task_queue_archive(workflow_run_id);
+create index if not exists wr_id_task_ord on workflow_engine.task_queue_archive(workflow_run_id,task_order);
+create index if not exists wr_id_task_id on workflow_engine.task_queue_archive(workflow_run_id,task_id);
 
 revoke all on workflow_engine.task_queue_archive from public;
 
