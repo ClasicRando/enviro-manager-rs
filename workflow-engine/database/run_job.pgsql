@@ -15,7 +15,7 @@ begin
     exception
         when no_data_found then
             rollback;
-            raise exception 'No job for job_id = %' $1;
+            raise exception 'No job for job_id = %', $1;
     end;
 
     if v_is_paused then
