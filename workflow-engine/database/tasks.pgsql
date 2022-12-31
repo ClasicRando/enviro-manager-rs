@@ -2,7 +2,7 @@ create table if not exists workflow_engine.tasks (
     task_id bigint primary key generated always as identity,
     name text not null check(data_check.check_not_blank_or_empty(name)),
     description text not null check(data_check.check_not_blank_or_empty(description)),
-    task_service_id references workflow_engine.task_services match simple
+    task_service_id bigint references workflow_engine.task_services match simple
         on delete restrict
         on update cascade,
     url text not null check(data_check.check_not_blank_or_empty(url)),
