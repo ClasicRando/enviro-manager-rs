@@ -1,4 +1,4 @@
-create function audit.if_modified_func()
+create or replace function audit.if_modified_func()
 returns trigger
 language plpgsql
 security definer

@@ -1,4 +1,4 @@
-create table audit.logged_actions (
+create table if not exists audit.logged_actions (
     event_id bigint primary key generated always as identity,
     schema_name text not null,
     table_name text not null,
@@ -40,6 +40,6 @@ comment on column audit.logged_actions.row_data is 'Record value. Null for state
 comment on column audit.logged_actions.changed_fields is 'New values of fields changed by UPDATE. Null except for row-level UPDATE events.';
 comment on column audit.logged_actions.statement_only is '''t'' if audit event is from an FOR EACH STATEMENT trigger, ''f'' for FOR EACH ROW';
 
-create index logged_actions_relid_idx on audit.logged_actions(relid);
-create index logged_actions_action_tstamp_tx_stm_idx on audit.logged_actions(action_tstamp_stm);
-create index logged_actions_action_idx on audit.logged_actions(action);
+create index if not exists logged_actions_relid_idx on audit.logged_actions(relid);
+create index if not exists logged_actions_action_tstamp_tx_stm_idx on audit.logged_actions(action_tstamp_stm);
+create index if not exists logged_actions_action_idx on audit.logged_actions(action);
