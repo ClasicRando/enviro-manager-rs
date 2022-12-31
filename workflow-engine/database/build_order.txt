@@ -10,19 +10,20 @@ task_services
 tasks
 workflow_tasks
 registered_we_executors
-executors
-next_executor
 workflow_runs
+v_executors
+next_executor
 task_queue
+v_workflow_runs
 task_queue_archive
 register_we_executor
-close_we_executor ?? Updated parameters
+close_we_executor
 next_workflow
 start_workflow_run
 next_task
 start_task_run
 complete_task_run
-fail_task_run ?? Check for message added, plpgsql
+fail_task_run
 complete_workflow_run
 cancel_workflow_run
 schedule_workflow_run
@@ -36,11 +37,9 @@ shutdown_executor
 start_workflow_run_move
 complete_workflow_run_move
 workflow_task
-all_workflows
+v_workflows
 deprecate_workflow
 v_workflow_runs
-workflow_run -- query v_workflow_runs instead
-active_workflow_runs -- query v_workflow_runs with 
 workflow_task_request
 create_workflow
 restart_workflow_run
@@ -54,6 +53,6 @@ jobs
 create_interval_job
 create_scheduled_job
 v_jobs
-get_jobs
+v_queued_jobs
 run_job
 complete_job
