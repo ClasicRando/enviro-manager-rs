@@ -11,7 +11,7 @@ begin
         begin
             select distinct workflow_id 
             into   v_workflow_id
-            from   new_table
+            from   new_table;
         exception
             when too_many_rows then
                 raise exception 'When affecting workflow_tasks, only 1 workflow_id can be impacted';
@@ -20,7 +20,7 @@ begin
         begin
             select distinct workflow_id 
             into   v_workflow_id
-            from   old_table
+            from   old_table;
         exception
             when too_many_rows then
                 raise exception 'When affecting workflow_tasks, only 1 workflow_id can be impacted';

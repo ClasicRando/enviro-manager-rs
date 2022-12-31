@@ -23,7 +23,7 @@ begin
         select workflow_run_id, task_order, task_id, status, parameters, output, rules, task_start, task_end
         from   workflow_engine.task_queue
         where  workflow_run_id = $1
-        and    task_order = $2;
+        and    task_order = $2
         for update;
 
         update workflow_engine.task_queue tq
