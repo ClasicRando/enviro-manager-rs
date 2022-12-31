@@ -33,7 +33,7 @@ begin
         select task_id, task_order, row_number() over (order by task_order) rn
         from   workflow_engine.workflow_tasks
         where  workflow_id = v_workflow_id
-    )
+    ) e
     where  task_order != rn;
 
     if v_errors is not null then
