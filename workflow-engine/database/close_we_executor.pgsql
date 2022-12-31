@@ -15,7 +15,7 @@ where  executor_id = $1;
 with workflow_runs as (
     update workflow_engine.workflow_runs
     set    status = 'Canceled'::workflow_engine.workflow_run_status,
-        executor_id = null
+           executor_id = null
     where  executor_id = $1
     and    status = 'Running'::workflow_engine.workflow_run_status
     returning workflow_run_id

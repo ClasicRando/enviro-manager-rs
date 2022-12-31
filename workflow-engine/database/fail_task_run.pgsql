@@ -12,8 +12,8 @@ begin
 
     update workflow_engine.task_queue
     set    status = 'Failed'::workflow_engine.task_status,
-        output = $3,
-        task_end = now() at time zone 'UTC'
+           output = $3,
+           task_end = now() at time zone 'UTC'
     where  workflow_run_id = $1
     and    task_order = $2
     and    status = 'Running'::workflow_engine.task_status;
