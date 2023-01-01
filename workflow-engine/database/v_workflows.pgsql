@@ -7,7 +7,7 @@ with w_tasks as (
                 t.name,
                 t.description,
                 wt.parameters,
-                ts.name,
+                t.task_service_name,
                 t.url
            )::workflow_engine.workflow_task) tasks
     from   workflow_engine.workflow_tasks wt
