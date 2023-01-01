@@ -8,11 +8,10 @@ with w_tasks as (
                 t.description,
                 wt.parameters,
                 ts.name,
-                rtrim(ts.base_url,'/') || '/' || ltrim(t.url,'/')
+                t.url
            )::workflow_engine.workflow_task) tasks
     from   workflow_engine.workflow_tasks wt
-    join   workflow_engine.tasks t on wt.task_id = t.task_id
-    join   workflow_engine.task_services ts on t.task_service_id = ts.service_id
+    join   workflow_engine.v_tasks t on wt.task_id = t.task_id
     group by wt.workflow_id
 )
 select w.workflow_id, w.name, wt.tasks
