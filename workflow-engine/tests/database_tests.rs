@@ -5,7 +5,7 @@ use tokio::{
     io::AsyncReadExt,
 };
 
-use workflow_engine::create_we_db_pool;
+use workflow_engine::database::create_db_pool;
 
 fn get_relative_path(
     path: &str,
@@ -45,7 +45,7 @@ async fn read_file(path: PathBuf) -> Result<String, Box<dyn std::error::Error>> 
 
 #[tokio::test]
 async fn run_data_check_database_tests() -> Result<(), Box<dyn std::error::Error>> {
-    let pool = create_we_db_pool().await?;
+    let pool = create_db_pool().await?;
     let tests = get_relative_path("/common-database/data_check/tests", true)?;
     let mut entries = read_dir(tests).await?;
     while let Some(file) = entries.next_entry().await? {
@@ -63,7 +63,7 @@ async fn run_data_check_database_tests() -> Result<(), Box<dyn std::error::Error
 
 #[tokio::test]
 async fn run_workflow_engine_database_tests() -> Result<(), Box<dyn std::error::Error>> {
-    let pool = create_we_db_pool().await?;
+    let pool = create_db_pool().await?;
     let tests = get_relative_path("/database/tests", false)?;
     let mut entries = read_dir(tests).await?;
     while let Some(file) = entries.next_entry().await? {
