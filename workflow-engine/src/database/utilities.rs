@@ -1,6 +1,9 @@
 use async_once_cell::OnceCell;
-use sqlx::postgres::{PgPool, PgConnectOptions, PgPoolOptions};
-use std::env;
+use sqlx::{
+    postgres::{PgConnectOptions, PgPool, PgPoolOptions},
+    Postgres, Transaction,
+};
+use std::{env, fmt::Display};
 
 static WE_POSTGRES_DB: OnceCell<PgPool> = OnceCell::new();
 
@@ -26,4 +29,46 @@ pub async fn create_db_pool() -> Result<PgPool, sqlx::Error> {
 
 pub async fn we_db_pool() -> Result<&'static PgPool, sqlx::Error> {
     WE_POSTGRES_DB.get_or_try_init(create_db_pool()).await
+}
+
+#[derive(Debug)]
+pub enum TransactionError {
+    Sql(sqlx::Error),
+    CommitError(sqlx::Error),
+    RollbackError { orig: sqlx::Error, new: sqlx::Error },
+}
+
+impl Display for TransactionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TransactionError::Sql(e) => write!(f, "{}", e),
+            TransactionError::CommitError(e) => write!(f, "Error during transaction commit: {}", e),
+            TransactionError::RollbackError { orig, new } => write!(
+                f,
+                "Error during transaction rollback: {}\nOriginal Error: {}",
+                new, orig
+            ),
+        }
+    }
+}
+
+pub async fn finish_transaction<T>(
+    transaction: Transaction<'_, Postgres>,
+    result: Result<T, sqlx::Error>,
+) -> Result<T, TransactionError> {
+    match result {
+        Ok(inner) => {
+            if let Err(error) = transaction.commit().await {
+                return Err(TransactionError::CommitError(error));
+            }
+            Ok(inner)
+        }
+        Err(error) => match transaction.rollback().await {
+            Ok(_) => Err(TransactionError::Sql(error)),
+            Err(t_error) => Err(TransactionError::RollbackError {
+                orig: error,
+                new: t_error,
+            }),
+        },
+    }
 }
