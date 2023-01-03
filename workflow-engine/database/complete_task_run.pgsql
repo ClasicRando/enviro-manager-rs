@@ -10,13 +10,27 @@ update workflow_engine.task_queue
 set    status = case
                     when exists(select 1 from unnest(rules) where failed) then 'Rule Broken'::workflow_engine.task_status
                     when $3 then 'Paused'::workflow_engine.task_status
-                    else 'Complete'
+                    else 'Complete'::workflow_engine.task_status
                 end,
        output = $4,
-       task_end = now() at time zone 'UTC'
+       task_end = now() at time zone 'UTC',
+       progress = 100
 where  workflow_run_id = $1
 and    task_order = $2
 and    status = 'Running'::workflow_engine.task_status;
+
+with tasks as (
+    select workflow_run_id,
+           count(0) filter (where status = 'Complete'::workflow_engine.task_status) complete_count,
+           count(0) total_tasks
+    from   workflow_engine.task_queue
+    group by workflow_run_id
+)
+update workflow_engine.workflow_runs wr
+set    progress = round((t.complete_count / cast(t.total_tasks as real)) * 100)::smallint
+from   tasks t
+where  wr.workflow_run_id = t.workflow_run_id
+and    wr.workflow_run_id = $1;
 $$;
 
 comment on procedure workflow_engine.complete_task_run IS $$
