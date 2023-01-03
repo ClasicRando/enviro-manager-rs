@@ -16,13 +16,24 @@ begin
     end if;
 
     update workflow_engine.task_queue tq
-    set    status = 'Complete'::workflow_engine.task_status
+    set    status = 'Complete'::workflow_engine.task_status,
+           progress = 100
     where  tq.workflow_run_id = $1
     and    tq.task_order = $2;
 
+    with tasks as (
+        select workflow_run_id,
+               count(0) filter (where status = 'Complete'::workflow_engine.task_status) complete_count,
+               count(0) total_tasks
+        from   workflow_engine.task_queue
+        group by workflow_run_id
+    )
     update workflow_engine.workflow_runs wr
-    set    status = 'Scheduled'::workflow_engine.workflow_run_status
-    where  wr.workflow_run_id = $1;
+    set    status = 'Scheduled'::workflow_engine.workflow_run_status,
+           progress = round((t.complete_count / cast(t.total_tasks as real)) * 100)::smallint
+    from   tasks t
+    where  wr.workflow_run_id = t.workflow_run_id
+    and    wr.workflow_run_id = $1;
 end;
 $$;
 
