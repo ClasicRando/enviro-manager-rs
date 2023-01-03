@@ -8,6 +8,9 @@ edition = "2021"
 [[bin]]
 name = "db_build"
 
+[[bin]]
+name = "workflow_engine_executor"
+
 [dependencies]
 sqlx = { version = "0.6.2", features = ["postgres", "runtime-tokio-rustls", "json", "macros", "chrono", "ipnetwork"] }
 tokio = { version = "1.20.1", features = ["full"] }
