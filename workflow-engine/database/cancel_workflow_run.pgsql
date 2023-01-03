@@ -6,8 +6,7 @@ as $$
 update workflow_engine.workflow_runs
 set    status = 'Canceled'::workflow_engine.workflow_run_status,
        executor_id = null
-where  workflow_run_id = $1
-and    status = 'Running'::workflow_engine.workflow_run_status;
+where  workflow_run_id = $1;
 
 update workflow_engine.task_queue
 set    status = 'Canceled'::workflow_engine.task_status,
