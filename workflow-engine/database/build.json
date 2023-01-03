@@ -504,6 +504,15 @@
                 "schema.pgsql",
                 "tasks.pgsql"
             ]
+        },
+        {
+            "name": "set_task_progress.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task_queue.pgsql",
+                "task_rule.pgsql",
+                "task_status.pgsql"
+            ]
         }
     ]
 }
