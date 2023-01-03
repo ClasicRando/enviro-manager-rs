@@ -10,7 +10,8 @@ if not data_check.type_exists('workflow_engine','workflow_run_task') then
         output text,
         rules workflow_engine.task_rule[],
         task_start timestamp without time zone,
-        task_end timestamp without time zone
+        task_end timestamp without time zone,
+        progress smallint
     );
 end if;
 

@@ -12,7 +12,8 @@ with tasks as (
                 tq.output,
                 tq.rules,
                 tq.task_start,
-                tq.task_end
+                tq.task_end,
+                tq.progress
             )::workflow_engine.workflow_run_task
             order by tq.task_id
            ) as tasks
