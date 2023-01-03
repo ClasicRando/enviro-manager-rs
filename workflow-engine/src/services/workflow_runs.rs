@@ -6,14 +6,14 @@ use sqlx::{
     encode::{Encode, IsNull},
     postgres::{
         types::{PgRecordDecoder, PgRecordEncoder},
-        PgArgumentBuffer, PgHasArrayType, PgTypeInfo, PgValueRef,
+        PgArgumentBuffer, PgHasArrayType, PgTypeInfo, PgValueRef, PgListener,
     },
     PgPool, Postgres, Type,
 };
 
-use crate::database::finish_transaction;
+use crate::{database::finish_transaction, error::Result as WEResult};
 
-use super::{error::ServiceResult, task_queue::TaskRule, tasks::TaskStatus};
+use super::{task_queue::TaskRule, tasks::TaskStatus};
 
 #[derive(sqlx::Type, PartialEq, Eq, Serialize)]
 #[sqlx(type_name = "workflow_run_status")]
@@ -39,6 +39,7 @@ pub struct WorkflowRunTask {
     rules: Option<Vec<TaskRule>>,
     task_start: Option<NaiveDateTime>,
     task_end: Option<NaiveDateTime>,
+    progress: Option<i16>,
 }
 
 impl Encode<'_, Postgres> for WorkflowRunTask {
@@ -54,6 +55,7 @@ impl Encode<'_, Postgres> for WorkflowRunTask {
         encoder.encode(&self.rules);
         encoder.encode(self.task_start);
         encoder.encode(self.task_end);
+        encoder.encode(&self.progress);
         encoder.finish();
         IsNull::No
     }
@@ -70,6 +72,7 @@ impl Encode<'_, Postgres> for WorkflowRunTask {
             + <Option<Vec<TaskRule>> as Encode<Postgres>>::size_hint(&self.rules)
             + <Option<NaiveDateTime> as Encode<Postgres>>::size_hint(&self.task_start)
             + <Option<NaiveDateTime> as Encode<Postgres>>::size_hint(&self.task_end)
+            + <Option<i16> as Encode<Postgres>>::size_hint(&self.progress)
     }
 }
 
@@ -88,6 +91,7 @@ impl<'r> Decode<'r, Postgres> for WorkflowRunTask {
         let rules = decoder.try_decode::<Option<Vec<TaskRule>>>()?;
         let task_start = decoder.try_decode::<Option<NaiveDateTime>>()?;
         let task_end = decoder.try_decode::<Option<NaiveDateTime>>()?;
+        let progress = decoder.try_decode::<Option<i16>>()?;
         Ok(WorkflowRunTask {
             task_order,
             task_id,
@@ -99,6 +103,7 @@ impl<'r> Decode<'r, Postgres> for WorkflowRunTask {
             rules,
             task_start,
             task_end,
+            progress,
         })
     }
 }
@@ -125,7 +130,14 @@ pub struct WorkflowRun {
     tasks: Vec<WorkflowRunTask>,
 }
 
-struct WorkflowRunsService {
+#[derive(sqlx::FromRow)]
+pub struct ExecutorWorkflowRuns {
+    pub workflow_run_id: i64,
+    pub status: WorkflowRunStatus,
+    pub is_valid: bool,
+}
+
+pub struct WorkflowRunsService {
     pool: &'static PgPool,
 }
 
@@ -134,7 +146,7 @@ impl WorkflowRunsService {
         Self { pool }
     }
 
-    pub async fn initialize(&self, workflow_id: i64) -> ServiceResult<WorkflowRun> {
+    pub async fn initialize(&self, workflow_id: i64) -> WEResult<WorkflowRun> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query_scalar("select initialize_workflow_run($1)")
             .bind(workflow_id)
@@ -148,7 +160,7 @@ impl WorkflowRunsService {
         }
     }
 
-    pub async fn read_one(&self, workflow_run_id: i64) -> ServiceResult<Option<WorkflowRun>> {
+    pub async fn read_one(&self, workflow_run_id: i64) -> WEResult<Option<WorkflowRun>> {
         let result = sqlx::query_as(
             r#"
             select workflow_run_id, workflow_id, status, executor_id, progress, tasks
@@ -161,7 +173,7 @@ impl WorkflowRunsService {
         Ok(result)
     }
 
-    pub async fn read_many(&self) -> ServiceResult<Vec<WorkflowRun>> {
+    pub async fn read_many(&self) -> WEResult<Vec<WorkflowRun>> {
         let result = sqlx::query_as(
             r#"
             select workflow_run_id, workflow_id, status, executor_id, progress, tasks
@@ -172,7 +184,7 @@ impl WorkflowRunsService {
         Ok(result)
     }
 
-    pub async fn cancel(&self, workflow_run_id: i64) -> ServiceResult<Option<WorkflowRun>> {
+    pub async fn cancel(&self, workflow_run_id: i64) -> WEResult<Option<WorkflowRun>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call cancel_workflow_run($1)")
             .bind(workflow_run_id)
@@ -182,7 +194,7 @@ impl WorkflowRunsService {
         self.read_one(workflow_run_id).await
     }
 
-    pub async fn schedule(&self, workflow_run_id: i64) -> ServiceResult<Option<WorkflowRun>> {
+    pub async fn schedule(&self, workflow_run_id: i64) -> WEResult<Option<WorkflowRun>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call schedule_workflow_run($1)")
             .bind(workflow_run_id)
@@ -192,7 +204,18 @@ impl WorkflowRunsService {
         self.read_one(workflow_run_id).await
     }
 
-    pub async fn restart(&self, workflow_run_id: i64) -> ServiceResult<Option<WorkflowRun>> {
+    pub async fn schedule_with_executor(&self, workflow_run_id: i64, executor_id: i64) -> WEResult<Option<WorkflowRun>> {
+        let mut transaction = self.pool.begin().await?;
+        let result = sqlx::query("call schedule_workflow_run($1,$2)")
+            .bind(workflow_run_id)
+            .bind(executor_id)
+            .execute(&mut transaction)
+            .await;
+        finish_transaction(transaction, result).await?;
+        self.read_one(workflow_run_id).await
+    }
+
+    pub async fn restart(&self, workflow_run_id: i64) -> WEResult<Option<WorkflowRun>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call restart_workflow_run($1)")
             .bind(workflow_run_id)
@@ -200,5 +223,63 @@ impl WorkflowRunsService {
             .await;
         finish_transaction(transaction, result).await?;
         self.read_one(workflow_run_id).await
+    }
+
+    pub async fn complete(&self, workflow_run_id: i64) -> WEResult<()> {
+        let mut transaction = self.pool.begin().await?;
+        let result = sqlx::query("call complete_workflow_run($1)")
+            .bind(workflow_run_id)
+            .execute(&mut transaction)
+            .await;
+        finish_transaction(transaction, result).await?;
+        Ok(())
+    }
+
+    pub async fn all_executor_workflows(&self, executor_id: i64) -> WEResult<Vec<ExecutorWorkflowRuns>> {
+        let result = sqlx::query_as(
+            r#"
+            select workflow_run_id, status, is_valid
+            from   all_executor_workflows($1)"#,
+        )
+        .bind(executor_id)
+        .fetch_all(self.pool)
+        .await?;
+        Ok(result)
+    }
+
+    pub async fn start_move(&self, workflow_run_id: i64) -> WEResult<Option<WorkflowRun>> {
+        let mut transaction = self.pool.begin().await?;
+        let result = sqlx::query("call start_workflow_run_move($1)")
+            .bind(workflow_run_id)
+            .execute(&mut transaction)
+            .await;
+        finish_transaction(transaction, result).await?;
+        self.read_one(workflow_run_id).await
+    }
+
+    pub async fn complete_move(&self, workflow_run_id: i64) -> WEResult<Option<WorkflowRun>> {
+        let mut transaction = self.pool.begin().await?;
+        let result = sqlx::query("call complete_workflow_run_move($1)")
+            .bind(workflow_run_id)
+            .execute(&mut transaction)
+            .await;
+        finish_transaction(transaction, result).await?;
+        self.read_one(workflow_run_id).await
+    }
+
+    pub async fn scheduled_listener(&self, executor_id: i64) -> WEResult<PgListener> {
+        let mut listener = PgListener::connect_with(self.pool).await?;
+        listener
+            .listen(&format!("wr_scheduled_{}", executor_id))
+            .await?;
+        Ok(listener)
+    }
+
+    pub async fn cancel_listener(&self, executor_id: i64) -> WEResult<PgListener> {
+        let mut listener = PgListener::connect_with(self.pool).await?;
+        listener
+            .listen(&format!("wr_canceled_{}", executor_id))
+            .await?;
+        Ok(listener)
     }
 }

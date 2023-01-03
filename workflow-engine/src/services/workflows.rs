@@ -5,9 +5,7 @@ use sqlx::{
     PgPool,
 };
 
-use crate::database::finish_transaction;
-
-use super::error::ServiceResult;
+use crate::{database::finish_transaction, error::Result as WEResult};
 
 #[derive(sqlx::Type, Serialize, Deserialize)]
 #[sqlx(type_name = "workflow_task")]
@@ -68,7 +66,7 @@ impl WorkflowsService {
         Self { pool }
     }
 
-    pub async fn create(&self, request: WorkflowRequest) -> ServiceResult<Workflow> {
+    pub async fn create(&self, request: WorkflowRequest) -> WEResult<Workflow> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query_scalar("select create_workflow($1,$2)")
             .bind(request.name)
@@ -83,7 +81,7 @@ impl WorkflowsService {
         }
     }
 
-    pub async fn read_one(&self, workflow_id: i64) -> ServiceResult<Option<Workflow>> {
+    pub async fn read_one(&self, workflow_id: i64) -> WEResult<Option<Workflow>> {
         let result = sqlx::query_as(
             r#"
             select workflow_id, name, tasks
@@ -96,7 +94,7 @@ impl WorkflowsService {
         Ok(result)
     }
 
-    pub async fn read_many(&self) -> ServiceResult<Vec<Workflow>> {
+    pub async fn read_many(&self) -> WEResult<Vec<Workflow>> {
         let result = sqlx::query_as(
             r#"
             select workflow_id, name, tasks
@@ -107,7 +105,7 @@ impl WorkflowsService {
         Ok(result)
     }
 
-    pub async fn deprecate(&self, request: WorkflowDeprecationRequest) -> ServiceResult<()> {
+    pub async fn deprecate(&self, request: WorkflowDeprecationRequest) -> WEResult<()> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call deprecate_workflow($1,$2)")
             .bind(request.workflow_id)

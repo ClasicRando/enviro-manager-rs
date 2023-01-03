@@ -1,9 +1,7 @@
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-use crate::database::finish_transaction;
-
-use super::error::ServiceResult;
+use crate::{database::finish_transaction, error::Result as WEResult};
 
 #[derive(sqlx::Type, Serialize)]
 #[sqlx(type_name = "task_status")]
@@ -44,7 +42,7 @@ impl TasksService {
         Self { pool }
     }
 
-    pub async fn create(&self, request: TaskRequest) -> ServiceResult<Task> {
+    pub async fn create(&self, request: TaskRequest) -> WEResult<Task> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query_scalar("select create_task($1,$2,$3,$4)")
             .bind(request.name)
@@ -61,7 +59,7 @@ impl TasksService {
         }
     }
 
-    pub async fn read_one(&self, task_id: i64) -> ServiceResult<Option<Task>> {
+    pub async fn read_one(&self, task_id: i64) -> WEResult<Option<Task>> {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
@@ -74,7 +72,7 @@ impl TasksService {
         Ok(result)
     }
 
-    pub async fn read_many(&self) -> ServiceResult<Vec<Task>> {
+    pub async fn read_many(&self) -> WEResult<Vec<Task>> {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
@@ -85,7 +83,7 @@ impl TasksService {
         Ok(result)
     }
 
-    pub async fn update(&self, task_id: i64, request: TaskRequest) -> ServiceResult<Option<Task>> {
+    pub async fn update(&self, task_id: i64, request: TaskRequest) -> WEResult<Option<Task>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call update_task($1,$2,$3,$4,$5)")
             .bind(task_id)

@@ -8,9 +8,12 @@ use serde::{
 };
 use sqlx::{postgres::types::PgInterval, PgPool};
 
-use crate::database::finish_transaction;
+use crate::{
+    database::finish_transaction,
+    error::{Error as WEError, Result as WEResult},
+};
 
-use super::{error::ServiceResult, workflow_runs::WorkflowRunStatus};
+use super::workflow_runs::WorkflowRunStatus;
 
 #[derive(Debug)]
 pub enum JobError {
@@ -235,7 +238,7 @@ impl JobsService {
         Self { pool }
     }
 
-    pub async fn create(&self, request: CronJobRequest) -> ServiceResult<Job> {
+    pub async fn create(&self, request: CronJobRequest) -> WEResult<Job> {
         let job_id = match &request.job_type {
             JobType::Scheduled(schedule) => {
                 self.create_scheduled_job(&request.workflow_id, &request.maintainer, schedule)
@@ -264,7 +267,7 @@ impl JobsService {
         maintainer: &str,
         interval: &PgInterval,
         next_run: &Option<NaiveDateTime>,
-    ) -> ServiceResult<i64> {
+    ) -> WEResult<i64> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query_scalar("select create_interval_cron_job($1,$2,$3)")
             .bind(workflow_id)
@@ -282,7 +285,7 @@ impl JobsService {
         workflow_id: &i64,
         maintainer: &str,
         schedule: &[ScheduleEntry],
-    ) -> ServiceResult<i64> {
+    ) -> WEResult<i64> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query_scalar("select create_scheduled_cron_job($1,$2,$3)")
             .bind(workflow_id)
@@ -294,7 +297,7 @@ impl JobsService {
         Ok(job_id)
     }
 
-    pub async fn read_one(&self, job_id: i64) -> ServiceResult<Option<Job>> {
+    pub async fn read_one(&self, job_id: i64) -> WEResult<Option<Job>> {
         let result = sqlx::query_as(
             r#"
             select job_id, workflow_id, workflow_name, job_type, maintainer, job_schedule, job_interval, is_paused,
@@ -308,7 +311,7 @@ impl JobsService {
         Ok(result)
     }
 
-    pub async fn read_many(&self) -> ServiceResult<Vec<Job>> {
+    pub async fn read_many(&self) -> WEResult<Vec<Job>> {
         let result = sqlx::query_as(
             r#"
             select job_id, workflow_id, workflow_name, job_type, maintainer, job_schedule, job_interval, is_paused,
@@ -320,7 +323,7 @@ impl JobsService {
         Ok(result)
     }
 
-    pub async fn read_queued(&self) -> ServiceResult<Vec<JobMin>> {
+    pub async fn read_queued(&self) -> WEResult<Vec<JobMin>> {
         let result = sqlx::query_as(
             r#"
             select job_id, next_run
@@ -331,7 +334,7 @@ impl JobsService {
         Ok(result)
     }
 
-    pub async fn run_job(&self, job_id: i64) -> ServiceResult<Option<Job>> {
+    pub async fn run_job(&self, job_id: i64) -> WEResult<Option<Job>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call run_job($1)")
             .bind(job_id)
@@ -341,7 +344,7 @@ impl JobsService {
         self.read_one(job_id).await
     }
 
-    pub async fn complete_job(&self, job_id: i64) -> ServiceResult<Option<Job>> {
+    pub async fn complete_job(&self, job_id: i64) -> WEResult<Option<Job>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query_scalar("select complete_job($1)")
             .bind(job_id)
@@ -356,9 +359,9 @@ impl JobsService {
         };
         if message.is_empty() {
             transaction.commit().await?;
-            return self.read_one(job_id).await
+            return self.read_one(job_id).await;
         }
         transaction.rollback().await?;
-        Err(JobError::Generic(message).into())
+        Err(WEError::Generic(message).into())
     }
 }
