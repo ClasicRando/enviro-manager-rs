@@ -17,3 +17,6 @@ serde_json = { version = "1.0.89", features = ["raw_value"] }
 log = "0.4.17"
 log4rs = { version = "1.1.1", features = ["rolling_file_appender", "console_appender", "pattern_encoder", "fixed_window_roller", "size_trigger", "threshold_filter"] }
 chrono = { version = "0.4.23", default-features = false, features = ["clock", "std", "wasmbind", "serde"] }
+rmp-serde = "1.1.1"
+futures = "0.3.25"
+reqwest = { version = "0.11.11", features = ["stream"] }
