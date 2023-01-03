@@ -499,7 +499,7 @@
             ]
         },
         {
-            "name": "update_tasks.pgsql",
+            "name": "update_task.pgsql",
             "dependencies": [
                 "schema.pgsql",
                 "tasks.pgsql"
