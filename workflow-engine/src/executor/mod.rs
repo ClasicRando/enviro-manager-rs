@@ -19,7 +19,7 @@ use crate::{
 };
 
 pub struct Executor {
-    executor_id: i64,
+    pub executor_id: i64,
     executor_service: &'static ExecutorsService,
     wr_service: &'static WorkflowRunsService,
     tq_service: &'static TaskQueueService,
