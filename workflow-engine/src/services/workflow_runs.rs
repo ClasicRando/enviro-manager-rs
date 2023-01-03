@@ -55,7 +55,7 @@ impl Encode<'_, Postgres> for WorkflowRunTask {
         encoder.encode(&self.rules);
         encoder.encode(self.task_start);
         encoder.encode(self.task_end);
-        encoder.encode(&self.progress);
+        encoder.encode(self.progress);
         encoder.finish();
         IsNull::No
     }
