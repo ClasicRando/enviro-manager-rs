@@ -1,12 +1,12 @@
 use std::fmt::Display;
 
-use chrono::{NaiveDateTime, Utc};
+use chrono::NaiveDateTime;
 use serde::{
     de::{MapAccess, Visitor},
     ser::SerializeStruct,
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use sqlx::{postgres::types::PgInterval, PgPool};
+use sqlx::{postgres::{types::PgInterval, PgListener}, PgPool};
 
 use crate::{
     database::finish_transaction,
@@ -165,7 +165,7 @@ pub struct Job {
     workflow_id: i64,
     workflow_name: String,
     job_type: JobType,
-    maintainer: String,
+    pub maintainer: String,
     is_paused: bool,
     next_run: NaiveDateTime,
     current_workflow_run_id: i64,
@@ -229,7 +229,7 @@ pub struct JobRequest {
     next_run: Option<NaiveDateTime>,
 }
 
-struct JobsService {
+pub struct JobsService {
     pool: &'static PgPool,
 }
 
@@ -362,6 +362,14 @@ impl JobsService {
             return self.read_one(job_id).await;
         }
         transaction.rollback().await?;
-        Err(WEError::Generic(message).into())
+        Err(WEError::Generic(message))
+    }
+
+    pub async fn listener(&self) -> WEResult<PgListener> {
+        let mut listener = PgListener::connect_with(self.pool).await?;
+        listener
+            .listen("jobs")
+            .await?;
+        Ok(listener)
     }
 }
