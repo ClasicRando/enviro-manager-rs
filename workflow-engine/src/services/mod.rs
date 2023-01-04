@@ -10,12 +10,14 @@ use async_once_cell::OnceCell;
 use crate::{database::we_db_pool, error::Result as WEResult};
 
 use self::{
-    executors::ExecutorsService, task_queue::TaskQueueService, workflow_runs::WorkflowRunsService,
+    executors::ExecutorsService, jobs::JobsService, task_queue::TaskQueueService,
+    workflow_runs::WorkflowRunsService,
 };
 
 static EXECUTORS_SERVICE: OnceCell<ExecutorsService> = OnceCell::new();
 static WORKFLOW_RUNS_SERVICE: OnceCell<WorkflowRunsService> = OnceCell::new();
-static TASK_QUEUE_SERVICE: OnceCell<task_queue::TaskQueueService> = OnceCell::new();
+static TASK_QUEUE_SERVICE: OnceCell<TaskQueueService> = OnceCell::new();
+static JOBS_SERVICE: OnceCell<JobsService> = OnceCell::new();
 
 pub async fn create_executors_service() -> WEResult<ExecutorsService> {
     let pool = we_db_pool().await?;
@@ -48,4 +50,13 @@ pub async fn task_queue_service() -> WEResult<&'static TaskQueueService> {
     TASK_QUEUE_SERVICE
         .get_or_try_init(create_task_queue_service())
         .await
+}
+
+pub async fn create_jobs_service() -> WEResult<JobsService> {
+    let pool = we_db_pool().await?;
+    Ok(JobsService::new(pool))
+}
+
+pub async fn jobs_service() -> WEResult<&'static JobsService> {
+    JOBS_SERVICE.get_or_try_init(create_jobs_service()).await
 }
