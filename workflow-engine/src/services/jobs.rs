@@ -222,7 +222,7 @@ where
 }
 
 #[derive(Deserialize)]
-pub struct CronJobRequest {
+pub struct JobRequest {
     workflow_id: i64,
     maintainer: String,
     job_type: JobType,
@@ -238,7 +238,7 @@ impl JobsService {
         Self { pool }
     }
 
-    pub async fn create(&self, request: CronJobRequest) -> WEResult<Job> {
+    pub async fn create(&self, request: JobRequest) -> WEResult<Job> {
         let job_id = match &request.job_type {
             JobType::Scheduled(schedule) => {
                 self.create_scheduled_job(&request.workflow_id, &request.maintainer, schedule)
