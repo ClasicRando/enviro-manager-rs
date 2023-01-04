@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use chrono::NaiveDateTime;
 use serde::{
     de::{MapAccess, Visitor},
@@ -14,37 +12,6 @@ use crate::{
 };
 
 use super::workflow_runs::WorkflowRunStatus;
-
-#[derive(Debug)]
-pub enum JobError {
-    Sql(sqlx::Error),
-    NotReady,
-    Generic(String),
-}
-
-impl From<sqlx::Error> for JobError {
-    fn from(error: sqlx::Error) -> Self {
-        Self::Sql(error)
-    }
-}
-
-impl From<String> for JobError {
-    fn from(error: String) -> Self {
-        Self::Generic(error)
-    }
-}
-
-impl Display for JobError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Sql(error) => write!(f, "SQL Error\n{}", error),
-            Self::NotReady => write!(f, "Attempted to run a job that is not ready to run yet"),
-            Self::Generic(error) => write!(f, "Generic Job Error: \"{}\"", error),
-        }
-    }
-}
-
-impl std::error::Error for JobError {}
 
 #[derive(sqlx::Type)]
 #[sqlx(type_name = "job_type")]
