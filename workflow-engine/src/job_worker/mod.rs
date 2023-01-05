@@ -5,7 +5,7 @@ use lettre::{
     transport::smtp::authentication::Credentials, AsyncSmtpTransport, AsyncTransport, Message,
     Tokio1Executor,
 };
-use log::info;
+use log::{info, error, warn};
 use sqlx::postgres::PgNotification;
 use tokio::{
     signal::ctrl_c,
@@ -49,6 +49,11 @@ impl JobWorker {
                     StdDuration::from_millis(duration.clamp(0, i64::MAX) as u64)
                 })
                 .unwrap_or(StdDuration::MAX);
+            if next_run != StdDuration::MAX {
+                info!("Next run in {:?}", next_run);
+            } else {
+                info!("Waiting for job update notification");
+            }
             tokio::select! {
                 biased;
                 _ = ctrl_c() => {
@@ -68,6 +73,7 @@ impl JobWorker {
     }
 
     async fn load_jobs(&mut self) -> WEResult<()> {
+        info!("Requesting new job queue");
         let jobs = self.service.read_queued().await?;
         self.jobs.clear();
         self.next_job = jobs.get(0).map(|j| j.job_id).unwrap_or(0);
@@ -95,6 +101,7 @@ impl JobWorker {
         let Ok(job_id) = payload.parse::<i64>() else {
             return Err(WEError::PayloadParseError(payload.to_owned()))
         };
+        info!("Received notifcation of \"{}\"", payload);
         Ok(NotificationAction::CompleteJob(job_id))
     }
 
@@ -109,8 +116,8 @@ impl JobWorker {
                     self.complete_job(job_id).await?;
                     self.load_jobs().await?;
                 }
-            }
-            Err(error) => return Err(error)
+            },
+            Err(error) => return Err(error),
         }
         Ok(())
     }
@@ -119,6 +126,7 @@ impl JobWorker {
         let Some(job) = self.jobs.get(&self.next_job) else {
             return Ok(())
         };
+        info!("Starting new job run for job_id = {}", job.job_id);
         if job.next_run > Utc::now().naive_utc() {
             return Err(WEError::JobNotReady);
         }
@@ -133,6 +141,7 @@ impl JobWorker {
         let Some(Job { maintainer, .. }) = self.service.read_one(job_id).await? else {
             return Err(WEError::Generic(format!("Could not find a job in the database for job_id = {}", job_id)))
         };
+        info!("Completing run for job_id = {}", job.job_id);
         let Err(WEError::Generic(error)) = self.service.complete_job(job.job_id).await else {
             return Ok(())
         };
@@ -141,6 +150,7 @@ impl JobWorker {
     }
 
     async fn send_error_email(&self, maintainer: String, message: String) -> WEResult<()> {
+        warn!("Sending error email to {} with message\n{}", maintainer, message);
         let username = env!("CLIPPY_USERNAME");
         let email = Message::builder()
             .from(format!("Clippy <{}>", username).parse()?)
