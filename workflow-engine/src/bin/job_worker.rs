@@ -3,7 +3,7 @@ use workflow_engine::{jobs_service, JobWorker, Result as WEResult};
 
 #[tokio::main]
 async fn main() -> WEResult<()> {
-    log4rs::init_file("job_worker_log4rs.yml", Default::default()).unwrap();
+    log4rs::init_file("workflow-engine/job_worker_log.yml", Default::default()).unwrap();
     
     info!("Initializing Worker");
     let jobs_service = jobs_service().await?;
