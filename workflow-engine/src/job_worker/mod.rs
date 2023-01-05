@@ -124,6 +124,7 @@ impl JobWorker {
 
     async fn run_next_job(&self) -> WEResult<()> {
         let Some(job) = self.jobs.get(&self.next_job) else {
+            warn!("Attempted to run a job that is not in the job queue. Job_id = {}", self.next_job);
             return Ok(())
         };
         info!("Starting new job run for job_id = {}", job.job_id);
@@ -136,6 +137,7 @@ impl JobWorker {
 
     async fn complete_job(&self, job_id: i64) -> WEResult<()> {
         let Some(job) = self.jobs.get(&job_id) else {
+            warn!("Received a message to complete a job that is not in the job queue. Job_id = {}", job_id);
             return Ok(())
         };
         let Some(Job { maintainer, .. }) = self.service.read_one(job_id).await? else {
