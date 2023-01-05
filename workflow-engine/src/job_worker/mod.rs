@@ -5,7 +5,7 @@ use lettre::{
     transport::smtp::authentication::Credentials, AsyncSmtpTransport, AsyncTransport, Message,
     Tokio1Executor,
 };
-use log::{info, error, warn};
+use log::{info, warn};
 use sqlx::postgres::PgNotification;
 use tokio::{
     signal::ctrl_c,
