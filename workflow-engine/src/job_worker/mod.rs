@@ -150,7 +150,10 @@ impl JobWorker {
     }
 
     async fn send_error_email(&self, maintainer: String, message: String) -> WEResult<()> {
-        warn!("Sending error email to {} with message\n{}", maintainer, message);
+        warn!(
+            "Sending error email to {} with message\n{}",
+            maintainer, message
+        );
         let username = env!("CLIPPY_USERNAME");
         let email = Message::builder()
             .from(format!("Clippy <{}>", username).parse()?)
