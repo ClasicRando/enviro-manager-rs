@@ -1,3 +1,4 @@
+mod tasks;
 mod utilities;
 
 use rocket::{routes, Build, Config, Rocket};
@@ -26,6 +27,14 @@ pub async fn build_api() -> WEResult<Rocket<Build>> {
         .manage(workflow_runs_service)
         .manage(workflows_service)
         .configure(config)
-        .mount("/api/v1/", routes![]);
+        .mount(
+            "/api/v1/",
+            routes![
+                tasks::tasks,
+                tasks::task,
+                tasks::create_task_json,
+                tasks::create_task_msgpack,
+            ],
+        );
     Ok(build)
 }
