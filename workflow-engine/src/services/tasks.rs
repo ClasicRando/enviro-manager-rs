@@ -33,7 +33,7 @@ pub struct TaskRequest {
     url: String,
 }
 
-struct TasksService {
+pub struct TasksService {
     pool: &'static PgPool,
 }
 

@@ -57,7 +57,7 @@ pub struct Workflow {
     tasks: Vec<WorkflowTask>,
 }
 
-struct WorkflowsService {
+pub struct WorkflowsService {
     pool: &'static PgPool,
 }
 
