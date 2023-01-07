@@ -44,7 +44,7 @@ pub async fn cancel_executor(
         Ok(Some(executor)) => ApiResponse::success(executor, f),
         Ok(None) => ApiResponse::failure(
             format!(
-                "Error while trying to shutdown executor_id = {}",
+                "Error while trying to cancel executor_id = {}",
                 executor_id
             ),
             f,
