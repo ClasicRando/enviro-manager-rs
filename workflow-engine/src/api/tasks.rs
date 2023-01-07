@@ -10,8 +10,8 @@ use crate::services::tasks::{Task, TaskRequest, TasksService};
 
 #[get("/tasks?<f>")]
 pub async fn tasks(
-    service: &State<TasksService>,
     f: ApiResponse<FormatType>,
+    service: &State<TasksService>,
 ) -> ApiResponse<Vec<Task>> {
     match service.read_many().await {
         Ok(tasks) => ApiResponse::success(tasks, f),
