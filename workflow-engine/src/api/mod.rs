@@ -1,3 +1,4 @@
+mod executors;
 mod tasks;
 mod utilities;
 mod workflows;
@@ -35,6 +36,15 @@ pub async fn build_api() -> WEResult<Rocket<Build>> {
                 tasks::task,
                 tasks::create_task_json,
                 tasks::create_task_msgpack,
+                workflows::workflows,
+                workflows::workflow,
+                workflows::create_workflow_json,
+                workflows::create_workflow_msgpack,
+                workflows::deprecate_workflow_json,
+                workflows::deprecate_workflow_msgpack,
+                executors::active_executors,
+                executors::shutdown_executor,
+                executors::cancel_executor,
             ],
         );
     Ok(build)
