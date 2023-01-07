@@ -68,18 +68,14 @@ pub async fn create_tasks_service() -> WEResult<TasksService> {
     Ok(TasksService::new(pool))
 }
 
-
 pub async fn tasks_service() -> WEResult<&'static TasksService> {
-    TASKS_SERVICE
-        .get_or_try_init(create_tasks_service())
-        .await
+    TASKS_SERVICE.get_or_try_init(create_tasks_service()).await
 }
 
 pub async fn create_workflows_service() -> WEResult<WorkflowsService> {
     let pool = we_db_pool().await?;
     Ok(WorkflowsService::new(pool))
 }
-
 
 pub async fn workflows_service() -> WEResult<&'static WorkflowsService> {
     WORKFLOWS_SERVICE
