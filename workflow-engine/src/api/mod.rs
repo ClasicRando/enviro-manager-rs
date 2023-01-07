@@ -1,6 +1,7 @@
 mod executors;
 mod tasks;
 mod utilities;
+mod workflow_runs;
 mod workflows;
 
 use rocket::{routes, Build, Config, Rocket};
@@ -45,6 +46,11 @@ pub async fn build_api() -> WEResult<Rocket<Build>> {
                 executors::active_executors,
                 executors::shutdown_executor,
                 executors::cancel_executor,
+                workflow_runs::workflow_runs,
+                workflow_runs::init_workflow_run,
+                workflow_runs::cancel_workflow_run,
+                workflow_runs::schedule_workflow_run,
+                workflow_runs::restart_workflow_run,
             ],
         );
     Ok(build)
