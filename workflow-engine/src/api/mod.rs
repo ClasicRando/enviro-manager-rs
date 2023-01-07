@@ -1,5 +1,6 @@
 mod tasks;
 mod utilities;
+mod workflows;
 
 use rocket::{routes, Build, Config, Rocket};
 
