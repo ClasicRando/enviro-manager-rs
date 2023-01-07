@@ -105,7 +105,7 @@ impl WorkflowsService {
         Ok(result)
     }
 
-    pub async fn deprecate(&self, request: WorkflowDeprecationRequest) -> WEResult<()> {
+    pub async fn deprecate(&self, request: WorkflowDeprecationRequest) -> WEResult<i64> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call deprecate_workflow($1,$2)")
             .bind(request.workflow_id)
@@ -113,6 +113,6 @@ impl WorkflowsService {
             .execute(&mut transaction)
             .await;
         finish_transaction(transaction, result).await?;
-        Ok(())
+        Ok(request.workflow_id)
     }
 }
