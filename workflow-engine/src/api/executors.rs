@@ -2,7 +2,7 @@ use rocket::{get, patch, State};
 
 use super::utilities::{ApiResponse, FormatType};
 
-use crate::services::executors::{Executor, ExecutorsService, ExecutorId};
+use crate::services::executors::{Executor, ExecutorId, ExecutorsService};
 
 #[get("/executors?<f>")]
 pub async fn active_executors(
@@ -43,10 +43,7 @@ pub async fn cancel_executor(
     match service.cancel(&executor_id).await {
         Ok(Some(executor)) => ApiResponse::success(executor, f),
         Ok(None) => ApiResponse::failure(
-            format!(
-                "Error while trying to cancel executor_id = {}",
-                executor_id
-            ),
+            format!("Error while trying to cancel executor_id = {}", executor_id),
             f,
         ),
         Err(error) => ApiResponse::error(error, f),

@@ -97,11 +97,15 @@ impl<'r> FromFormField<'r> for ApiResponse<FormatType> {
     fn from_value(field: ValueField<'r>) -> form::Result<'r, Self> {
         match field.value {
             "json" => Ok(ApiResponse::Json(Json(Response::success(FormatType)))),
-            _ => Ok(ApiResponse::MessagePack(MsgPack(Response::success(FormatType)))),
+            _ => Ok(ApiResponse::MessagePack(MsgPack(Response::success(
+                FormatType,
+            )))),
         }
     }
 
     fn default() -> Option<Self> {
-        Some(ApiResponse::MessagePack(MsgPack(Response::success(FormatType))))
+        Some(ApiResponse::MessagePack(MsgPack(Response::success(
+            FormatType,
+        ))))
     }
 }

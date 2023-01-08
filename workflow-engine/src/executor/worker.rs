@@ -2,7 +2,10 @@ use log::{error, info};
 
 use crate::{
     error::Result as WEResult,
-    services::{task_queue::TaskQueueService, workflow_runs::{WorkflowRunsService, WorkflowRunId}},
+    services::{
+        task_queue::TaskQueueService,
+        workflow_runs::{WorkflowRunId, WorkflowRunsService},
+    },
 };
 
 pub struct WorkflowRunWorker {

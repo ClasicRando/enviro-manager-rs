@@ -65,7 +65,7 @@ impl<'e> Iterator for OrderIter<'e> {
             if entry.dependencies_met(&self.completed) {
                 self.returned.insert(i);
                 self.completed.insert(entry.name.clone());
-                return Some(entry)
+                return Some(entry);
             }
         }
         if self.returned.len() != self.entries.len() {

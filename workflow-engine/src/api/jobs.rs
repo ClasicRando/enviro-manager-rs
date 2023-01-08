@@ -7,7 +7,7 @@ use rocket::{
 
 use super::utilities::{ApiResponse, FormatType};
 
-use crate::services::jobs::{Job, JobRequest, JobsService, JobId};
+use crate::services::jobs::{Job, JobId, JobRequest, JobsService};
 
 #[get("/cron-jobs?<f>")]
 pub async fn jobs(

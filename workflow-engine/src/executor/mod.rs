@@ -12,7 +12,7 @@ use worker::WorkflowRunWorker;
 use crate::{
     error::Result as WEResult,
     services::{
-        executors::{ExecutorStatus, ExecutorsService, ExecutorId},
+        executors::{ExecutorId, ExecutorStatus, ExecutorsService},
         task_queue::TaskQueueService,
         workflow_runs::{WorkflowRunStatus, WorkflowRunsService},
     },
@@ -68,8 +68,10 @@ impl Executor {
             .executor_service
             .status_listener(&self.executor_id)
             .await?;
-        let mut workflow_run_scheduled_listener =
-            self.wr_service.scheduled_listener(&self.executor_id).await?;
+        let mut workflow_run_scheduled_listener = self
+            .wr_service
+            .scheduled_listener(&self.executor_id)
+            .await?;
         let mut workflow_run_cancel_listener =
             self.wr_service.cancel_listener(&self.executor_id).await?;
         loop {

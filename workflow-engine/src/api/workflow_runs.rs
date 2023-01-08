@@ -2,7 +2,7 @@ use rocket::{get, patch, post, put, State};
 
 use super::utilities::{ApiResponse, FormatType};
 
-use crate::services::workflow_runs::{WorkflowRun, WorkflowRunsService, WorkflowRunId};
+use crate::services::workflow_runs::{WorkflowRun, WorkflowRunId, WorkflowRunsService};
 
 #[get("/workflow_runs/<workflow_run_id>?<f>")]
 pub async fn workflow_runs(
