@@ -172,13 +172,13 @@ impl Executor {
         tokio::spawn(async move {
             let worker = WorkflowRunWorker::new(&workflow_run_id, wr_service, tq_service);
             let worker_result = worker.run().await;
-            match worker_result {
-                Ok(_) => (workflow_run_id, None),
-                Err(error) => {
-                    error!("WE Error\n{:?}", error);
-                    (workflow_run_id, Some(error))
-                }
+
+            let mut err = None;
+            if let Err(error) = worker_result {
+                error!("WE Error\n{:?}", error);
+                err = Some(error);
             }
+            (workflow_run_id, err)
         })
     }
 
