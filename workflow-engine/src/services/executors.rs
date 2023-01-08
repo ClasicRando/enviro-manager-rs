@@ -115,12 +115,12 @@ impl ExecutorsService {
         executor_id: i64,
         mut transaction: Transaction<'_, Postgres>,
     ) -> WEResult<Option<i64>> {
-        sqlx::query("call start_workflow_run($1, $2)")
+        let result = sqlx::query("call start_workflow_run($1, $2)")
             .bind(workflow_run_id)
             .bind(executor_id)
             .execute(&mut transaction)
-            .await?;
-        transaction.commit().await?;
+            .await;
+        finish_transaction(transaction, result).await?;
         Ok(Some(workflow_run_id))
     }
 
@@ -129,11 +129,11 @@ impl ExecutorsService {
         workflow_run_id: i64,
         mut transaction: Transaction<'_, Postgres>,
     ) -> WEResult<Option<i64>> {
-        sqlx::query("call complete_workflow_run($1)")
+        let result = sqlx::query("call complete_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&mut transaction)
-            .await?;
-        transaction.commit().await?;
+            .await;
+        finish_transaction(transaction, result).await?;
         Ok(None)
     }
 
