@@ -15,7 +15,7 @@ use sqlx::{
 use super::workflow_runs::WorkflowRunId;
 
 use crate::{
-    database::finish_transaction,
+    database::{finish_transaction, rollback_transaction},
     error::{Error as WEError, Result as WEResult},
 };
 
@@ -194,13 +194,7 @@ impl TaskQueueService {
         match result {
             Ok(Some(record)) => Ok(Some((record, transaction))),
             Ok(None) => Ok(None),
-            Err(error) => match transaction.rollback().await {
-                Ok(_) => Err(WEError::Sql(error)),
-                Err(t_error) => Err(WEError::RollbackError {
-                    orig: error,
-                    new: t_error,
-                }),
-            },
+            Err(error) => rollback_transaction(error, transaction).await,
         }
     }
 
