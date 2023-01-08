@@ -116,15 +116,16 @@ impl JobWorker {
         &mut self,
         notification: Result<PgNotification, sqlx::Error>,
     ) -> WEResult<()> {
-        match self.parse_notification(notification) {
-            Ok(action) => match action {
-                NotificationAction::LoadJobs => self.load_jobs().await?,
-                NotificationAction::CompleteJob(job_id) => {
-                    self.complete_job(&job_id).await?;
-                    self.load_jobs().await?;
-                }
-            },
+        let action = match self.parse_notification(notification) {
+            Ok(action) => action,
             Err(error) => return Err(error),
+        };
+        match action {
+            NotificationAction::LoadJobs => self.load_jobs().await?,
+            NotificationAction::CompleteJob(job_id) => {
+                self.complete_job(&job_id).await?;
+                self.load_jobs().await?;
+            }
         }
         Ok(())
     }
