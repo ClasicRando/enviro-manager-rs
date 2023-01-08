@@ -198,47 +198,56 @@ impl TaskQueueService {
         }
     }
 
-    pub async fn run_task(&self, record: &TaskQueueRecord) -> WEResult<(bool, Option<String>)> {
+    async fn process_response_message(
+        &self,
+        message: &[u8],
+        workflow_run_id: &WorkflowRunId,
+        record: &TaskQueueRecord,
+    ) -> WEResult<Option<(bool, Option<String>)>> {
+        match rmp_serde::from_slice(message)? {
+            TaskResponse::Progress(progress) => {
+                self.set_task_progress(workflow_run_id, record.task_order, progress)
+                    .await?;
+            }
+            TaskResponse::Rule(rule) => {
+                self.append_task_rule(workflow_run_id, record.task_order, rule)
+                    .await?
+            }
+            TaskResponse::Done { success, message } => return Ok(Some((success, message))),
+        }
+        Ok(None)
+    }
+
+    async fn remote_task_run(&self, record: &TaskQueueRecord) -> WEResult<(bool, Option<String>)> {
         let workflow_run_id = record.workflow_run_id.into();
+        let client = Client::new();
+        let buffer = rmp_serde::to_vec(record)?;
+        let mut stream = client
+            .request(Method::POST, &record.url)
+            .body(buffer)
+            .send()
+            .await?
+            .bytes_stream();
+        while let Some(chunk) = stream.next().await {
+            let message = match chunk {
+                Ok(message) => message,
+                Err(error) => return Err(error.into()),
+            };
+            let message = self
+                .process_response_message(&message, &workflow_run_id, record)
+                .await?;
+            if let Some(done_message) = message {
+                return Ok(done_message);
+            }
+        }
+        Err(WEError::ExitedTask)
+    }
+
+    pub async fn run_task(&self, record: &TaskQueueRecord) -> WEResult<(bool, Option<String>)> {
         let result = self
             .pool
             .close_event()
-            .do_until(async {
-                let client = Client::new();
-                let buffer = rmp_serde::to_vec(record)?;
-                let mut stream = client
-                    .request(Method::POST, &record.url)
-                    .body(buffer)
-                    .send()
-                    .await?
-                    .bytes_stream();
-                while let Some(chunk) = stream.next().await {
-                    match chunk {
-                        Ok(message) => {
-                            let message: TaskResponse = rmp_serde::from_slice(&message)?;
-                            match message {
-                                TaskResponse::Progress(progress) => {
-                                    self.set_task_progress(
-                                        &workflow_run_id,
-                                        record.task_order,
-                                        progress,
-                                    )
-                                    .await?
-                                }
-                                TaskResponse::Rule(rule) => {
-                                    self.append_task_rule(&workflow_run_id, record.task_order, rule)
-                                        .await?
-                                }
-                                TaskResponse::Done { success, message } => {
-                                    return Ok((success, message))
-                                }
-                            }
-                        }
-                        Err(error) => return Err(error.into()),
-                    }
-                }
-                Err(WEError::ExitedTask)
-            })
+            .do_until(self.remote_task_run(record))
             .await?;
         result
     }
