@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use log::error;
 use serde::Serialize;
-use sqlx::{types::ipnetwork::IpNetwork, PgPool, postgres::PgListener};
+use sqlx::{postgres::PgListener, types::ipnetwork::IpNetwork, PgPool, Postgres, Transaction};
 
 use crate::{
     database::finish_transaction,
@@ -109,6 +109,60 @@ impl ExecutorsService {
         Ok(result)
     }
 
+    async fn start_workflow_run(
+        &self,
+        workflow_run_id: i64,
+        executor_id: i64,
+        mut transaction: Transaction<'_, Postgres>,
+    ) -> WEResult<Option<i64>> {
+        sqlx::query("call start_workflow_run($1, $2)")
+            .bind(workflow_run_id)
+            .bind(executor_id)
+            .execute(&mut transaction)
+            .await?;
+        transaction.commit().await?;
+        Ok(Some(workflow_run_id))
+    }
+
+    async fn complete_workflow_run(
+        &self,
+        workflow_run_id: i64,
+        mut transaction: Transaction<'_, Postgres>,
+    ) -> WEResult<Option<i64>> {
+        sqlx::query("call complete_workflow_run($1)")
+            .bind(workflow_run_id)
+            .execute(&mut transaction)
+            .await?;
+        transaction.commit().await?;
+        Ok(None)
+    }
+
+    async fn process_next_workflow_run(
+        &self,
+        executor_id: i64,
+        fetch_result: Result<Option<(i64, bool)>, sqlx::Error>,
+        transaction: Transaction<'_, Postgres>,
+    ) -> WEResult<Option<i64>> {
+        match fetch_result {
+            Ok(Some((workflow_run_id, true))) => {
+                self.start_workflow_run(workflow_run_id, executor_id, transaction)
+                    .await
+            }
+            Ok(Some((workflow_run_id, false))) => {
+                self.complete_workflow_run(workflow_run_id, transaction)
+                    .await
+            }
+            Ok(None) => {
+                transaction.commit().await?;
+                Ok(None)
+            }
+            Err(error) => {
+                transaction.rollback().await?;
+                Err(error.into())
+            }
+        }
+    }
+
     pub async fn next_workflow_run(&self, executor_id: i64) -> WEResult<Option<i64>> {
         let mut transaction = self.pool.begin().await?;
         let fetch_result = sqlx::query_as(
@@ -119,29 +173,9 @@ impl ExecutorsService {
         .bind(executor_id)
         .fetch_optional(&mut transaction)
         .await;
-        let workflow_run_id = match fetch_result {
-            Ok(Some((workflow_run_id, true))) => {
-                sqlx::query("call start_workflow_run($1, $2)")
-                    .bind(workflow_run_id)
-                    .bind(executor_id)
-                    .execute(&mut transaction)
-                    .await?;
-                Some(workflow_run_id)
-            }
-            Ok(Some((workflow_run_id, false))) => {
-                sqlx::query("call complete_workflow_run($1)")
-                    .bind(workflow_run_id)
-                    .execute(&mut transaction)
-                    .await?;
-                None
-            }
-            Ok(None) => None,
-            Err(error) => {
-                transaction.rollback().await?;
-                return Err(error.into());
-            }
-        };
-        transaction.commit().await?;
+        let workflow_run_id = self
+            .process_next_workflow_run(executor_id, fetch_result, transaction)
+            .await?;
         Ok(workflow_run_id)
     }
 
