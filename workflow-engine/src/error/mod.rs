@@ -2,112 +2,40 @@ use chrono::NaiveDateTime;
 use lettre::{
     address::AddressError, error::Error as EmailError, transport::smtp::Error as StmpError,
 };
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum Error {
-    Sql(sqlx::Error),
+    #[error("Generic SQL error\n{0}")]
+    Sql(#[from] sqlx::Error),
+    #[error("SQL Error during transaction commit\n{0}")]
     CommitError(sqlx::Error),
+    #[error("SQL Error during transaction rollback\n{orig}\nOriginal Error\n{new}")]
     RollbackError { orig: sqlx::Error, new: sqlx::Error },
+    #[error("Job attempted to start before next run")]
     JobNotReady,
+    #[error("Error during executor initialization. {0}. Exiting executor")]
     ExecutorInit(&'static str),
+    #[error("Exited remote task run unexpectedly")]
     ExitedTask,
-    RmpEncode(rmp_serde::encode::Error),
-    RmpDecode(rmp_serde::decode::Error),
-    Reqwest(reqwest::Error),
+    #[error("MessagePack encode error\n{0}")]
+    RmpEncode(#[from] rmp_serde::encode::Error),
+    #[error("MessagePack decode error\n{0}")]
+    RmpDecode(#[from] rmp_serde::decode::Error),
+    #[error("Reqwest Error\n{0}")]
+    Reqwest(#[from] reqwest::Error),
+    #[error("Generic error\n{0}")]
     Generic(String),
+    #[error("Duplicate Job Entry\nId: {0}\nNext Runs:{1:?}")]
     DuplicateJobId(i64, [NaiveDateTime; 2]),
+    #[error("Notification Payload Parse Error\nNotification: `{0}`")]
     PayloadParseError(String),
-    Lettre(EmailError),
-    AddressParseError(AddressError),
-    SmtpError(StmpError),
+    #[error("Reqwest Error\n{0}")]
+    Lettre(#[from] EmailError),
+    #[error("Reqwest Error\n{0}")]
+    AddressParseError(#[from] AddressError),
+    #[error("Reqwest Error\n{0}")]
+    SmtpError(#[from] StmpError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
-
-impl From<sqlx::Error> for Error {
-    fn from(error: sqlx::Error) -> Self {
-        Self::Sql(error)
-    }
-}
-
-impl From<rmp_serde::encode::Error> for Error {
-    fn from(error: rmp_serde::encode::Error) -> Self {
-        Self::RmpEncode(error)
-    }
-}
-
-impl From<rmp_serde::decode::Error> for Error {
-    fn from(error: rmp_serde::decode::Error) -> Self {
-        Self::RmpDecode(error)
-    }
-}
-
-impl From<reqwest::Error> for Error {
-    fn from(error: reqwest::Error) -> Self {
-        Self::Reqwest(error)
-    }
-}
-
-impl From<String> for Error {
-    fn from(error: String) -> Self {
-        Self::Generic(error)
-    }
-}
-
-impl From<EmailError> for Error {
-    fn from(error: EmailError) -> Self {
-        Self::Lettre(error)
-    }
-}
-
-impl From<AddressError> for Error {
-    fn from(error: AddressError) -> Self {
-        Self::AddressParseError(error)
-    }
-}
-
-impl From<StmpError> for Error {
-    fn from(error: StmpError) -> Self {
-        Self::SmtpError(error)
-    }
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Sql(error) => write!(f, "SQL Error\n{}", error),
-            Self::CommitError(error) => write!(f, "SQL Error during transaction commit\n{}", error),
-            Self::RollbackError { orig, new } => write!(
-                f,
-                "SQL Error during transaction rollback\n{}\nOriginal Error\n{}",
-                new, orig
-            ),
-            Self::JobNotReady => write!(f, "Attempted to execute a job that is not ready yet"),
-            Self::ExecutorInit(message) => write!(
-                f,
-                "Error during executor initialization. {}. Exiting executor",
-                message
-            ),
-            Self::ExitedTask => write!(f, "Exited remote task run unexpectedly"),
-            Self::RmpEncode(error) => write!(f, "Encountered rmp encode error\n{}", error),
-            Self::RmpDecode(error) => write!(f, "Encountered rmp decode error\n{}", error),
-            Self::Reqwest(error) => write!(f, "Reqwest Error\n{}", error),
-            Self::Generic(error) => write!(f, "Generic error\n{}", error),
-            Self::DuplicateJobId(id, next_runs) => write!(
-                f,
-                "Duplicate Job Entry\nId: {}\nNext Runs:{:?}",
-                id, next_runs
-            ),
-            Self::PayloadParseError(payload) => write!(
-                f,
-                "Notification Payload Parse Error\nNotification: \"{}\"",
-                payload
-            ),
-            Self::Lettre(error) => write!(f, "Email Error\n{}", error),
-            Self::AddressParseError(error) => write!(f, "Address Parse Error\n{}", error),
-            Self::SmtpError(error) => write!(f, "SMTP Error\n{}", error),
-        }
-    }
-}
-
-impl std::error::Error for Error {}
