@@ -43,8 +43,8 @@ impl Executor {
         })
     }
 
-    pub fn executor_id(&self) -> ExecutorId {
-        self.executor_id.clone()
+    pub fn executor_id(&self) -> &ExecutorId {
+        &self.executor_id
     }
 
     fn add_workflow_run_handle(
