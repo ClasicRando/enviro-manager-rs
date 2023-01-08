@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use log::{error, info, warn};
 use sqlx::{postgres::PgNotification, Error as SqlError};
-use tokio::signal::ctrl_c;
+use tokio::{signal::ctrl_c, task::JoinError};
 use utilities::{ExecutorNotificationSignal, WorkflowRunWorkerResult};
 use worker::WorkflowRunWorker;
 
@@ -116,7 +116,7 @@ impl Executor {
                     workflow_run_id?
                 }
             };
-            
+
             if let Some((workflow_run_id, handle)) = workflow_run {
                 self.add_workflow_run_handle(workflow_run_id, handle);
                 continue;
@@ -182,6 +182,18 @@ impl Executor {
         })
     }
 
+    fn handle_join_error(&self, workflow_run_id: &WorkflowRunId, error: JoinError) {
+        if error.is_cancelled() {
+            warn!("Workflow run = {} canceled\n{}", workflow_run_id, error);
+            return;
+        }
+        if error.is_panic() {
+            error!("Workflow run = {} panicked!\n{}", workflow_run_id, error);
+            return;
+        }
+        info!("Workflow run = {} completed\n{}", workflow_run_id, error)
+    }
+
     async fn handle_workflow_run_cancel_notification(
         &mut self,
         result: Result<PgNotification, SqlError>,
@@ -197,22 +209,18 @@ impl Executor {
             }
         };
         let workflow_run_id = notification.payload().parse()?;
-        let workflow_run_handle = self.wr_handles.remove(&workflow_run_id);
-        if let Some(handle) = workflow_run_handle {
-            if !handle.is_finished() {
-                handle.abort();
-            }
-            if let Err(error) = handle.await {
-                if error.is_cancelled() {
-                    warn!("Workflow run = {} canceled\n{}", workflow_run_id, error)
-                } else if error.is_panic() {
-                    error!("Workflow run = {} panicked!\n{}", workflow_run_id, error)
-                } else {
-                    info!("Workflow run = {} completed\n{}", workflow_run_id, error)
-                }
-            }
-            self.wr_service.cancel(&workflow_run_id).await?;
+        let Some(handle) = self.wr_handles.remove(&workflow_run_id) else {
+            return Ok(())
+        };
+
+        if !handle.is_finished() {
+            handle.abort();
         }
+
+        if let Err(error) = handle.await {
+            self.handle_join_error(&workflow_run_id, error)
+        }
+        self.wr_service.cancel(&workflow_run_id).await?;
         Ok(())
     }
 
