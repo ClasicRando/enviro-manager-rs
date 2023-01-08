@@ -38,11 +38,12 @@ impl WorkflowRunWorker {
     pub async fn run(self) -> WEResult<()> {
         loop {
             let Some((next_task, transaction)) = self.next_task().await? else {
-                        self.wr_service.complete(&self.workflow_run_id).await?;
-                        info!("No available task to run. Exiting worker");
-                        break;
-                };
+                self.wr_service.complete(&self.workflow_run_id).await?;
+                info!("No available task to run. Exiting worker");
+                break;
+            };
             info!("Running task, {:?}", next_task);
+            self.tq_service.start_task_run(&next_task, transaction).await?;
             match self.tq_service.run_task(&next_task).await {
                 Ok((is_paused, output)) => {
                     self.tq_service
