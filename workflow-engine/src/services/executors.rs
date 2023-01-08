@@ -184,7 +184,10 @@ impl ExecutorsService {
         }
     }
 
-    pub async fn next_workflow_run(&self, executor_id: &ExecutorId) -> WEResult<Option<WorkflowRunId>> {
+    pub async fn next_workflow_run(
+        &self,
+        executor_id: &ExecutorId,
+    ) -> WEResult<Option<WorkflowRunId>> {
         let mut transaction = self.pool.begin().await?;
         let fetch_result = sqlx::query_as(
             r#"

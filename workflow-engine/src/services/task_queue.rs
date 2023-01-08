@@ -252,7 +252,11 @@ impl TaskQueueService {
         result
     }
 
-    pub async fn start_task_run(&self, record: &TaskQueueRecord, mut transaction: Transaction<'_, Postgres>) -> WEResult<()> {
+    pub async fn start_task_run(
+        &self,
+        record: &TaskQueueRecord,
+        mut transaction: Transaction<'_, Postgres>,
+    ) -> WEResult<()> {
         let result = sqlx::query("call start_task_run($1, $2)")
             .bind(record.workflow_run_id)
             .bind(record.task_order)

@@ -43,7 +43,9 @@ impl<'w> WorkflowRunWorker<'w> {
                 break;
             };
             info!("Running task, {:?}", next_task);
-            self.tq_service.start_task_run(&next_task, transaction).await?;
+            self.tq_service
+                .start_task_run(&next_task, transaction)
+                .await?;
             match self.tq_service.run_task(&next_task).await {
                 Ok((is_paused, output)) => {
                     self.tq_service
