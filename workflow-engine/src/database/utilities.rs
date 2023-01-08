@@ -39,18 +39,30 @@ pub async fn finish_transaction<T>(
     result: Result<T, sqlx::Error>,
 ) -> WEResult<T> {
     match result {
-        Ok(inner) => {
-            if let Err(error) = transaction.commit().await {
-                return Err(WEError::CommitError(error));
-            }
-            Ok(inner)
-        }
-        Err(error) => match transaction.rollback().await {
-            Ok(_) => Err(WEError::Sql(error)),
-            Err(t_error) => Err(WEError::RollbackError {
-                orig: error,
-                new: t_error,
-            }),
-        },
+        Ok(inner) => commit_transaction(inner, transaction).await,
+        Err(error) => rollback_transaction(error, transaction).await,
+    }
+}
+
+pub async fn commit_transaction<T>(
+    inner: T,
+    transaction: Transaction<'_, Postgres>,
+) -> WEResult<T> {
+    if let Err(error) = transaction.commit().await {
+        return Err(WEError::CommitError(error));
+    }
+    Ok(inner)
+}
+
+pub async fn rollback_transaction<T>(
+    error: sqlx::Error,
+    transaction: Transaction<'_, Postgres>,
+) -> WEResult<T> {
+    match transaction.rollback().await {
+        Ok(_) => Err(WEError::Sql(error)),
+        Err(t_error) => Err(WEError::RollbackError {
+            orig: error,
+            new: t_error,
+        }),
     }
 }
