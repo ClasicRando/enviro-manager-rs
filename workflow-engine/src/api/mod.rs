@@ -1,4 +1,5 @@
 mod executors;
+mod jobs;
 mod task_queue;
 mod tasks;
 mod utilities;
@@ -56,6 +57,10 @@ pub async fn build_api() -> WEResult<Rocket<Build>> {
                 task_queue::task_queue_retry_msgpack,
                 task_queue::task_queue_complete_json,
                 task_queue::task_queue_complete_msgpack,
+                jobs::jobs,
+                jobs::job,
+                jobs::create_job_json,
+                jobs::create_job_msgpack,
             ],
         );
     Ok(build)
