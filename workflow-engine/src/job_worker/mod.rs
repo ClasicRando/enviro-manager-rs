@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::Utc;
+use chrono::{NaiveDateTime, Utc};
 use lettre::{
     transport::smtp::authentication::Credentials, AsyncSmtpTransport, AsyncTransport, Message,
     Tokio1Executor,
@@ -13,19 +13,19 @@ use tokio::{
 };
 
 use crate::{
-    services::jobs::{Job, JobMin, JobsService},
+    services::jobs::{Job, JobId, JobsService},
     Error as WEError, Result as WEResult,
 };
 
 enum NotificationAction {
     LoadJobs,
-    CompleteJob(i64),
+    CompleteJob(JobId),
 }
 
 pub struct JobWorker {
     service: &'static JobsService,
-    jobs: HashMap<i64, JobMin>,
-    next_job: i64,
+    jobs: HashMap<JobId, NaiveDateTime>,
+    next_job: JobId,
 }
 
 impl JobWorker {
@@ -33,7 +33,7 @@ impl JobWorker {
         Ok(Self {
             service,
             jobs: HashMap::new(),
-            next_job: 0,
+            next_job: 0.into(),
         })
     }
 
@@ -44,8 +44,8 @@ impl JobWorker {
             let next_run = self
                 .jobs
                 .get(&self.next_job)
-                .map(|j| {
-                    let duration = j.next_run.timestamp_millis() - Utc::now().timestamp_millis();
+                .map(|next_run| {
+                    let duration = next_run.timestamp_millis() - Utc::now().timestamp_millis();
                     StdDuration::from_millis(duration.clamp(0, i64::MAX) as u64)
                 })
                 .unwrap_or(StdDuration::MAX);
@@ -76,15 +76,16 @@ impl JobWorker {
         info!("Requesting new job queue");
         let jobs = self.service.read_queued().await?;
         self.jobs.clear();
-        self.next_job = jobs.get(0).map(|j| j.job_id).unwrap_or(0);
+        self.next_job = jobs.get(0).map(|j| j.job_id).unwrap_or(0).into();
         for job in jobs {
-            if let Some(duplicate) = self.jobs.get(&job.job_id) {
+            let job_id = job.job_id.into();
+            if let Some(duplicate) = self.jobs.get(&job_id) {
                 return Err(WEError::DuplicateJobId(
                     job.job_id,
-                    [job.next_run, duplicate.next_run.to_owned()],
+                    [job.next_run, duplicate.to_owned()],
                 ));
             }
-            self.jobs.insert(job.job_id, job);
+            self.jobs.insert(job_id, job.next_run);
         }
         Ok(())
     }
@@ -102,7 +103,7 @@ impl JobWorker {
             return Err(WEError::PayloadParseError(payload.to_owned()))
         };
         info!("Received notifcation of \"{}\"", payload);
-        Ok(NotificationAction::CompleteJob(job_id))
+        Ok(NotificationAction::CompleteJob(job_id.into()))
     }
 
     async fn handle_notification(
@@ -113,7 +114,7 @@ impl JobWorker {
             Ok(action) => match action {
                 NotificationAction::LoadJobs => self.load_jobs().await?,
                 NotificationAction::CompleteJob(job_id) => {
-                    self.complete_job(job_id).await?;
+                    self.complete_job(&job_id).await?;
                     self.load_jobs().await?;
                 }
             },
@@ -123,28 +124,31 @@ impl JobWorker {
     }
 
     async fn run_next_job(&self) -> WEResult<()> {
-        let Some(job) = self.jobs.get(&self.next_job) else {
+        let Some(next_run) = self.jobs.get(&self.next_job) else {
             warn!("Attempted to run a job that is not in the job queue. Job_id = {}", self.next_job);
             return Ok(())
         };
-        info!("Starting new job run for job_id = {}", job.job_id);
-        if job.next_run > Utc::now().naive_utc() {
+        info!("Starting new job run for job_id = {}", self.next_job);
+        if next_run > &Utc::now().naive_utc() {
             return Err(WEError::JobNotReady);
         }
-        self.service.run_job(job.job_id).await?;
+        self.service.run_job(&self.next_job).await?;
         Ok(())
     }
 
-    async fn complete_job(&self, job_id: i64) -> WEResult<()> {
-        let Some(job) = self.jobs.get(&job_id) else {
-            warn!("Received a message to complete a job that is not in the job queue. Job_id = {}", job_id);
-            return Ok(())
+    async fn complete_job(&self, job_id: &JobId) -> WEResult<()> {
+        if !self.jobs.contains_key(job_id) {
+            warn!(
+                "Received a message to complete a job that is not in the job queue. Job_id = {}",
+                job_id
+            );
+            return Ok(());
         };
         let Some(Job { maintainer, .. }) = self.service.read_one(job_id).await? else {
             return Err(WEError::Generic(format!("Could not find a job in the database for job_id = {}", job_id)))
         };
-        info!("Completing run for job_id = {}", job.job_id);
-        let Err(WEError::Generic(error)) = self.service.complete_job(job.job_id).await else {
+        info!("Completing run for job_id = {}", job_id);
+        let Err(WEError::Generic(error)) = self.service.complete_job(job_id).await else {
             return Ok(())
         };
         self.send_error_email(maintainer, error).await?;

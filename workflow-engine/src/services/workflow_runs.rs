@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use rocket::request::FromParam;
 use serde::Serialize;
 use serde_json::Value;
 use sqlx::{
@@ -6,14 +7,17 @@ use sqlx::{
     encode::{Encode, IsNull},
     postgres::{
         types::{PgRecordDecoder, PgRecordEncoder},
-        PgArgumentBuffer, PgHasArrayType, PgTypeInfo, PgValueRef, PgListener,
+        PgArgumentBuffer, PgHasArrayType, PgListener, PgTypeInfo, PgValueRef,
     },
     PgPool, Postgres, Type,
 };
 
-use crate::{database::finish_transaction, error::Result as WEResult};
+use crate::{
+    database::finish_transaction,
+    error::{Error as WEError, Result as WEResult},
+};
 
-use super::{task_queue::TaskRule, tasks::TaskStatus};
+use super::{executors::ExecutorId, task_queue::TaskRule, tasks::TaskStatus};
 
 #[derive(sqlx::Type, PartialEq, Eq, Serialize)]
 #[sqlx(type_name = "workflow_run_status")]
@@ -137,6 +141,30 @@ pub struct ExecutorWorkflowRuns {
     pub is_valid: bool,
 }
 
+#[derive(sqlx::Type)]
+#[sqlx(transparent)]
+pub struct WorkflowRunId(i64);
+
+impl From<i64> for WorkflowRunId {
+    fn from(value: i64) -> Self {
+        Self(value)
+    }
+}
+
+impl<'a> FromParam<'a> for WorkflowRunId {
+    type Error = WEError;
+
+    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+        Ok(Self(param.parse::<i64>()?))
+    }
+}
+
+impl std::fmt::Display for WorkflowRunId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 pub struct WorkflowRunsService {
     pool: &'static PgPool,
 }
@@ -152,15 +180,15 @@ impl WorkflowRunsService {
             .bind(workflow_id)
             .fetch_one(&mut transaction)
             .await;
-        let workflow_run_id: i64 = finish_transaction(transaction, result).await?;
-        match self.read_one(workflow_run_id).await {
+        let workflow_run_id: WorkflowRunId = finish_transaction(transaction, result).await?;
+        match self.read_one(&workflow_run_id).await {
             Ok(Some(workflow_run)) => Ok(workflow_run),
             Ok(None) => Err(sqlx::Error::RowNotFound.into()),
             Err(error) => Err(error),
         }
     }
 
-    pub async fn read_one(&self, workflow_run_id: i64) -> WEResult<Option<WorkflowRun>> {
+    pub async fn read_one(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
         let result = sqlx::query_as(
             r#"
             select workflow_run_id, workflow_id, status, executor_id, progress, tasks
@@ -184,7 +212,7 @@ impl WorkflowRunsService {
         Ok(result)
     }
 
-    pub async fn cancel(&self, workflow_run_id: i64) -> WEResult<Option<WorkflowRun>> {
+    pub async fn cancel(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call cancel_workflow_run($1)")
             .bind(workflow_run_id)
@@ -194,7 +222,7 @@ impl WorkflowRunsService {
         self.read_one(workflow_run_id).await
     }
 
-    pub async fn schedule(&self, workflow_run_id: i64) -> WEResult<Option<WorkflowRun>> {
+    pub async fn schedule(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call schedule_workflow_run($1)")
             .bind(workflow_run_id)
@@ -204,7 +232,11 @@ impl WorkflowRunsService {
         self.read_one(workflow_run_id).await
     }
 
-    pub async fn schedule_with_executor(&self, workflow_run_id: i64, executor_id: i64) -> WEResult<Option<WorkflowRun>> {
+    pub async fn schedule_with_executor(
+        &self,
+        workflow_run_id: &WorkflowRunId,
+        executor_id: &ExecutorId,
+    ) -> WEResult<Option<WorkflowRun>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call schedule_workflow_run($1,$2)")
             .bind(workflow_run_id)
@@ -215,7 +247,7 @@ impl WorkflowRunsService {
         self.read_one(workflow_run_id).await
     }
 
-    pub async fn restart(&self, workflow_run_id: i64) -> WEResult<Option<WorkflowRun>> {
+    pub async fn restart(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call restart_workflow_run($1)")
             .bind(workflow_run_id)
@@ -225,7 +257,7 @@ impl WorkflowRunsService {
         self.read_one(workflow_run_id).await
     }
 
-    pub async fn complete(&self, workflow_run_id: i64) -> WEResult<()> {
+    pub async fn complete(&self, workflow_run_id: &WorkflowRunId) -> WEResult<()> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call complete_workflow_run($1)")
             .bind(workflow_run_id)
@@ -235,7 +267,10 @@ impl WorkflowRunsService {
         Ok(())
     }
 
-    pub async fn all_executor_workflows(&self, executor_id: i64) -> WEResult<Vec<ExecutorWorkflowRuns>> {
+    pub async fn all_executor_workflows(
+        &self,
+        executor_id: &ExecutorId,
+    ) -> WEResult<Vec<ExecutorWorkflowRuns>> {
         let result = sqlx::query_as(
             r#"
             select workflow_run_id, status, is_valid
@@ -247,7 +282,10 @@ impl WorkflowRunsService {
         Ok(result)
     }
 
-    pub async fn start_move(&self, workflow_run_id: i64) -> WEResult<Option<WorkflowRun>> {
+    pub async fn start_move(
+        &self,
+        workflow_run_id: &WorkflowRunId,
+    ) -> WEResult<Option<WorkflowRun>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call start_workflow_run_move($1)")
             .bind(workflow_run_id)
@@ -257,7 +295,10 @@ impl WorkflowRunsService {
         self.read_one(workflow_run_id).await
     }
 
-    pub async fn complete_move(&self, workflow_run_id: i64) -> WEResult<Option<WorkflowRun>> {
+    pub async fn complete_move(
+        &self,
+        workflow_run_id: &WorkflowRunId,
+    ) -> WEResult<Option<WorkflowRun>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call complete_workflow_run_move($1)")
             .bind(workflow_run_id)
@@ -267,7 +308,7 @@ impl WorkflowRunsService {
         self.read_one(workflow_run_id).await
     }
 
-    pub async fn scheduled_listener(&self, executor_id: i64) -> WEResult<PgListener> {
+    pub async fn scheduled_listener(&self, executor_id: &ExecutorId) -> WEResult<PgListener> {
         let mut listener = PgListener::connect_with(self.pool).await?;
         listener
             .listen(&format!("wr_scheduled_{}", executor_id))
@@ -275,7 +316,7 @@ impl WorkflowRunsService {
         Ok(listener)
     }
 
-    pub async fn cancel_listener(&self, executor_id: i64) -> WEResult<PgListener> {
+    pub async fn cancel_listener(&self, executor_id: &ExecutorId) -> WEResult<PgListener> {
         let mut listener = PgListener::connect_with(self.pool).await?;
         listener
             .listen(&format!("wr_canceled_{}", executor_id))

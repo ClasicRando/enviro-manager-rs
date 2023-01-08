@@ -6,7 +6,7 @@ use rocket::{
 
 use super::utilities::{ApiResponse, FormatType};
 
-use crate::services::tasks::{Task, TaskRequest, TasksService};
+use crate::services::tasks::{Task, TaskId, TaskRequest, TasksService};
 
 #[get("/tasks?<f>")]
 pub async fn tasks(
@@ -21,11 +21,11 @@ pub async fn tasks(
 
 #[get("/tasks/<task_id>?<f>")]
 pub async fn task(
-    task_id: i64,
+    task_id: TaskId,
     f: ApiResponse<FormatType>,
     service: &State<TasksService>,
 ) -> ApiResponse<Task> {
-    match service.read_one(task_id).await {
+    match service.read_one(&task_id).await {
         Ok(task_option) => match task_option {
             Some(task) => ApiResponse::success(task, f),
             None => ApiResponse::failure(

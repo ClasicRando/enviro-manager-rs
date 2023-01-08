@@ -1,5 +1,6 @@
 use chrono::NaiveDateTime;
 use log::error;
+use rocket::request::FromParam;
 use serde::Serialize;
 use sqlx::{postgres::PgListener, types::ipnetwork::IpNetwork, PgPool, Postgres, Transaction};
 
@@ -41,6 +42,24 @@ pub struct Executor {
     workflow_run_count: Option<i64>,
 }
 
+#[derive(sqlx::Type, Clone)]
+#[sqlx(transparent)]
+pub struct ExecutorId(i64);
+
+impl<'a> FromParam<'a> for ExecutorId {
+    type Error = WEError;
+
+    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+        Ok(Self(param.parse::<i64>()?))
+    }
+}
+
+impl std::fmt::Display for ExecutorId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 pub struct ExecutorsService {
     pool: &'static PgPool,
 }
@@ -50,14 +69,14 @@ impl ExecutorsService {
         Self { pool }
     }
 
-    pub async fn register_executor(&self) -> WEResult<i64> {
+    pub async fn register_executor(&self) -> WEResult<ExecutorId> {
         let executor_id = sqlx::query_scalar("select register_we_executor()")
             .fetch_one(self.pool)
             .await?;
         Ok(executor_id)
     }
 
-    pub async fn read_one(&self, executor_id: i64) -> WEResult<Option<Executor>> {
+    pub async fn read_one(&self, executor_id: &ExecutorId) -> WEResult<Option<Executor>> {
         let result = sqlx::query_as(
             r#"
             select executor_id, pid, username, application_name, client_addr, client_port, exec_start
@@ -71,7 +90,7 @@ impl ExecutorsService {
         Ok(result)
     }
 
-    pub async fn read_status(&self, executor_id: i64) -> WEResult<Option<ExecutorStatus>> {
+    pub async fn read_status(&self, executor_id: &ExecutorId) -> WEResult<Option<ExecutorStatus>> {
         let result = sqlx::query_scalar(
             r#"
             select status
@@ -112,7 +131,7 @@ impl ExecutorsService {
     async fn start_workflow_run(
         &self,
         workflow_run_id: i64,
-        executor_id: i64,
+        executor_id: &ExecutorId,
         mut transaction: Transaction<'_, Postgres>,
     ) -> WEResult<Option<i64>> {
         let result = sqlx::query("call start_workflow_run($1, $2)")
@@ -139,7 +158,7 @@ impl ExecutorsService {
 
     async fn process_next_workflow_run(
         &self,
-        executor_id: i64,
+        executor_id: &ExecutorId,
         fetch_result: Result<Option<(i64, bool)>, sqlx::Error>,
         transaction: Transaction<'_, Postgres>,
     ) -> WEResult<Option<i64>> {
@@ -163,7 +182,7 @@ impl ExecutorsService {
         }
     }
 
-    pub async fn next_workflow_run(&self, executor_id: i64) -> WEResult<Option<i64>> {
+    pub async fn next_workflow_run(&self, executor_id: &ExecutorId) -> WEResult<Option<i64>> {
         let mut transaction = self.pool.begin().await?;
         let fetch_result = sqlx::query_as(
             r#"
@@ -179,7 +198,7 @@ impl ExecutorsService {
         Ok(workflow_run_id)
     }
 
-    pub async fn shutdown(&self, executor_id: i64) -> WEResult<Option<Executor>> {
+    pub async fn shutdown(&self, executor_id: &ExecutorId) -> WEResult<Option<Executor>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call shutdown_executor($1)")
             .bind(executor_id)
@@ -189,7 +208,7 @@ impl ExecutorsService {
         self.read_one(executor_id).await
     }
 
-    pub async fn cancel(&self, executor_id: i64) -> WEResult<Option<Executor>> {
+    pub async fn cancel(&self, executor_id: &ExecutorId) -> WEResult<Option<Executor>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call cancel_executor($1)")
             .bind(executor_id)
@@ -199,7 +218,7 @@ impl ExecutorsService {
         self.read_one(executor_id).await
     }
 
-    pub async fn close(&self, executor_id: i64, is_cancelled: bool) -> WEResult<()> {
+    pub async fn close(&self, executor_id: &ExecutorId, is_cancelled: bool) -> WEResult<()> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call close_we_executor($1,$2)")
             .bind(executor_id)
@@ -210,7 +229,7 @@ impl ExecutorsService {
         Ok(())
     }
 
-    pub async fn post_error(&self, executor_id: i64, error: WEError) -> WEResult<()> {
+    pub async fn post_error(&self, executor_id: &ExecutorId, error: WEError) -> WEResult<()> {
         let message = format!("{}", error);
         let sql_result = sqlx::query("call post_executor_error_message($1,$2)")
             .bind(executor_id)
@@ -234,7 +253,7 @@ impl ExecutorsService {
         Ok(())
     }
 
-    pub async fn status_listener(&self, executor_id: i64) -> WEResult<PgListener> {
+    pub async fn status_listener(&self, executor_id: &ExecutorId) -> WEResult<PgListener> {
         let mut listener = PgListener::connect_with(self.pool).await?;
         listener
             .listen(&format!("exec_status_{}", executor_id))

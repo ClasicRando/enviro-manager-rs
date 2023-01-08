@@ -12,6 +12,8 @@ use sqlx::{
     PgPool, Postgres, Transaction, Type,
 };
 
+use super::workflow_runs::WorkflowRunId;
+
 use crate::{
     database::finish_transaction,
     error::{Error as WEError, Result as WEResult},
@@ -121,7 +123,7 @@ impl TaskQueueService {
 
     async fn append_task_rule(
         &self,
-        workflow_run_id: i64,
+        workflow_run_id: &WorkflowRunId,
         task_order: i32,
         rule: TaskRule,
     ) -> WEResult<()> {
@@ -138,7 +140,7 @@ impl TaskQueueService {
 
     async fn set_task_progress(
         &self,
-        workflow_run_id: i64,
+        workflow_run_id: &WorkflowRunId,
         task_order: i32,
         progress: i16,
     ) -> WEResult<()> {
@@ -177,7 +179,7 @@ impl TaskQueueService {
 
     pub async fn next_task(
         &self,
-        workflow_run_id: i64,
+        workflow_run_id: &WorkflowRunId,
     ) -> WEResult<Option<(TaskQueueRecord, Transaction<'_, Postgres>)>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query_as(
@@ -203,6 +205,7 @@ impl TaskQueueService {
     }
 
     pub async fn run_task(&self, record: &TaskQueueRecord) -> WEResult<(bool, Option<String>)> {
+        let workflow_run_id = record.workflow_run_id.into();
         let result = self
             .pool
             .close_event()
@@ -222,26 +225,22 @@ impl TaskQueueService {
                             match message {
                                 TaskResponse::Progress(progress) => {
                                     self.set_task_progress(
-                                        record.workflow_run_id,
+                                        &workflow_run_id,
                                         record.task_order,
                                         progress,
                                     )
                                     .await?
                                 }
                                 TaskResponse::Rule(rule) => {
-                                    self.append_task_rule(
-                                        record.workflow_run_id,
-                                        record.task_order,
-                                        rule,
-                                    )
-                                    .await?
+                                    self.append_task_rule(&workflow_run_id, record.task_order, rule)
+                                        .await?
                                 }
                                 TaskResponse::Done { success, message } => {
                                     return Ok((success, message))
                                 }
                             }
                         }
-                        Err(error) => return Err(error.into())
+                        Err(error) => return Err(error.into()),
                     }
                 }
                 Err(WEError::ExitedTask)

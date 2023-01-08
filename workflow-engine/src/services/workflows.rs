@@ -1,3 +1,4 @@
+use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{
@@ -5,7 +6,10 @@ use sqlx::{
     PgPool,
 };
 
-use crate::{database::finish_transaction, error::Result as WEResult};
+use crate::{
+    database::finish_transaction,
+    error::{Error as WEError, Result as WEResult},
+};
 
 #[derive(sqlx::Type, Serialize, Deserialize)]
 #[sqlx(type_name = "workflow_task")]
@@ -57,6 +61,30 @@ pub struct Workflow {
     tasks: Vec<WorkflowTask>,
 }
 
+#[derive(sqlx::Type)]
+#[sqlx(transparent)]
+pub struct WorkflowId(i64);
+
+impl From<i64> for WorkflowId {
+    fn from(value: i64) -> Self {
+        Self(value)
+    }
+}
+
+impl<'a> FromParam<'a> for WorkflowId {
+    type Error = WEError;
+
+    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+        Ok(Self(param.parse::<i64>()?))
+    }
+}
+
+impl std::fmt::Display for WorkflowId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 pub struct WorkflowsService {
     pool: &'static PgPool,
 }
@@ -73,15 +101,15 @@ impl WorkflowsService {
             .bind(request.tasks)
             .fetch_one(&mut transaction)
             .await;
-        let workflow_id: i64 = finish_transaction(transaction, result).await?;
-        match self.read_one(workflow_id).await {
+        let workflow_id: WorkflowId = finish_transaction(transaction, result).await?;
+        match self.read_one(&workflow_id).await {
             Ok(Some(workflow)) => Ok(workflow),
             Ok(None) => Err(sqlx::Error::RowNotFound.into()),
             Err(error) => Err(error),
         }
     }
 
-    pub async fn read_one(&self, workflow_id: i64) -> WEResult<Option<Workflow>> {
+    pub async fn read_one(&self, workflow_id: &WorkflowId) -> WEResult<Option<Workflow>> {
         let result = sqlx::query_as(
             r#"
             select workflow_id, name, tasks

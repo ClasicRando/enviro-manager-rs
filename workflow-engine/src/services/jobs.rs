@@ -1,10 +1,14 @@
 use chrono::NaiveDateTime;
+use rocket::request::FromParam;
 use serde::{
     de::{MapAccess, Visitor},
     ser::SerializeStruct,
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use sqlx::{postgres::{types::PgInterval, PgListener}, PgPool};
+use sqlx::{
+    postgres::{types::PgInterval, PgListener},
+    PgPool,
+};
 
 use crate::{
     database::finish_transaction,
@@ -196,6 +200,30 @@ pub struct JobRequest {
     next_run: Option<NaiveDateTime>,
 }
 
+#[derive(sqlx::Type, Eq, Hash, PartialEq)]
+#[sqlx(transparent)]
+pub struct JobId(i64);
+
+impl From<i64> for JobId {
+    fn from(value: i64) -> Self {
+        Self(value)
+    }
+}
+
+impl<'a> FromParam<'a> for JobId {
+    type Error = WEError;
+
+    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
+        Ok(Self(param.parse::<i64>()?))
+    }
+}
+
+impl std::fmt::Display for JobId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 pub struct JobsService {
     pool: &'static PgPool,
 }
@@ -221,7 +249,7 @@ impl JobsService {
                 .await?
             }
         };
-        match self.read_one(job_id).await {
+        match self.read_one(&job_id).await {
             Ok(Some(job)) => Ok(job),
             Ok(None) => Err(sqlx::Error::RowNotFound.into()),
             Err(error) => Err(error),
@@ -234,7 +262,7 @@ impl JobsService {
         maintainer: &str,
         interval: &PgInterval,
         next_run: &Option<NaiveDateTime>,
-    ) -> WEResult<i64> {
+    ) -> WEResult<JobId> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query_scalar("select create_interval_cron_job($1,$2,$3)")
             .bind(workflow_id)
@@ -243,7 +271,7 @@ impl JobsService {
             .bind(next_run)
             .fetch_one(&mut transaction)
             .await;
-        let job_id: i64 = finish_transaction(transaction, result).await?;
+        let job_id: JobId = finish_transaction(transaction, result).await?;
         Ok(job_id)
     }
 
@@ -252,7 +280,7 @@ impl JobsService {
         workflow_id: &i64,
         maintainer: &str,
         schedule: &[ScheduleEntry],
-    ) -> WEResult<i64> {
+    ) -> WEResult<JobId> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query_scalar("select create_scheduled_cron_job($1,$2,$3)")
             .bind(workflow_id)
@@ -260,11 +288,11 @@ impl JobsService {
             .bind(schedule)
             .fetch_one(&mut transaction)
             .await;
-        let job_id: i64 = finish_transaction(transaction, result).await?;
+        let job_id: JobId = finish_transaction(transaction, result).await?;
         Ok(job_id)
     }
 
-    pub async fn read_one(&self, job_id: i64) -> WEResult<Option<Job>> {
+    pub async fn read_one(&self, job_id: &JobId) -> WEResult<Option<Job>> {
         let result = sqlx::query_as(
             r#"
             select job_id, workflow_id, workflow_name, job_type, maintainer, job_schedule, job_interval, is_paused,
@@ -301,7 +329,7 @@ impl JobsService {
         Ok(result)
     }
 
-    pub async fn run_job(&self, job_id: i64) -> WEResult<Option<Job>> {
+    pub async fn run_job(&self, job_id: &JobId) -> WEResult<Option<Job>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query("call run_job($1)")
             .bind(job_id)
@@ -311,7 +339,7 @@ impl JobsService {
         self.read_one(job_id).await
     }
 
-    pub async fn complete_job(&self, job_id: i64) -> WEResult<Option<Job>> {
+    pub async fn complete_job(&self, job_id: &JobId) -> WEResult<Option<Job>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query_scalar("select complete_job($1)")
             .bind(job_id)
@@ -334,9 +362,7 @@ impl JobsService {
 
     pub async fn listener(&self) -> WEResult<PgListener> {
         let mut listener = PgListener::connect_with(self.pool).await?;
-        listener
-            .listen("jobs")
-            .await?;
+        listener.listen("jobs").await?;
         Ok(listener)
     }
 }

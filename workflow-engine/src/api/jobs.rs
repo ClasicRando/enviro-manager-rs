@@ -7,7 +7,7 @@ use rocket::{
 
 use super::utilities::{ApiResponse, FormatType};
 
-use crate::services::jobs::{Job, JobRequest, JobsService};
+use crate::services::jobs::{Job, JobRequest, JobsService, JobId};
 
 #[get("/cron-jobs?<f>")]
 pub async fn jobs(
@@ -25,11 +25,11 @@ pub async fn jobs(
 
 #[get("/cron-jobs/<job_id>?<f>")]
 pub async fn job(
-    job_id: i64,
+    job_id: JobId,
     f: ApiResponse<FormatType>,
     service: &State<JobsService>,
 ) -> ApiResponse<Job> {
-    match service.read_one(job_id).await {
+    match service.read_one(&job_id).await {
         Ok(Some(job)) => ApiResponse::success(job, f),
         Ok(None) => {
             ApiResponse::failure(format!("Could not find record for job_id = {}", job_id), f)

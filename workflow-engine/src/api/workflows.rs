@@ -7,7 +7,7 @@ use rocket::{
 use super::utilities::{ApiResponse, FormatType};
 
 use crate::services::workflows::{
-    Workflow, WorkflowDeprecationRequest, WorkflowRequest, WorkflowsService,
+    Workflow, WorkflowDeprecationRequest, WorkflowId, WorkflowRequest, WorkflowsService,
 };
 
 #[get("/workflows?<f>")]
@@ -23,11 +23,11 @@ pub async fn workflows(
 
 #[get("/workflows/<workflow_id>?<f>")]
 pub async fn workflow(
-    workflow_id: i64,
+    workflow_id: WorkflowId,
     f: ApiResponse<FormatType>,
     service: &State<WorkflowsService>,
 ) -> ApiResponse<Workflow> {
-    match service.read_one(workflow_id).await {
+    match service.read_one(&workflow_id).await {
         Ok(Some(workflow)) => ApiResponse::success(workflow, f),
         Ok(None) => ApiResponse::failure(
             format!("Could not find record for workflow_id = {}", workflow_id),

@@ -36,6 +36,8 @@ pub enum Error {
     AddressParseError(#[from] AddressError),
     #[error("Reqwest Error\n{0}")]
     SmtpError(#[from] StmpError),
+    #[error("{0}")]
+    ParseInt(#[from] std::num::ParseIntError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

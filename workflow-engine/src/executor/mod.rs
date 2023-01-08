@@ -12,14 +12,14 @@ use worker::WorkflowRunWorker;
 use crate::{
     error::Result as WEResult,
     services::{
-        executors::{ExecutorStatus, ExecutorsService},
+        executors::{ExecutorStatus, ExecutorsService, ExecutorId},
         task_queue::TaskQueueService,
         workflow_runs::{WorkflowRunStatus, WorkflowRunsService},
     },
 };
 
 pub struct Executor {
-    pub executor_id: i64,
+    executor_id: ExecutorId,
     executor_service: &'static ExecutorsService,
     wr_service: &'static WorkflowRunsService,
     tq_service: &'static TaskQueueService,
@@ -43,6 +43,10 @@ impl Executor {
         })
     }
 
+    pub fn executor_id(&self) -> ExecutorId {
+        self.executor_id.clone()
+    }
+
     fn add_workflow_run_handle(&mut self, workflow_run_id: i64, handle: WorkflowRunWorkerResult) {
         self.wr_handles.insert(workflow_run_id, handle);
         info!(
@@ -53,7 +57,7 @@ impl Executor {
 
     async fn status(&self) -> WEResult<ExecutorStatus> {
         self.executor_service
-            .read_status(self.executor_id)
+            .read_status(&self.executor_id)
             .await
             .map(|status| status.unwrap_or(ExecutorStatus::Canceled))
     }
@@ -62,12 +66,12 @@ impl Executor {
         let mut executor_signal: ExecutorNotificationSignal;
         let mut executor_status_listener = self
             .executor_service
-            .status_listener(self.executor_id)
+            .status_listener(&self.executor_id)
             .await?;
         let mut workflow_run_scheduled_listener =
-            self.wr_service.scheduled_listener(self.executor_id).await?;
+            self.wr_service.scheduled_listener(&self.executor_id).await?;
         let mut workflow_run_cancel_listener =
-            self.wr_service.cancel_listener(self.executor_id).await?;
+            self.wr_service.cancel_listener(&self.executor_id).await?;
         loop {
             match self.status().await? {
                 ExecutorStatus::Active => {}
@@ -147,7 +151,7 @@ impl Executor {
     }
 
     async fn next_workflow(&self) -> WEResult<Option<(i64, WorkflowRunWorkerResult)>> {
-        let Some(workflow_run_id) = self.executor_service.next_workflow_run(self.executor_id).await? else {
+        let Some(workflow_run_id) = self.executor_service.next_workflow_run(&self.executor_id).await? else {
             return Ok(None)
         };
         let wr_handle = self.spawn_workflow_run_worker(workflow_run_id);
@@ -179,6 +183,7 @@ impl Executor {
                 let workflow_run_id: i64 =
                     notification.payload().parse::<i64>().unwrap_or_default();
                 let workflow_run_handle = self.wr_handles.remove(&workflow_run_id);
+                let workflow_run_id = workflow_run_id.into();
                 if let Some(handle) = workflow_run_handle {
                     if !handle.is_finished() {
                         handle.abort();
@@ -192,7 +197,7 @@ impl Executor {
                             info!("Workflow run = {} completed\n{}", workflow_run_id, error)
                         }
                     }
-                    self.wr_service.cancel(workflow_run_id).await?;
+                    self.wr_service.cancel(&workflow_run_id).await?;
                 }
             }
             Err(error) => {
@@ -264,12 +269,13 @@ impl Executor {
         info!("Checking owned workflows");
         let workflow_runs = self
             .wr_service
-            .all_executor_workflows(self.executor_id)
+            .all_executor_workflows(&self.executor_id)
             .await?;
         for wr in workflow_runs {
             if self.wr_handles.contains_key(&wr.workflow_run_id) {
                 continue;
             }
+            let workflow_run_id = wr.workflow_run_id.into();
 
             if wr.is_valid {
                 info!("Restarting workflow_run_id = {}", wr.workflow_run_id);
@@ -277,14 +283,14 @@ impl Executor {
                     let wr_handle = self.spawn_workflow_run_worker(wr.workflow_run_id);
                     self.add_workflow_run_handle(wr.workflow_run_id, wr_handle);
                 } else {
-                    self.wr_service.restart(wr.workflow_run_id).await?;
+                    self.wr_service.restart(&workflow_run_id).await?;
                     self.wr_service
-                        .schedule_with_executor(wr.workflow_run_id, self.executor_id)
+                        .schedule_with_executor(&workflow_run_id, &self.executor_id)
                         .await?;
                 }
             } else {
                 info!("Canceling workflow_run_id = {}", wr.workflow_run_id);
-                self.wr_service.cancel(wr.workflow_run_id).await?;
+                self.wr_service.cancel(&workflow_run_id).await?;
             }
         }
         Ok(())
@@ -296,13 +302,14 @@ impl Executor {
             let Some(handle) = self.wr_handles.remove(&workflow_run_id) else {
                 continue;
             };
+            let workflow_run_id = workflow_run_id.into();
 
             let is_move = if !handle.is_finished() {
                 if is_forced {
                     handle.abort();
                     false
                 } else {
-                    self.wr_service.start_move(workflow_run_id).await?;
+                    self.wr_service.start_move(&workflow_run_id).await?;
                     true
                 }
             } else {
@@ -318,9 +325,9 @@ impl Executor {
             }
 
             if is_move {
-                self.wr_service.complete_move(workflow_run_id).await?;
+                self.wr_service.complete_move(&workflow_run_id).await?;
             } else {
-                self.wr_service.cancel(workflow_run_id).await?;
+                self.wr_service.cancel(&workflow_run_id).await?;
             }
         }
         Ok(is_forced)
@@ -339,7 +346,7 @@ impl Executor {
 
         info!("Closing executor");
         self.executor_service
-            .close(self.executor_id, is_cancelled)
+            .close(&self.executor_id, is_cancelled)
             .await?;
         Ok(())
     }
