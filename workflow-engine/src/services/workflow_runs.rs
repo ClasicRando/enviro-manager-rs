@@ -137,7 +137,7 @@ pub struct WorkflowRun {
 }
 
 #[derive(sqlx::FromRow)]
-pub struct ExecutorWorkflowRuns {
+pub struct ExecutorWorkflowRun {
     pub workflow_run_id: WorkflowRunId,
     pub status: WorkflowRunStatus,
     pub is_valid: bool,
@@ -280,7 +280,7 @@ impl WorkflowRunsService {
     pub async fn all_executor_workflows(
         &self,
         executor_id: &ExecutorId,
-    ) -> WEResult<Vec<ExecutorWorkflowRuns>> {
+    ) -> WEResult<Vec<ExecutorWorkflowRun>> {
         let result = sqlx::query_as(
             r#"
             select workflow_run_id, status, is_valid
