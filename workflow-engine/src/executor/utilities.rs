@@ -1,8 +1,8 @@
 use tokio::task::JoinHandle;
 
-use crate::error::Error;
+use crate::{error::Error, services::workflow_runs::WorkflowRunId};
 
-pub type WorkflowRunWorkerResult = JoinHandle<(i64, Option<Error>)>;
+pub type WorkflowRunWorkerResult = JoinHandle<(WorkflowRunId, Option<Error>)>;
 
 pub enum ExecutorNotificationSignal {
     Cancel,

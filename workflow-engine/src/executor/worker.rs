@@ -9,27 +9,27 @@ use crate::{
     },
 };
 
-pub struct WorkflowRunWorker {
-    workflow_run_id: WorkflowRunId,
+pub struct WorkflowRunWorker<'w> {
+    workflow_run_id: &'w WorkflowRunId,
     wr_service: &'static WorkflowRunsService,
     tq_service: &'static TaskQueueService,
 }
 
-impl WorkflowRunWorker {
+impl<'w> WorkflowRunWorker<'w> {
     pub fn new(
-        workflow_run_id: i64,
+        workflow_run_id: &'w WorkflowRunId,
         wr_service: &'static WorkflowRunsService,
         tq_service: &'static TaskQueueService,
     ) -> Self {
         Self {
-            workflow_run_id: workflow_run_id.into(),
+            workflow_run_id,
             wr_service,
             tq_service,
         }
     }
 
     async fn next_task(&self) -> WEResult<Option<(TaskQueueRecord, Transaction<'_, Postgres>)>> {
-        match self.tq_service.next_task(&self.workflow_run_id).await? {
+        match self.tq_service.next_task(self.workflow_run_id).await? {
             Some(task) => Ok(Some(task)),
             None => Ok(None),
         }
@@ -38,7 +38,7 @@ impl WorkflowRunWorker {
     pub async fn run(self) -> WEResult<()> {
         loop {
             let Some((next_task, transaction)) = self.next_task().await? else {
-                self.wr_service.complete(&self.workflow_run_id).await?;
+                self.wr_service.complete(self.workflow_run_id).await?;
                 info!("No available task to run. Exiting worker");
                 break;
             };
@@ -52,7 +52,7 @@ impl WorkflowRunWorker {
                 }
                 Err(error) => {
                     self.tq_service.fail_task_run(&next_task, error).await?;
-                    self.wr_service.complete(&self.workflow_run_id).await?;
+                    self.wr_service.complete(self.workflow_run_id).await?;
                     error!("Task failed, {:?}", next_task);
                     break;
                 }

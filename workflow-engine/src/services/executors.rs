@@ -9,6 +9,8 @@ use crate::{
     error::{Error as WEError, Result as WEResult},
 };
 
+use super::workflow_runs::WorkflowRunId;
+
 #[derive(sqlx::Type, Serialize)]
 #[sqlx(type_name = "executor_status")]
 pub enum ExecutorStatus {
@@ -130,12 +132,12 @@ impl ExecutorsService {
 
     async fn start_workflow_run(
         &self,
-        workflow_run_id: i64,
+        workflow_run_id: WorkflowRunId,
         executor_id: &ExecutorId,
         mut transaction: Transaction<'_, Postgres>,
-    ) -> WEResult<Option<i64>> {
+    ) -> WEResult<Option<WorkflowRunId>> {
         let result = sqlx::query("call start_workflow_run($1, $2)")
-            .bind(workflow_run_id)
+            .bind(&workflow_run_id)
             .bind(executor_id)
             .execute(&mut transaction)
             .await;
@@ -145,9 +147,9 @@ impl ExecutorsService {
 
     async fn complete_workflow_run(
         &self,
-        workflow_run_id: i64,
+        workflow_run_id: WorkflowRunId,
         mut transaction: Transaction<'_, Postgres>,
-    ) -> WEResult<Option<i64>> {
+    ) -> WEResult<Option<WorkflowRunId>> {
         let result = sqlx::query("call complete_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&mut transaction)
@@ -159,9 +161,9 @@ impl ExecutorsService {
     async fn process_next_workflow_run(
         &self,
         executor_id: &ExecutorId,
-        fetch_result: Result<Option<(i64, bool)>, sqlx::Error>,
+        fetch_result: Result<Option<(WorkflowRunId, bool)>, sqlx::Error>,
         transaction: Transaction<'_, Postgres>,
-    ) -> WEResult<Option<i64>> {
+    ) -> WEResult<Option<WorkflowRunId>> {
         match fetch_result {
             Ok(Some((workflow_run_id, true))) => {
                 self.start_workflow_run(workflow_run_id, executor_id, transaction)
@@ -182,7 +184,7 @@ impl ExecutorsService {
         }
     }
 
-    pub async fn next_workflow_run(&self, executor_id: &ExecutorId) -> WEResult<Option<i64>> {
+    pub async fn next_workflow_run(&self, executor_id: &ExecutorId) -> WEResult<Option<WorkflowRunId>> {
         let mut transaction = self.pool.begin().await?;
         let fetch_result = sqlx::query_as(
             r#"

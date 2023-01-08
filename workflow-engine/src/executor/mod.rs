@@ -14,7 +14,7 @@ use crate::{
     services::{
         executors::{ExecutorId, ExecutorStatus, ExecutorsService},
         task_queue::TaskQueueService,
-        workflow_runs::{WorkflowRunStatus, WorkflowRunsService},
+        workflow_runs::{WorkflowRunId, WorkflowRunStatus, WorkflowRunsService},
     },
 };
 
@@ -23,7 +23,7 @@ pub struct Executor {
     executor_service: &'static ExecutorsService,
     wr_service: &'static WorkflowRunsService,
     tq_service: &'static TaskQueueService,
-    wr_handles: HashMap<i64, WorkflowRunWorkerResult>,
+    wr_handles: HashMap<WorkflowRunId, WorkflowRunWorkerResult>,
 }
 
 impl Executor {
@@ -47,12 +47,16 @@ impl Executor {
         self.executor_id.clone()
     }
 
-    fn add_workflow_run_handle(&mut self, workflow_run_id: i64, handle: WorkflowRunWorkerResult) {
-        self.wr_handles.insert(workflow_run_id, handle);
+    fn add_workflow_run_handle(
+        &mut self,
+        workflow_run_id: WorkflowRunId,
+        handle: WorkflowRunWorkerResult,
+    ) {
         info!(
             "Created sub executor to handle workflow_run_id = {}",
             workflow_run_id
         );
+        self.wr_handles.insert(workflow_run_id, handle);
     }
 
     async fn status(&self) -> WEResult<ExecutorStatus> {
@@ -87,7 +91,7 @@ impl Executor {
                 }
             }
             self.cleanup_workflows().await?;
-            let workflow_run: Option<(i64, WorkflowRunWorkerResult)> = tokio::select! {
+            let workflow_run: Option<(WorkflowRunId, WorkflowRunWorkerResult)> = tokio::select! {
                 biased;
                 _ = ctrl_c() => {
                     info!("Received shutdown signal. Starting graceful shutdown");
@@ -142,7 +146,7 @@ impl Executor {
                         }
                         notification = workflow_run_scheduled_listener.recv() => {
                             self.handle_workflow_run_scheduled_notification(notification)?;
-                            continue
+                            continue;
                         }
                     }
                 }
@@ -152,19 +156,23 @@ impl Executor {
         Ok(())
     }
 
-    async fn next_workflow(&self) -> WEResult<Option<(i64, WorkflowRunWorkerResult)>> {
+    async fn next_workflow(&self) -> WEResult<Option<(WorkflowRunId, WorkflowRunWorkerResult)>> {
         let Some(workflow_run_id) = self.executor_service.next_workflow_run(&self.executor_id).await? else {
             return Ok(None)
         };
-        let wr_handle = self.spawn_workflow_run_worker(workflow_run_id);
+        let wr_handle = self.spawn_workflow_run_worker(&workflow_run_id);
         Ok(Some((workflow_run_id, wr_handle)))
     }
 
-    fn spawn_workflow_run_worker(&self, workflow_run_id: i64) -> WorkflowRunWorkerResult {
+    fn spawn_workflow_run_worker(
+        &self,
+        workflow_run_id: &WorkflowRunId,
+    ) -> WorkflowRunWorkerResult {
         let wr_service = self.wr_service;
         let tq_service = self.tq_service;
+        let workflow_run_id = workflow_run_id.to_owned();
         tokio::spawn(async move {
-            let worker = WorkflowRunWorker::new(workflow_run_id, wr_service, tq_service);
+            let worker = WorkflowRunWorker::new(&workflow_run_id, wr_service, tq_service);
             let worker_result = worker.run().await;
             match worker_result {
                 Ok(_) => (workflow_run_id, None),
@@ -180,34 +188,32 @@ impl Executor {
         &mut self,
         result: Result<PgNotification, SqlError>,
     ) -> WEResult<()> {
-        match result {
-            Ok(notification) => {
-                let workflow_run_id: i64 =
-                    notification.payload().parse::<i64>().unwrap_or_default();
-                let workflow_run_handle = self.wr_handles.remove(&workflow_run_id);
-                let workflow_run_id = workflow_run_id.into();
-                if let Some(handle) = workflow_run_handle {
-                    if !handle.is_finished() {
-                        handle.abort();
-                    }
-                    if let Err(error) = handle.await {
-                        if error.is_cancelled() {
-                            warn!("Workflow run = {} canceled\n{}", workflow_run_id, error)
-                        } else if error.is_panic() {
-                            error!("Workflow run = {} panicked!\n{}", workflow_run_id, error)
-                        } else {
-                            info!("Workflow run = {} completed\n{}", workflow_run_id, error)
-                        }
-                    }
-                    self.wr_service.cancel(&workflow_run_id).await?;
-                }
-            }
+        let notification = match result {
+            Ok(notification) => notification,
             Err(error) => {
                 error!(
                     "Error receiving workflow run cancel notification.\n{:?}",
                     error
                 );
+                return Err(error.into());
             }
+        };
+        let workflow_run_id = notification.payload().parse()?;
+        let workflow_run_handle = self.wr_handles.remove(&workflow_run_id);
+        if let Some(handle) = workflow_run_handle {
+            if !handle.is_finished() {
+                handle.abort();
+            }
+            if let Err(error) = handle.await {
+                if error.is_cancelled() {
+                    warn!("Workflow run = {} canceled\n{}", workflow_run_id, error)
+                } else if error.is_panic() {
+                    error!("Workflow run = {} panicked!\n{}", workflow_run_id, error)
+                } else {
+                    info!("Workflow run = {} completed\n{}", workflow_run_id, error)
+                }
+            }
+            self.wr_service.cancel(&workflow_run_id).await?;
         }
         Ok(())
     }
@@ -277,34 +283,33 @@ impl Executor {
             if self.wr_handles.contains_key(&wr.workflow_run_id) {
                 continue;
             }
-            let workflow_run_id = wr.workflow_run_id.into();
 
             if wr.is_valid {
                 info!("Restarting workflow_run_id = {}", wr.workflow_run_id);
                 if wr.status == WorkflowRunStatus::Running {
-                    let wr_handle = self.spawn_workflow_run_worker(wr.workflow_run_id);
+                    let wr_handle = self.spawn_workflow_run_worker(&wr.workflow_run_id);
                     self.add_workflow_run_handle(wr.workflow_run_id, wr_handle);
                 } else {
-                    self.wr_service.restart(&workflow_run_id).await?;
+                    self.wr_service.restart(&wr.workflow_run_id).await?;
                     self.wr_service
-                        .schedule_with_executor(&workflow_run_id, &self.executor_id)
+                        .schedule_with_executor(&wr.workflow_run_id, &self.executor_id)
                         .await?;
                 }
             } else {
                 info!("Canceling workflow_run_id = {}", wr.workflow_run_id);
-                self.wr_service.cancel(&workflow_run_id).await?;
+                self.wr_service.cancel(&wr.workflow_run_id).await?;
             }
         }
         Ok(())
     }
 
     async fn shutdown_workers(&mut self, is_forced: bool) -> WEResult<bool> {
-        let handle_keys: Vec<i64> = self.wr_handles.keys().map(|key| key.to_owned()).collect();
+        let handle_keys: Vec<WorkflowRunId> =
+            self.wr_handles.keys().map(|key| key.to_owned()).collect();
         for workflow_run_id in handle_keys {
             let Some(handle) = self.wr_handles.remove(&workflow_run_id) else {
                 continue;
             };
-            let workflow_run_id = workflow_run_id.into();
 
             let is_move = if !handle.is_finished() {
                 if is_forced {
