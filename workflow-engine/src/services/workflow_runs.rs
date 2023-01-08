@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use chrono::NaiveDateTime;
 use rocket::request::FromParam;
 use serde::Serialize;
@@ -136,14 +138,22 @@ pub struct WorkflowRun {
 
 #[derive(sqlx::FromRow)]
 pub struct ExecutorWorkflowRuns {
-    pub workflow_run_id: i64,
+    pub workflow_run_id: WorkflowRunId,
     pub status: WorkflowRunStatus,
     pub is_valid: bool,
 }
 
-#[derive(sqlx::Type)]
+#[derive(sqlx::Type, Eq, PartialEq, Hash, Clone)]
 #[sqlx(transparent)]
 pub struct WorkflowRunId(i64);
+
+impl FromStr for WorkflowRunId {
+    type Err = WEError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(s.parse::<i64>()?.into())
+    }
+}
 
 impl From<i64> for WorkflowRunId {
     fn from(value: i64) -> Self {
@@ -155,7 +165,7 @@ impl<'a> FromParam<'a> for WorkflowRunId {
     type Error = WEError;
 
     fn from_param(param: &'a str) -> Result<Self, Self::Error> {
-        Ok(Self(param.parse::<i64>()?))
+        param.parse()
     }
 }
 
