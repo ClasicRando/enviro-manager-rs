@@ -14,7 +14,9 @@ use crate::{
     services::{
         executors::{ExecutorId, ExecutorStatus, ExecutorsService},
         task_queue::TaskQueueService,
-        workflow_runs::{WorkflowRunId, WorkflowRunStatus, WorkflowRunsService, ExecutorWorkflowRun},
+        workflow_runs::{
+            ExecutorWorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunsService,
+        },
     },
 };
 
@@ -263,6 +265,38 @@ impl Executor {
         }
     }
 
+    async fn process_unknown_run(&mut self, workflow_run: ExecutorWorkflowRun) -> WEResult<()> {
+        if !workflow_run.is_valid {
+            info!(
+                "Canceling workflow_run_id = {}",
+                workflow_run.workflow_run_id
+            );
+            self.wr_service
+                .cancel(&workflow_run.workflow_run_id)
+                .await?;
+            return Ok(());
+        }
+
+        info!(
+            "Restarting workflow_run_id = {}",
+            workflow_run.workflow_run_id
+        );
+
+        if workflow_run.status == WorkflowRunStatus::Running {
+            let wr_handle = self.spawn_workflow_run_worker(&workflow_run.workflow_run_id);
+            self.add_workflow_run_handle(workflow_run.workflow_run_id, wr_handle);
+            return Ok(());
+        }
+
+        self.wr_service
+            .restart(&workflow_run.workflow_run_id)
+            .await?;
+        self.wr_service
+            .schedule_with_executor(&workflow_run.workflow_run_id, &self.executor_id)
+            .await?;
+        Ok(())
+    }
+
     async fn cleanup_workflows(&mut self) -> WEResult<()> {
         info!("Checking handles");
         let completed_handle_keys = self
@@ -289,21 +323,7 @@ impl Executor {
                 continue;
             }
 
-            if wr.is_valid {
-                info!("Restarting workflow_run_id = {}", wr.workflow_run_id);
-                if wr.status == WorkflowRunStatus::Running {
-                    let wr_handle = self.spawn_workflow_run_worker(&wr.workflow_run_id);
-                    self.add_workflow_run_handle(wr.workflow_run_id, wr_handle);
-                } else {
-                    self.wr_service.restart(&wr.workflow_run_id).await?;
-                    self.wr_service
-                        .schedule_with_executor(&wr.workflow_run_id, &self.executor_id)
-                        .await?;
-                }
-            } else {
-                info!("Canceling workflow_run_id = {}", wr.workflow_run_id);
-                self.wr_service.cancel(&wr.workflow_run_id).await?;
-            }
+            self.process_unknown_run(wr).await?
         }
         Ok(())
     }
