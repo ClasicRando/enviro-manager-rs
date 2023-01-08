@@ -71,10 +71,10 @@ impl PgHasArrayType for TaskRule {
     }
 }
 
-#[derive(sqlx::FromRow, Serialize, Deserialize)]
+#[derive(sqlx::FromRow, Serialize, Deserialize, Debug)]
 pub struct TaskQueueRecord {
-    pub workflow_run_id: i64,
-    pub task_order: i32,
+    workflow_run_id: i64,
+    task_order: i32,
     task_id: i64,
     parameters: Option<Value>,
     url: String,

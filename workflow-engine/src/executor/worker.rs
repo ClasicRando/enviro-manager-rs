@@ -42,16 +42,7 @@ impl WorkflowRunWorker {
                         info!("No available task to run. Exiting worker");
                         break;
                 };
-            info!(
-                "Running task, workflow_run_id = {}, task_order = {}",
-                self.workflow_run_id, next_task.task_order,
-            );
-            sqlx::query("call start_task_run($1, $2)")
-                .bind(next_task.workflow_run_id)
-                .bind(next_task.task_order)
-                .execute(&mut transaction)
-                .await?;
-            transaction.commit().await?;
+            info!("Running task, {:?}", next_task);
             match self.tq_service.run_task(&next_task).await {
                 Ok((is_paused, output)) => {
                     self.tq_service
@@ -61,10 +52,7 @@ impl WorkflowRunWorker {
                 Err(error) => {
                     self.tq_service.fail_task_run(&next_task, error).await?;
                     self.wr_service.complete(&self.workflow_run_id).await?;
-                    error!(
-                        "Task failed, workflow_run_id = {}, task_order = {}. Exiting worker",
-                        self.workflow_run_id, next_task.task_order,
-                    );
+                    error!("Task failed, {:?}", next_task);
                     break;
                 }
             }
