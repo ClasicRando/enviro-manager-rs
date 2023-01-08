@@ -1,9 +1,10 @@
 use log::{error, info};
+use sqlx::{Postgres, Transaction};
 
 use crate::{
     error::Result as WEResult,
     services::{
-        task_queue::TaskQueueService,
+        task_queue::{TaskQueueRecord, TaskQueueService},
         workflow_runs::{WorkflowRunId, WorkflowRunsService},
     },
 };
@@ -27,16 +28,19 @@ impl WorkflowRunWorker {
         }
     }
 
+    async fn next_task(&self) -> WEResult<Option<(TaskQueueRecord, Transaction<'_, Postgres>)>> {
+        match self.tq_service.next_task(&self.workflow_run_id).await? {
+            Some(task) => Ok(Some(task)),
+            None => Ok(None),
+        }
+    }
+
     pub async fn run(self) -> WEResult<()> {
         loop {
-            let (next_task, mut transaction) =
-                match self.tq_service.next_task(&self.workflow_run_id).await? {
-                    Some(task) => task,
-                    None => {
+            let Some((next_task, transaction)) = self.next_task().await? else {
                         self.wr_service.complete(&self.workflow_run_id).await?;
                         info!("No available task to run. Exiting worker");
                         break;
-                    }
                 };
             info!(
                 "Running task, workflow_run_id = {}, task_order = {}",
