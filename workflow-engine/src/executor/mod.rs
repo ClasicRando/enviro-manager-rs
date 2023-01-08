@@ -116,39 +116,37 @@ impl Executor {
                     workflow_run_id?
                 }
             };
-            match workflow_run {
-                Some((workflow_run_id, handle)) => {
-                    self.add_workflow_run_handle(workflow_run_id, handle);
+            
+            if let Some((workflow_run_id, handle)) = workflow_run {
+                self.add_workflow_run_handle(workflow_run_id, handle);
+                continue;
+            }
+
+            info!("No more workflow runs available. Switching to listen mode.");
+            tokio::select! {
+                biased;
+                _ = ctrl_c() => {
+                    info!("Received shutdown signal. Starting graceful shutdown");
+                    executor_signal = ExecutorNotificationSignal::Shutdown;
+                    break;
+                }
+                notification = executor_status_listener.recv() => {
+                    executor_signal = self.handle_executor_status_notification(notification);
+                    match &executor_signal {
+                        ExecutorNotificationSignal::Cancel
+                        | ExecutorNotificationSignal::Shutdown
+                        | ExecutorNotificationSignal::Error(_) => break,
+                        ExecutorNotificationSignal::Cleanup
+                        | ExecutorNotificationSignal::NoOp => continue,
+                    }
+                }
+                notification = workflow_run_cancel_listener.recv() => {
+                    self.handle_workflow_run_cancel_notification(notification).await?;
                     continue;
                 }
-                None => {
-                    info!("No more workflow runs available. Switching to listen mode.");
-                    tokio::select! {
-                        biased;
-                        _ = ctrl_c() => {
-                            info!("Received shutdown signal. Starting graceful shutdown");
-                            executor_signal = ExecutorNotificationSignal::Shutdown;
-                            break;
-                        }
-                        notification = executor_status_listener.recv() => {
-                            executor_signal = self.handle_executor_status_notification(notification);
-                            match &executor_signal {
-                                ExecutorNotificationSignal::Cancel
-                                | ExecutorNotificationSignal::Shutdown
-                                | ExecutorNotificationSignal::Error(_) => break,
-                                ExecutorNotificationSignal::Cleanup
-                                | ExecutorNotificationSignal::NoOp => continue,
-                            }
-                        }
-                        notification = workflow_run_cancel_listener.recv() => {
-                            self.handle_workflow_run_cancel_notification(notification).await?;
-                            continue;
-                        }
-                        notification = workflow_run_scheduled_listener.recv() => {
-                            self.handle_workflow_run_scheduled_notification(notification)?;
-                            continue;
-                        }
-                    }
+                notification = workflow_run_scheduled_listener.recv() => {
+                    self.handle_workflow_run_scheduled_notification(notification)?;
+                    continue;
                 }
             }
         }
