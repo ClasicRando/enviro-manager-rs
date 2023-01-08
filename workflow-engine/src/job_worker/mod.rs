@@ -26,14 +26,20 @@ pub struct JobWorker {
     service: &'static JobsService,
     jobs: HashMap<JobId, NaiveDateTime>,
     next_job: JobId,
+    mailer: AsyncSmtpTransport<Tokio1Executor>,
 }
 
 impl JobWorker {
     pub async fn new(service: &'static JobsService) -> WEResult<Self> {
+        let credentials = Credentials::from((env!("CLIPPY_USERNAME"), env!("CLIPPY_PASSWORD")));
+        let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(env!("CLIPPY_RELAY"))?
+            .credentials(credentials)
+            .build();
         Ok(Self {
             service,
             jobs: HashMap::new(),
             next_job: 0.into(),
+            mailer,
         })
     }
 
@@ -160,18 +166,12 @@ impl JobWorker {
             "Sending error email to {} with message\n{}",
             maintainer, message
         );
-        let username = env!("CLIPPY_USERNAME");
         let email = Message::builder()
-            .from(format!("Clippy <{}>", username).parse()?)
+            .from("Clippy".parse()?)
             .to(maintainer.parse()?)
             .subject("Job Completion Error")
             .body(message)?;
-        let credentials = Credentials::from((username, env!("CLIPPY_PASSWORD")));
-        let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(env!("CLIPPY_RELAY"))?
-            .credentials(credentials)
-            .build();
-
-        let _response = mailer.send(email).await?;
+        let _response = self.mailer.send(email).await?;
         Ok(())
     }
 }
