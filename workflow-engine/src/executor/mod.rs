@@ -14,7 +14,7 @@ use crate::{
     services::{
         executors::{ExecutorId, ExecutorStatus, ExecutorsService},
         task_queue::TaskQueueService,
-        workflow_runs::{WorkflowRunId, WorkflowRunStatus, WorkflowRunsService},
+        workflow_runs::{WorkflowRunId, WorkflowRunStatus, WorkflowRunsService, ExecutorWorkflowRun},
     },
 };
 
@@ -244,23 +244,22 @@ impl Executor {
         &self,
         result: Result<PgNotification, SqlError>,
     ) -> ExecutorNotificationSignal {
-        match result {
-            Ok(notification) => {
-                info!(
-                    "Received executor status notification, \"{}\"",
-                    notification.payload()
-                );
-                match notification.payload() {
-                    "cancel" => ExecutorNotificationSignal::Cancel,
-                    "shutdown" => ExecutorNotificationSignal::Shutdown,
-                    "cleanup" => ExecutorNotificationSignal::Cleanup,
-                    _ => ExecutorNotificationSignal::NoOp,
-                }
-            }
+        let notification = match result {
+            Ok(notification) => notification,
             Err(error) => {
                 error!("Error receiving executor notification.\n{:?}", error);
-                ExecutorNotificationSignal::Error(error)
+                return ExecutorNotificationSignal::Error(error);
             }
+        };
+        info!(
+            "Received executor status notification, \"{}\"",
+            notification.payload()
+        );
+        match notification.payload() {
+            "cancel" => ExecutorNotificationSignal::Cancel,
+            "shutdown" => ExecutorNotificationSignal::Shutdown,
+            "cleanup" => ExecutorNotificationSignal::Cleanup,
+            _ => ExecutorNotificationSignal::NoOp,
         }
     }
 
