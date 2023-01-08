@@ -328,7 +328,26 @@ impl Executor {
         Ok(())
     }
 
-    async fn shutdown_workers(&mut self, is_forced: bool) -> WEResult<bool> {
+    async fn finish_handle(
+        &self,
+        workflow_run_id: &WorkflowRunId,
+        handle: &WorkflowRunWorkerResult,
+        is_cancelled: bool,
+    ) -> WEResult<bool> {
+        if handle.is_finished() {
+            return Ok(false);
+        }
+
+        if is_cancelled {
+            handle.abort();
+            return Ok(false);
+        }
+
+        self.wr_service.start_move(workflow_run_id).await?;
+        Ok(true)
+    }
+
+    async fn shutdown_workers(&mut self, is_cancelled: bool) -> WEResult<()> {
         let handle_keys: Vec<WorkflowRunId> =
             self.wr_handles.keys().map(|key| key.to_owned()).collect();
         for workflow_run_id in handle_keys {
@@ -336,45 +355,36 @@ impl Executor {
                 continue;
             };
 
-            let is_move = if !handle.is_finished() {
-                if is_forced {
-                    handle.abort();
-                    false
-                } else {
-                    self.wr_service.start_move(&workflow_run_id).await?;
-                    true
-                }
-            } else {
-                false
-            };
+            let is_move = self
+                .finish_handle(&workflow_run_id, &handle, is_cancelled)
+                .await?;
 
             if let Err(join_error) = handle.await {
                 warn!(
                     "Join error during {} shutdown.\n{}",
-                    if is_forced { "forced" } else { "graceful" },
+                    if is_cancelled { "forced" } else { "graceful" },
                     join_error
                 );
             }
 
             if is_move {
                 self.wr_service.complete_move(&workflow_run_id).await?;
-            } else {
-                self.wr_service.cancel(&workflow_run_id).await?;
+                continue;
             }
+            self.wr_service.cancel(&workflow_run_id).await?;
         }
-        Ok(is_forced)
+        Ok(())
     }
 
     async fn close_executor(&mut self, signal: ExecutorNotificationSignal) -> WEResult<()> {
         info!("Shutting down workers");
         let is_cancelled = match signal {
-            ExecutorNotificationSignal::Cancel | ExecutorNotificationSignal::Error(_) => {
-                self.shutdown_workers(true).await?
-            }
+            ExecutorNotificationSignal::Cancel | ExecutorNotificationSignal::Error(_) => true,
             ExecutorNotificationSignal::Shutdown
             | ExecutorNotificationSignal::NoOp
-            | ExecutorNotificationSignal::Cleanup => self.shutdown_workers(false).await?,
+            | ExecutorNotificationSignal::Cleanup => false,
         };
+        self.shutdown_workers(is_cancelled).await?;
 
         info!("Closing executor");
         self.executor_service
