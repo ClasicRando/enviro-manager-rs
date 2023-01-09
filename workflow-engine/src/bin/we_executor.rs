@@ -21,7 +21,9 @@ async fn main() -> WEResult<()> {
 
     info!("Running Executor, id = {}", executor.executor_id());
     if let Err(error) = executor.run().await {
-        executor_service.post_error(executor.executor_id(), error).await?;
+        executor_service
+            .post_error(executor.executor_id(), error)
+            .await?;
     }
     info!("Exiting executor, id = {}", executor.executor_id());
     Ok(())
