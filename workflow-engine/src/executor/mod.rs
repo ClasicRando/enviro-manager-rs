@@ -378,12 +378,7 @@ impl Executor {
 
     async fn close_executor(&mut self, signal: ExecutorNotificationSignal) -> WEResult<()> {
         info!("Shutting down workers");
-        let is_cancelled = match signal {
-            ExecutorNotificationSignal::Cancel | ExecutorNotificationSignal::Error(_) => true,
-            ExecutorNotificationSignal::Shutdown
-            | ExecutorNotificationSignal::NoOp
-            | ExecutorNotificationSignal::Cleanup => false,
-        };
+        let is_cancelled = signal.is_cancelled();
         self.shutdown_workers(is_cancelled).await?;
 
         info!("Closing executor");
