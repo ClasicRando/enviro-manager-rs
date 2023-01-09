@@ -4,7 +4,7 @@ mod worker;
 use std::collections::HashMap;
 
 use log::{error, info, warn};
-use sqlx::{postgres::PgNotification, Error as SqlError};
+use sqlx::{postgres::{PgNotification, PgListener}, Error as SqlError};
 use tokio::{signal::ctrl_c, task::JoinError};
 use utilities::{ExecutorNotificationSignal, WorkflowRunWorkerResult};
 use worker::WorkflowRunWorker;
@@ -19,6 +19,13 @@ use crate::{
         },
     },
 };
+
+enum ExecutorNextOperation {
+    Continue(ExecutorNotificationSignal),
+    Break(ExecutorNotificationSignal),
+    NextWorkflowRun(WorkflowRunId, WorkflowRunWorkerResult),
+    Listen,
+}
 
 pub struct Executor {
     executor_id: ExecutorId,
@@ -68,7 +75,76 @@ impl Executor {
             .map(|status| status.unwrap_or(ExecutorStatus::Canceled))
     }
 
+    async fn next_operation_active(
+        &mut self,
+        executor_status_listener: &mut PgListener,
+        workflow_run_cancel_listener: &mut PgListener,
+    ) -> WEResult<ExecutorNextOperation> {
+        Ok(tokio::select! {
+            biased;
+            _ = ctrl_c() => {
+                info!("Received shutdown signal. Starting graceful shutdown");
+                ExecutorNextOperation::Break(ExecutorNotificationSignal::Shutdown)
+            }
+            notification = executor_status_listener.recv() => {
+                let executor_signal = self.handle_executor_status_notification(notification);
+                match &executor_signal {
+                    ExecutorNotificationSignal::Cancel
+                    | ExecutorNotificationSignal::Shutdown
+                    | ExecutorNotificationSignal::Error(_) => ExecutorNextOperation::Break(executor_signal),
+                    ExecutorNotificationSignal::Cleanup
+                    | ExecutorNotificationSignal::NoOp => ExecutorNextOperation::Continue(executor_signal),
+                }
+            }
+            notification = workflow_run_cancel_listener.recv() => {
+                self.handle_workflow_run_cancel_notification(notification).await?;
+                ExecutorNextOperation::Continue(ExecutorNotificationSignal::NoOp)
+            }
+            workflow_run_id = self.next_workflow() => {
+                let Some((workflow_run_id, run_result)) = workflow_run_id? else {
+                    return Ok(ExecutorNextOperation::Listen)
+                };
+                ExecutorNextOperation::NextWorkflowRun(workflow_run_id, run_result)
+            }
+        })
+    }
+
+    async fn next_operation_listen(
+        &mut self,
+        executor_status_listener: &mut PgListener,
+        workflow_run_cancel_listener: &mut PgListener,
+        workflow_run_scheduled_listener: &mut PgListener,
+    ) -> WEResult<ExecutorNextOperation> {
+        Ok(            tokio::select! {
+            biased;
+            _ = ctrl_c() => {
+                info!("Received shutdown signal. Starting graceful shutdown");
+                ExecutorNextOperation::Break(ExecutorNotificationSignal::Shutdown)
+            }
+            notification = executor_status_listener.recv() => {
+                let executor_signal = self.handle_executor_status_notification(notification);
+                match &executor_signal {
+                    ExecutorNotificationSignal::Cancel
+                    | ExecutorNotificationSignal::Shutdown
+                    | ExecutorNotificationSignal::Error(_) => ExecutorNextOperation::Break(executor_signal),
+                    ExecutorNotificationSignal::Cleanup
+                    | ExecutorNotificationSignal::NoOp => ExecutorNextOperation::Continue(executor_signal),
+                }
+            }
+            notification = workflow_run_cancel_listener.recv() => {
+                self.handle_workflow_run_cancel_notification(notification).await?;
+                ExecutorNextOperation::Continue(ExecutorNotificationSignal::NoOp)
+            }
+            notification = workflow_run_scheduled_listener.recv() => {
+                self.handle_workflow_run_scheduled_notification(notification)?;
+                ExecutorNextOperation::Continue(ExecutorNotificationSignal::NoOp)
+            }
+        })
+    }
+    
+    #[allow(unused_assignments)]
     pub async fn run(&mut self) -> WEResult<()> {
+        let mut is_listen_mode = false;
         let mut executor_signal: ExecutorNotificationSignal;
         let mut executor_status_listener = self
             .executor_service
@@ -93,62 +169,38 @@ impl Executor {
                 }
             }
             self.cleanup_workflows().await?;
-            let workflow_run: Option<(WorkflowRunId, WorkflowRunWorkerResult)> = tokio::select! {
-                biased;
-                _ = ctrl_c() => {
-                    info!("Received shutdown signal. Starting graceful shutdown");
-                    executor_signal = ExecutorNotificationSignal::Shutdown;
-                    break;
-                }
-                notification = executor_status_listener.recv() => {
-                    executor_signal = self.handle_executor_status_notification(notification);
-                    match &executor_signal {
-                        ExecutorNotificationSignal::Cancel
-                        | ExecutorNotificationSignal::Shutdown
-                        | ExecutorNotificationSignal::Error(_) => break,
-                        ExecutorNotificationSignal::Cleanup
-                        | ExecutorNotificationSignal::NoOp => continue,
-                    }
-                }
-                notification = workflow_run_cancel_listener.recv() => {
-                    self.handle_workflow_run_cancel_notification(notification).await?;
-                    continue;
-                }
-                workflow_run_id = self.next_workflow() => {
-                    workflow_run_id?
-                }
-            };
 
-            if let Some((workflow_run_id, handle)) = workflow_run {
-                self.add_workflow_run_handle(workflow_run_id, handle);
-                continue;
+            let next_operation = if is_listen_mode {
+                self.next_operation_listen(
+                    &mut executor_status_listener,
+                    &mut workflow_run_cancel_listener,
+                    &mut workflow_run_scheduled_listener
+                ).await?
             }
-
-            info!("No more workflow runs available. Switching to listen mode.");
-            tokio::select! {
-                biased;
-                _ = ctrl_c() => {
-                    info!("Received shutdown signal. Starting graceful shutdown");
-                    executor_signal = ExecutorNotificationSignal::Shutdown;
+            else {
+                self.next_operation_active(
+                    &mut executor_status_listener,
+                    &mut workflow_run_cancel_listener
+                ).await?
+            };
+            match next_operation {
+                ExecutorNextOperation::Continue(signal) => {
+                    is_listen_mode = false;
+                    executor_signal = signal;
+                    continue;
+                }
+                ExecutorNextOperation::Break(signal) => {
+                    executor_signal = signal;
                     break;
                 }
-                notification = executor_status_listener.recv() => {
-                    executor_signal = self.handle_executor_status_notification(notification);
-                    match &executor_signal {
-                        ExecutorNotificationSignal::Cancel
-                        | ExecutorNotificationSignal::Shutdown
-                        | ExecutorNotificationSignal::Error(_) => break,
-                        ExecutorNotificationSignal::Cleanup
-                        | ExecutorNotificationSignal::NoOp => continue,
-                    }
-                }
-                notification = workflow_run_cancel_listener.recv() => {
-                    self.handle_workflow_run_cancel_notification(notification).await?;
+                ExecutorNextOperation::NextWorkflowRun(workflow_run_id, handle) => {
+                    is_listen_mode = false;
+                    self.add_workflow_run_handle(workflow_run_id, handle);
                     continue;
                 }
-                notification = workflow_run_scheduled_listener.recv() => {
-                    self.handle_workflow_run_scheduled_notification(notification)?;
-                    continue;
+                ExecutorNextOperation::Listen => {
+                    is_listen_mode = true;
+                    info!("No more workflow runs available. Switching to listen mode.")
                 }
             }
         }
