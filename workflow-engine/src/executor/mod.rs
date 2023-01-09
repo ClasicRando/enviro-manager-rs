@@ -78,6 +78,11 @@ impl Executor {
             .map(|status| status.unwrap_or(ExecutorStatus::Canceled))
     }
 
+    fn handle_sigint(&self) -> ExecutorNextOperation {
+        info!("Received shutdown signal. Starting graceful shutdown");
+        ExecutorNextOperation::Break(ExecutorNotificationSignal::Shutdown)
+    }
+
     async fn next_operation_active(
         &mut self,
         executor_status_listener: &mut PgListener,
@@ -85,24 +90,11 @@ impl Executor {
     ) -> WEResult<ExecutorNextOperation> {
         Ok(tokio::select! {
             biased;
-            _ = ctrl_c() => {
-                info!("Received shutdown signal. Starting graceful shutdown");
-                ExecutorNextOperation::Break(ExecutorNotificationSignal::Shutdown)
-            }
-            notification = executor_status_listener.recv() => {
-                let executor_signal = self.handle_executor_status_notification(notification);
-                match &executor_signal {
-                    ExecutorNotificationSignal::Cancel
-                    | ExecutorNotificationSignal::Shutdown
-                    | ExecutorNotificationSignal::Error(_) => ExecutorNextOperation::Break(executor_signal),
-                    ExecutorNotificationSignal::Cleanup
-                    | ExecutorNotificationSignal::NoOp => ExecutorNextOperation::Continue(executor_signal),
-                }
-            }
-            notification = workflow_run_cancel_listener.recv() => {
-                self.handle_workflow_run_cancel_notification(notification).await?;
-                ExecutorNextOperation::Continue(ExecutorNotificationSignal::NoOp)
-            }
+            _ = ctrl_c() => self.handle_sigint(),
+            notification = executor_status_listener.recv() => self
+                .handle_executor_status_notification(notification)?,
+            notification = workflow_run_cancel_listener.recv() => self
+                .handle_workflow_run_cancel_notification(notification).await?,
             workflow_run_id = self.next_workflow() => {
                 let Some((workflow_run_id, run_result)) = workflow_run_id? else {
                     return Ok(ExecutorNextOperation::Listen)
@@ -120,28 +112,13 @@ impl Executor {
     ) -> WEResult<ExecutorNextOperation> {
         Ok(tokio::select! {
             biased;
-            _ = ctrl_c() => {
-                info!("Received shutdown signal. Starting graceful shutdown");
-                ExecutorNextOperation::Break(ExecutorNotificationSignal::Shutdown)
-            }
-            notification = executor_status_listener.recv() => {
-                let executor_signal = self.handle_executor_status_notification(notification);
-                match &executor_signal {
-                    ExecutorNotificationSignal::Cancel
-                    | ExecutorNotificationSignal::Shutdown
-                    | ExecutorNotificationSignal::Error(_) => ExecutorNextOperation::Break(executor_signal),
-                    ExecutorNotificationSignal::Cleanup
-                    | ExecutorNotificationSignal::NoOp => ExecutorNextOperation::Continue(executor_signal),
-                }
-            }
-            notification = workflow_run_cancel_listener.recv() => {
-                self.handle_workflow_run_cancel_notification(notification).await?;
-                ExecutorNextOperation::Continue(ExecutorNotificationSignal::NoOp)
-            }
-            notification = workflow_run_scheduled_listener.recv() => {
-                self.handle_workflow_run_scheduled_notification(notification)?;
-                ExecutorNextOperation::Continue(ExecutorNotificationSignal::NoOp)
-            }
+            _ = ctrl_c() => self.handle_sigint(),
+            notification = executor_status_listener.recv() => self
+                .handle_executor_status_notification(notification)?,
+            notification = workflow_run_cancel_listener.recv() => self
+                .handle_workflow_run_cancel_notification(notification).await?,
+            notification = workflow_run_scheduled_listener.recv() => self
+                .handle_workflow_run_scheduled_notification(notification)?,
         })
     }
 
@@ -255,7 +232,7 @@ impl Executor {
     async fn handle_workflow_run_cancel_notification(
         &mut self,
         result: Result<PgNotification, SqlError>,
-    ) -> WEResult<()> {
+    ) -> WEResult<ExecutorNextOperation> {
         let notification = match result {
             Ok(notification) => notification,
             Err(error) => {
@@ -268,7 +245,7 @@ impl Executor {
         };
         let workflow_run_id = notification.payload().parse()?;
         let Some(handle) = self.wr_handles.remove(&workflow_run_id) else {
-            return Ok(())
+            return Ok(ExecutorNextOperation::Continue(ExecutorNotificationSignal::NoOp))
         };
 
         if !handle.is_finished() {
@@ -279,17 +256,21 @@ impl Executor {
             self.handle_join_error(&workflow_run_id, error)
         }
         self.wr_service.cancel(&workflow_run_id).await?;
-        Ok(())
+        Ok(ExecutorNextOperation::Continue(
+            ExecutorNotificationSignal::NoOp,
+        ))
     }
 
     fn handle_workflow_run_scheduled_notification(
         &self,
         result: Result<PgNotification, SqlError>,
-    ) -> WEResult<()> {
+    ) -> WEResult<ExecutorNextOperation> {
         match result {
             Ok(_) => {
                 info!("Notification of workflow run scheduled. Starting loop again.");
-                Ok(())
+                Ok(ExecutorNextOperation::Continue(
+                    ExecutorNotificationSignal::NoOp,
+                ))
             }
             Err(error) => {
                 error!("Error receiving workflow run notification.\n{:?}", error);
@@ -301,24 +282,32 @@ impl Executor {
     fn handle_executor_status_notification(
         &self,
         result: Result<PgNotification, SqlError>,
-    ) -> ExecutorNotificationSignal {
+    ) -> WEResult<ExecutorNextOperation> {
         let notification = match result {
             Ok(notification) => notification,
             Err(error) => {
                 error!("Error receiving executor notification.\n{:?}", error);
-                return ExecutorNotificationSignal::Error(error);
+                return Err(error.into());
             }
         };
         info!(
             "Received executor status notification, \"{}\"",
             notification.payload()
         );
-        match notification.payload() {
+        let executor_signal = match notification.payload() {
             "cancel" => ExecutorNotificationSignal::Cancel,
             "shutdown" => ExecutorNotificationSignal::Shutdown,
             "cleanup" => ExecutorNotificationSignal::Cleanup,
             _ => ExecutorNotificationSignal::NoOp,
-        }
+        };
+        Ok(match &executor_signal {
+            ExecutorNotificationSignal::Cancel | ExecutorNotificationSignal::Shutdown => {
+                ExecutorNextOperation::Break(executor_signal)
+            }
+            ExecutorNotificationSignal::Cleanup | ExecutorNotificationSignal::NoOp => {
+                ExecutorNextOperation::Continue(executor_signal)
+            }
+        })
     }
 
     async fn process_unknown_run(&mut self, workflow_run: ExecutorWorkflowRun) -> WEResult<()> {

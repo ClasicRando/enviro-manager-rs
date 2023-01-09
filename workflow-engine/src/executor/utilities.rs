@@ -9,13 +9,12 @@ pub enum ExecutorNotificationSignal {
     Shutdown,
     Cleanup,
     NoOp,
-    Error(sqlx::Error),
 }
 
 impl ExecutorNotificationSignal {
     pub fn is_cancelled(&self) -> bool {
         match self {
-            ExecutorNotificationSignal::Cancel | ExecutorNotificationSignal::Error(_) => true,
+            ExecutorNotificationSignal::Cancel => true,
             ExecutorNotificationSignal::Shutdown
             | ExecutorNotificationSignal::NoOp
             | ExecutorNotificationSignal::Cleanup => false,
