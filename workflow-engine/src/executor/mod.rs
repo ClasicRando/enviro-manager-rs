@@ -4,7 +4,10 @@ mod worker;
 use std::collections::HashMap;
 
 use log::{error, info, warn};
-use sqlx::{postgres::{PgNotification, PgListener}, Error as SqlError};
+use sqlx::{
+    postgres::{PgListener, PgNotification},
+    Error as SqlError,
+};
 use tokio::{signal::ctrl_c, task::JoinError};
 use utilities::{ExecutorNotificationSignal, WorkflowRunWorkerResult};
 use worker::WorkflowRunWorker;
@@ -115,7 +118,7 @@ impl Executor {
         workflow_run_cancel_listener: &mut PgListener,
         workflow_run_scheduled_listener: &mut PgListener,
     ) -> WEResult<ExecutorNextOperation> {
-        Ok(            tokio::select! {
+        Ok(tokio::select! {
             biased;
             _ = ctrl_c() => {
                 info!("Received shutdown signal. Starting graceful shutdown");
@@ -141,7 +144,7 @@ impl Executor {
             }
         })
     }
-    
+
     #[allow(unused_assignments)]
     pub async fn run(&mut self) -> WEResult<()> {
         let mut is_listen_mode = false;
@@ -174,14 +177,15 @@ impl Executor {
                 self.next_operation_listen(
                     &mut executor_status_listener,
                     &mut workflow_run_cancel_listener,
-                    &mut workflow_run_scheduled_listener
-                ).await?
-            }
-            else {
+                    &mut workflow_run_scheduled_listener,
+                )
+                .await?
+            } else {
                 self.next_operation_active(
                     &mut executor_status_listener,
-                    &mut workflow_run_cancel_listener
-                ).await?
+                    &mut workflow_run_cancel_listener,
+                )
+                .await?
             };
             match next_operation {
                 ExecutorNextOperation::Continue(signal) => {
