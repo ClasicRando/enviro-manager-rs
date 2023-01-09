@@ -1,3 +1,4 @@
+use log::{error, warn};
 use rocket::form::{self, FromFormField, ValueField};
 use rocket::response::Responder;
 use rocket::serde::json::Json;
@@ -73,6 +74,7 @@ impl<T: Serialize> ApiResponse<T> {
     }
 
     pub fn failure(message: String, format: ApiResponse<FormatType>) -> Self {
+        warn!("{}", message);
         let response = Response::failure(message);
         match format {
             ApiResponse::Json(_) => Self::Json(Json(response)),
@@ -81,6 +83,7 @@ impl<T: Serialize> ApiResponse<T> {
     }
 
     pub fn error<E: std::error::Error>(error: E, format: ApiResponse<FormatType>) -> Self {
+        error!("{}", error);
         let response = Response::error(error);
         match format {
             ApiResponse::Json(_) => Self::Json(Json(response)),
