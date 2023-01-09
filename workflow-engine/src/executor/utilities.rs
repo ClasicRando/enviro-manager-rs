@@ -11,3 +11,14 @@ pub enum ExecutorNotificationSignal {
     NoOp,
     Error(sqlx::Error),
 }
+
+impl ExecutorNotificationSignal {
+    pub fn is_cancelled(&self) -> bool {
+        match self {
+            ExecutorNotificationSignal::Cancel | ExecutorNotificationSignal::Error(_) => true,
+            ExecutorNotificationSignal::Shutdown
+            | ExecutorNotificationSignal::NoOp
+            | ExecutorNotificationSignal::Cleanup => false,
+        }
+    }
+}
