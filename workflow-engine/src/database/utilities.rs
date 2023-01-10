@@ -11,9 +11,12 @@ use crate::error::{Error as WEError, Result as WEResult};
 static WE_POSTGRES_DB: OnceCell<PgPool> = OnceCell::new();
 
 fn db_options() -> Result<PgConnectOptions, sqlx::Error> {
+    let port = env!("WE_PORT")
+        .parse()
+        .expect("Port environment variable is not an integer");
     let options = PgConnectOptions::new()
         .host(env!("WE_HOST"))
-        .port(9875)
+        .port(port)
         .database(env!("WE_DB"))
         .username(env!("WE_USER"))
         .password(env!("WE_PASSWORD"));
