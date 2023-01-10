@@ -244,7 +244,10 @@ impl Executor {
                 return Err(error.into());
             }
         };
-        let workflow_run_id = notification.payload().parse()?;
+        let Ok(workflow_run_id) = notification.payload().parse() else {
+            warn!("Cannot parse workflow_run_id from `{}`", notification.payload());
+            return Ok(ExecutorNextOperation::Continue(ExecutorNotificationSignal::NoOp));
+        };
         let Some(handle) = self.wr_handles.remove(&workflow_run_id) else {
             return Ok(ExecutorNextOperation::Continue(ExecutorNotificationSignal::NoOp))
         };
