@@ -151,6 +151,7 @@ impl Executor {
             self.cleanup_workflows().await?;
 
             let next_operation = if is_listen_mode {
+                info!("Starting listen mode.");
                 self.next_operation_listen(
                     &mut executor_status_listener,
                     &mut workflow_run_cancel_listener,
