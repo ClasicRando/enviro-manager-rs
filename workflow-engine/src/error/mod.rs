@@ -4,6 +4,7 @@ use lettre::{
 };
 use thiserror::Error;
 
+/// All possible error types that may occur during workflow engine operations
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Generic SQL error\n{0}")]
@@ -40,4 +41,5 @@ pub enum Error {
     ParseInt(#[from] std::num::ParseIntError),
 }
 
+/// Generic [Result][std::result::Result] type where the error is always [Error]
 pub type Result<T> = std::result::Result<T, Error>;
