@@ -2,7 +2,7 @@ use log::{error, info};
 use sqlx::{Postgres, Transaction};
 
 use crate::{
-    error::Result as WEResult,
+    error::{Error as WEError, Result as WEResult},
     services::{
         task_queue::{TaskQueueRecord, TaskQueueService},
         workflow_runs::{WorkflowRunId, WorkflowRunsService},
@@ -35,6 +35,23 @@ impl<'w> WorkflowRunWorker<'w> {
         }
     }
 
+    async fn complete_task(
+        &self,
+        record: &TaskQueueRecord,
+        is_paused: bool,
+        message: Option<String>,
+    ) -> WEResult<()> {
+        self.tq_service
+            .complete_task_run(record, is_paused, message)
+            .await
+    }
+
+    async fn fail_task(&self, record: &TaskQueueRecord, error: WEError) -> WEResult<()> {
+        error!("Task failed, {:?}", record);
+        self.tq_service.fail_task_run(record, error).await?;
+        self.wr_service.complete(self.workflow_run_id).await
+    }
+
     pub async fn run(self) -> WEResult<()> {
         loop {
             let Some((next_task, transaction)) = self.next_task().await? else {
@@ -47,15 +64,11 @@ impl<'w> WorkflowRunWorker<'w> {
                 .start_task_run(&next_task, transaction)
                 .await?;
             match self.tq_service.run_task(&next_task).await {
-                Ok((is_paused, output)) => {
-                    self.tq_service
-                        .complete_task_run(&next_task, is_paused, output)
-                        .await?;
+                Ok((is_paused, message)) => {
+                    self.complete_task(&next_task, is_paused, message).await?
                 }
                 Err(error) => {
-                    self.tq_service.fail_task_run(&next_task, error).await?;
-                    self.wr_service.complete(self.workflow_run_id).await?;
-                    error!("Task failed, {:?}", next_task);
+                    self.fail_task(&next_task, error).await?;
                     break;
                 }
             }
