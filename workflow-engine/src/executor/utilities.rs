@@ -11,6 +11,17 @@ pub enum ExecutorNotificationSignal {
     NoOp,
 }
 
+impl From<&str> for ExecutorNotificationSignal {
+    fn from(value: &str) -> Self {
+        match value {
+            "cancel" => Self::Cancel,
+            "shutdown" => Self::Shutdown,
+            "cleanup" => Self::Cleanup,
+            _ => Self::NoOp,
+        }
+    }
+}
+
 impl ExecutorNotificationSignal {
     pub fn is_cancelled(&self) -> bool {
         match self {

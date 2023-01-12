@@ -295,15 +295,10 @@ impl Executor {
             }
         };
         info!(
-            "Received executor status notification, \"{}\"",
+            "Received executor status notification, `{}`",
             notification.payload()
         );
-        let executor_signal = match notification.payload() {
-            "cancel" => ExecutorNotificationSignal::Cancel,
-            "shutdown" => ExecutorNotificationSignal::Shutdown,
-            "cleanup" => ExecutorNotificationSignal::Cleanup,
-            _ => ExecutorNotificationSignal::NoOp,
-        };
+        let executor_signal = notification.payload().into();
         Ok(match &executor_signal {
             ExecutorNotificationSignal::Cancel | ExecutorNotificationSignal::Shutdown => {
                 ExecutorNextOperation::Break(executor_signal)
