@@ -9,6 +9,8 @@ use crate::{
     },
 };
 
+/// Container with the workflow run ID associated with the worker and the necessary services to
+/// complete workflow run operations
 pub struct WorkflowRunWorker<'w> {
     workflow_run_id: &'w WorkflowRunId,
     wr_service: &'static WorkflowRunsService,
@@ -16,6 +18,13 @@ pub struct WorkflowRunWorker<'w> {
 }
 
 impl<'w> WorkflowRunWorker<'w> {
+    /// Create a new worker. Worker does nothing until [`WorkflowRunWorker::run`] is called.
+    ///
+    /// # Arguments
+    ///
+    /// * `workflow_run_id` - ID of the workflow run to be executed
+    /// * `wr_service` - workflow run service to interact with the database
+    /// * `tq_service` - task queue service to interact with the database
     pub fn new(
         workflow_run_id: &'w WorkflowRunId,
         wr_service: &'static WorkflowRunsService,
@@ -28,6 +37,9 @@ impl<'w> WorkflowRunWorker<'w> {
         }
     }
 
+    /// Fetch next available task. If there is an available task, the transaction that selected the
+    /// task is returned as well to release the lock later. A None result means no tasks are
+    /// available for the workflow run.
     async fn next_task(&self) -> WEResult<Option<(TaskQueueRecord, Transaction<'_, Postgres>)>> {
         match self.tq_service.next_task(self.workflow_run_id).await? {
             Some(task) => Ok(Some(task)),
@@ -35,6 +47,7 @@ impl<'w> WorkflowRunWorker<'w> {
         }
     }
 
+    /// Complete a task run, updating the database record with run results
     async fn complete_task(
         &self,
         record: &TaskQueueRecord,
@@ -46,12 +59,15 @@ impl<'w> WorkflowRunWorker<'w> {
             .await
     }
 
+    /// Fail the task run, updating the database record with error information
     async fn fail_task(&self, record: &TaskQueueRecord, error: WEError) -> WEResult<()> {
         error!("Task failed, {:?}", record);
         self.tq_service.fail_task_run(record, error).await?;
         self.wr_service.complete(self.workflow_run_id).await
     }
 
+    /// Entry point for running the worker. Continues to get the next task to run until no more
+    /// tasks are available or a task fails. Once this is completed, the worker is dropped.
     pub async fn run(self) -> WEResult<()> {
         loop {
             let Some((next_task, transaction)) = self.next_task().await? else {
