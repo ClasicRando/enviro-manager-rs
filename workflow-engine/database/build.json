@@ -1,7 +1,7 @@
 {
     "common_dependencies": [
-        "audit",
-        "data_check"
+        "data_check",
+        "audit"
     ],
     "entries": [
         {
