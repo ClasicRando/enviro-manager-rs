@@ -31,11 +31,11 @@ pub enum Error {
     DuplicateJobId(i64, [NaiveDateTime; 2]),
     #[error("Notification Payload Parse Error\nNotification: `{0}`")]
     PayloadParseError(String),
-    #[error("Reqwest Error\n{0}")]
+    #[error("Email Error\n{0}")]
     Lettre(#[from] EmailError),
-    #[error("Reqwest Error\n{0}")]
+    #[error("Email Address Error\n{0}")]
     AddressParseError(#[from] AddressError),
-    #[error("Reqwest Error\n{0}")]
+    #[error("STMP Error\n{0}")]
     SmtpError(#[from] StmpError),
     #[error("{0}")]
     ParseInt(#[from] std::num::ParseIntError),
