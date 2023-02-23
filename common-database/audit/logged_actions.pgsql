@@ -16,7 +16,7 @@ create table if not exists audit.logged_actions (
     row_data jsonb,
     changed_fields jsonb,
     statement_only boolean not null,
-    geoflow_user_id bigint
+    em_user_id bigint
 );
 
 revoke all on audit.logged_actions from public;
