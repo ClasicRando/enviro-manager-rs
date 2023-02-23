@@ -69,6 +69,8 @@
         {
             "name": "workflow_tasks.pgsql",
             "dependencies": [
+                "workflows.pgsql",
+                "tasks.pgsql",
                 "schema.pgsql"
             ]
         },
