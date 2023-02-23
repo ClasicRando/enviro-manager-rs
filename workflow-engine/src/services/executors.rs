@@ -4,10 +4,7 @@ use rocket::request::FromParam;
 use serde::Serialize;
 use sqlx::{postgres::PgListener, types::ipnetwork::IpNetwork, PgPool};
 
-use crate::{
-    database::finish_transaction,
-    error::{Error as WEError, Result as WEResult},
-};
+use crate::error::{Error as WEError, Result as WEResult};
 
 use super::workflow_runs::WorkflowRunId;
 
@@ -144,33 +141,27 @@ impl ExecutorsService {
     }
 
     pub async fn shutdown(&self, executor_id: &ExecutorId) -> WEResult<Option<Executor>> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call shutdown_executor($1)")
+        sqlx::query("call shutdown_executor($1)")
             .bind(executor_id)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         self.read_one(executor_id).await
     }
 
     pub async fn cancel(&self, executor_id: &ExecutorId) -> WEResult<Option<Executor>> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call cancel_executor($1)")
+        sqlx::query("call cancel_executor($1)")
             .bind(executor_id)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         self.read_one(executor_id).await
     }
 
     pub async fn close(&self, executor_id: &ExecutorId, is_cancelled: bool) -> WEResult<()> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call close_we_executor($1,$2)")
+        sqlx::query("call close_we_executor($1,$2)")
             .bind(executor_id)
             .bind(is_cancelled)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         Ok(())
     }
 
