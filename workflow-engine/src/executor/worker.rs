@@ -1,5 +1,4 @@
 use log::{error, info};
-use sqlx::{Postgres, Transaction};
 
 use crate::{
     error::{Error as WEError, Result as WEResult},
@@ -37,16 +36,6 @@ impl<'w> WorkflowRunWorker<'w> {
         }
     }
 
-    /// Fetch next available task. If there is an available task, the transaction that selected the
-    /// task is returned as well to release the lock later. A None result means no tasks are
-    /// available for the workflow run.
-    async fn next_task(&self) -> WEResult<Option<(TaskQueueRecord, Transaction<'_, Postgres>)>> {
-        match self.tq_service.next_task(self.workflow_run_id).await? {
-            Some(task) => Ok(Some(task)),
-            None => Ok(None),
-        }
-    }
-
     /// Complete a task run, updating the database record with run results
     async fn complete_task(
         &self,
@@ -70,15 +59,12 @@ impl<'w> WorkflowRunWorker<'w> {
     /// tasks are available or a task fails. Once this is completed, the worker is dropped.
     pub async fn run(self) -> WEResult<()> {
         loop {
-            let Some((next_task, transaction)) = self.next_task().await? else {
+            let Some(next_task) = self.tq_service.next_task(self.workflow_run_id).await? else {
                 self.wr_service.complete(self.workflow_run_id).await?;
                 info!("No available task to run. Exiting worker");
                 break;
             };
             info!("Running task, {:?}", next_task);
-            self.tq_service
-                .start_task_run(&next_task, transaction)
-                .await?;
             match self.tq_service.run_task(&next_task).await {
                 Ok((is_paused, message)) => {
                     self.complete_task(&next_task, is_paused, message).await?

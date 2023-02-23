@@ -14,10 +14,7 @@ use sqlx::{
     PgPool, Postgres, Type,
 };
 
-use crate::{
-    database::finish_transaction,
-    error::{Error as WEError, Result as WEResult},
-};
+use crate::error::{Error as WEError, Result as WEResult};
 
 use super::{executors::ExecutorId, task_queue::TaskRule, tasks::TaskStatus};
 
@@ -185,12 +182,10 @@ impl WorkflowRunsService {
     }
 
     pub async fn initialize(&self, workflow_id: i64) -> WEResult<WorkflowRun> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query_scalar("select initialize_workflow_run($1)")
+        let workflow_run_id = sqlx::query_scalar("select initialize_workflow_run($1)")
             .bind(workflow_id)
-            .fetch_one(&mut transaction)
-            .await;
-        let workflow_run_id: WorkflowRunId = finish_transaction(transaction, result).await?;
+            .fetch_one(self.pool)
+            .await?;
         match self.read_one(&workflow_run_id).await {
             Ok(Some(workflow_run)) => Ok(workflow_run),
             Ok(None) => Err(sqlx::Error::RowNotFound.into()),
@@ -223,22 +218,18 @@ impl WorkflowRunsService {
     }
 
     pub async fn cancel(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call cancel_workflow_run($1)")
+        sqlx::query("call cancel_workflow_run($1)")
             .bind(workflow_run_id)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         self.read_one(workflow_run_id).await
     }
 
     pub async fn schedule(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call schedule_workflow_run($1)")
+        sqlx::query("call schedule_workflow_run($1)")
             .bind(workflow_run_id)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         self.read_one(workflow_run_id).await
     }
 
@@ -247,33 +238,27 @@ impl WorkflowRunsService {
         workflow_run_id: &WorkflowRunId,
         executor_id: &ExecutorId,
     ) -> WEResult<Option<WorkflowRun>> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call schedule_workflow_run($1,$2)")
+        sqlx::query("call schedule_workflow_run($1,$2)")
             .bind(workflow_run_id)
             .bind(executor_id)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         self.read_one(workflow_run_id).await
     }
 
     pub async fn restart(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call restart_workflow_run($1)")
+        sqlx::query("call restart_workflow_run($1)")
             .bind(workflow_run_id)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         self.read_one(workflow_run_id).await
     }
 
     pub async fn complete(&self, workflow_run_id: &WorkflowRunId) -> WEResult<()> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call complete_workflow_run($1)")
+        sqlx::query("call complete_workflow_run($1)")
             .bind(workflow_run_id)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         Ok(())
     }
 
@@ -296,12 +281,10 @@ impl WorkflowRunsService {
         &self,
         workflow_run_id: &WorkflowRunId,
     ) -> WEResult<Option<WorkflowRun>> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call start_workflow_run_move($1)")
+        sqlx::query("call start_workflow_run_move($1)")
             .bind(workflow_run_id)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         self.read_one(workflow_run_id).await
     }
 
@@ -309,12 +292,10 @@ impl WorkflowRunsService {
         &self,
         workflow_run_id: &WorkflowRunId,
     ) -> WEResult<Option<WorkflowRun>> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call complete_workflow_run_move($1)")
+        sqlx::query("call complete_workflow_run_move($1)")
             .bind(workflow_run_id)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         self.read_one(workflow_run_id).await
     }
 

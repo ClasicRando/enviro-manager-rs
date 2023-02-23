@@ -2,10 +2,7 @@ use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
-use crate::{
-    database::finish_transaction,
-    error::{Error as WEError, Result as WEResult},
-};
+use crate::error::{Error as WEError, Result as WEResult};
 
 #[derive(sqlx::Type, Serialize)]
 #[sqlx(type_name = "task_status")]
@@ -110,16 +107,14 @@ impl TasksService {
     }
 
     pub async fn update(&self, task_id: &TaskId, request: TaskRequest) -> WEResult<Option<Task>> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call update_task($1,$2,$3,$4,$5)")
+        sqlx::query("call update_task($1,$2,$3,$4,$5)")
             .bind(task_id)
             .bind(request.name)
             .bind(request.description)
             .bind(request.task_service_id)
             .bind(request.url)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         self.read_one(task_id).await
     }
 }

@@ -6,10 +6,7 @@ use sqlx::{
     PgPool,
 };
 
-use crate::{
-    database::finish_transaction,
-    error::{Error as WEError, Result as WEResult},
-};
+use crate::error::{Error as WEError, Result as WEResult};
 
 #[derive(sqlx::Type, Serialize, Deserialize)]
 #[sqlx(type_name = "workflow_task")]
@@ -94,14 +91,13 @@ impl WorkflowsService {
         Self { pool }
     }
 
+    // TODO: Alter create_workflow to return Workflow data
     pub async fn create(&self, request: WorkflowRequest) -> WEResult<Workflow> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query_scalar("select create_workflow($1,$2)")
+        let workflow_id = sqlx::query_scalar("select create_workflow($1,$2)")
             .bind(request.name)
             .bind(request.tasks)
-            .fetch_one(&mut transaction)
-            .await;
-        let workflow_id: WorkflowId = finish_transaction(transaction, result).await?;
+            .fetch_one(self.pool)
+            .await?;
         match self.read_one(&workflow_id).await {
             Ok(Some(workflow)) => Ok(workflow),
             Ok(None) => Err(sqlx::Error::RowNotFound.into()),
@@ -134,13 +130,11 @@ impl WorkflowsService {
     }
 
     pub async fn deprecate(&self, request: WorkflowDeprecationRequest) -> WEResult<i64> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call deprecate_workflow($1,$2)")
+        sqlx::query("call deprecate_workflow($1,$2)")
             .bind(request.workflow_id)
             .bind(request.new_workflow_id)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         Ok(request.workflow_id)
     }
 }

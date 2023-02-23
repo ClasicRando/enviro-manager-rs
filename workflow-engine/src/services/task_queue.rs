@@ -9,15 +9,12 @@ use sqlx::{
         types::{PgRecordDecoder, PgRecordEncoder},
         PgArgumentBuffer, PgHasArrayType, PgTypeInfo, PgValueRef,
     },
-    PgPool, Postgres, Transaction, Type,
+    PgPool, Postgres, Type,
 };
 
 use super::workflow_runs::WorkflowRunId;
 
-use crate::{
-    database::{finish_transaction, rollback_transaction},
-    error::{Error as WEError, Result as WEResult},
-};
+use crate::error::{Error as WEError, Result as WEResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskRule {
@@ -127,14 +124,12 @@ impl TaskQueueService {
         task_order: i32,
         rule: TaskRule,
     ) -> WEResult<()> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call append_task_rule($1,$2,$3)")
+        sqlx::query("call append_task_rule($1,$2,$3)")
             .bind(workflow_run_id)
             .bind(task_order)
             .bind(rule)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         Ok(())
     }
 
@@ -144,58 +139,42 @@ impl TaskQueueService {
         task_order: i32,
         progress: i16,
     ) -> WEResult<()> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call set_task_progress($1,$2,$3)")
+        sqlx::query("call set_task_progress($1,$2,$3)")
             .bind(workflow_run_id)
             .bind(task_order)
             .bind(progress)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         Ok(())
     }
 
     pub async fn retry_task(&self, request: TaskQueueRequest) -> WEResult<()> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call retry_task($1,$2)")
+        sqlx::query("call retry_task($1,$2)")
             .bind(request.workflow_run_id)
             .bind(request.task_order)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         Ok(())
     }
 
     pub async fn complete_task(&self, request: TaskQueueRequest) -> WEResult<()> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call complete_task($1,$2)")
+        sqlx::query("call complete_task($1,$2)")
             .bind(request.workflow_run_id)
             .bind(request.task_order)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         Ok(())
     }
 
     pub async fn next_task(
         &self,
         workflow_run_id: &WorkflowRunId,
-    ) -> WEResult<Option<(TaskQueueRecord, Transaction<'_, Postgres>)>> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query_as(
-            r#"
-            select workflow_run_id, task_order, task_id, parameters, url
-            from   next_task($1)
-            where  task_order is not null"#,
-        )
-        .bind(workflow_run_id)
-        .fetch_optional(&mut transaction)
-        .await;
-        match result {
-            Ok(Some(record)) => Ok(Some((record, transaction))),
-            Ok(None) => Ok(None),
-            Err(error) => rollback_transaction(error, transaction).await,
-        }
+    ) -> WEResult<Option<TaskQueueRecord>> {
+        let task_queue_record = sqlx::query_as("call workflow_engine.aquire_next_task($1)")
+            .bind(workflow_run_id)
+            .fetch_optional(self.pool)
+            .await?;
+        Ok(task_queue_record)
     }
 
     async fn process_response_message(
@@ -252,29 +231,13 @@ impl TaskQueueService {
         result
     }
 
-    pub async fn start_task_run(
-        &self,
-        record: &TaskQueueRecord,
-        mut transaction: Transaction<'_, Postgres>,
-    ) -> WEResult<()> {
-        let result = sqlx::query("call start_task_run($1, $2)")
-            .bind(record.workflow_run_id)
-            .bind(record.task_order)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
-        Ok(())
-    }
-
     pub async fn fail_task_run(&self, record: &TaskQueueRecord, error: WEError) -> WEResult<()> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call fail_task_run($1,$2,$3)")
+        sqlx::query("call fail_task_run($1,$2,$3)")
             .bind(record.workflow_run_id)
             .bind(record.task_order)
             .bind(error.to_string())
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         Ok(())
     }
 
@@ -284,15 +247,13 @@ impl TaskQueueService {
         is_paused: bool,
         message: Option<String>,
     ) -> WEResult<()> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call complete_task_run($1,$2,$3,$4)")
+        sqlx::query("call complete_task_run($1,$2,$3,$4)")
             .bind(record.workflow_run_id)
             .bind(record.task_order)
             .bind(is_paused)
             .bind(message)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         Ok(())
     }
 }

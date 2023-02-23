@@ -10,10 +10,7 @@ use sqlx::{
     PgPool,
 };
 
-use crate::{
-    database::finish_transaction,
-    error::{Error as WEError, Result as WEResult},
-};
+use crate::error::{Error as WEError, Result as WEResult};
 
 use super::workflow_runs::WorkflowRunStatus;
 
@@ -263,15 +260,13 @@ impl JobsService {
         interval: &PgInterval,
         next_run: &Option<NaiveDateTime>,
     ) -> WEResult<JobId> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query_scalar("select create_interval_cron_job($1,$2,$3)")
+        let job_id = sqlx::query_scalar("select create_interval_cron_job($1,$2,$3)")
             .bind(workflow_id)
             .bind(maintainer)
             .bind(interval)
             .bind(next_run)
-            .fetch_one(&mut transaction)
-            .await;
-        let job_id: JobId = finish_transaction(transaction, result).await?;
+            .fetch_one(self.pool)
+            .await?;
         Ok(job_id)
     }
 
@@ -281,14 +276,12 @@ impl JobsService {
         maintainer: &str,
         schedule: &[ScheduleEntry],
     ) -> WEResult<JobId> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query_scalar("select create_scheduled_cron_job($1,$2,$3)")
+        let job_id = sqlx::query_scalar("select create_scheduled_cron_job($1,$2,$3)")
             .bind(workflow_id)
             .bind(maintainer)
             .bind(schedule)
-            .fetch_one(&mut transaction)
-            .await;
-        let job_id: JobId = finish_transaction(transaction, result).await?;
+            .fetch_one(self.pool)
+            .await?;
         Ok(job_id)
     }
 
@@ -330,12 +323,10 @@ impl JobsService {
     }
 
     pub async fn run_job(&self, job_id: &JobId) -> WEResult<Option<Job>> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query("call run_job($1)")
+        sqlx::query("call run_job($1)")
             .bind(job_id)
-            .execute(&mut transaction)
-            .await;
-        finish_transaction(transaction, result).await?;
+            .execute(self.pool)
+            .await?;
         self.read_one(job_id).await
     }
 
