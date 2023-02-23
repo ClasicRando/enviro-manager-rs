@@ -29,7 +29,7 @@ begin
         substring(TG_OP,1,1)::audit.audit_action,     -- action
         null, null,                                   -- row_data, changed_fields
         'f',                                          -- statement_only
-        nullif(current_setting('geoflow.uid', true),'') -- geoflow_user_id
+        nullif(current_setting('em.uid', true),'')    -- em_user_id
     );
 
     if not TG_ARGV[0]::boolean is distinct from 'f'::boolean then
@@ -59,8 +59,11 @@ begin
     elsif TG_LEVEL = 'STATEMENT' and TG_OP in ('INSERT','UPDATE','DELETE','TRUNCATE') then
         audit_row.statement_only := 't';
     else
-        raise exception '[audit.if_modified_func] - Trigger func added as trigger for unhandled case: %, %',TG_OP, TG_LEVEL;
-        return null;
+        raise exception
+            '[audit.if_modified_func] - Trigger func added as trigger for unhandled case: %, %',
+            TG_OP,
+            TG_LEVEL;
+            return null;
     end if;
     insert into audit.logged_actions(
         schema_name,
@@ -79,7 +82,7 @@ begin
         row_data,
         changed_fields,
         statement_only,
-        geoflow_user_id
+        em_user_id
     )
     values (
         audit_row.schema_name,
@@ -98,7 +101,7 @@ begin
         audit_row.row_data,
         audit_row.changed_fields,
         audit_row.statement_only,
-        audit_row.geoflow_user_id
+        audit_row.em_user_id
     );
     return null;
 end;
