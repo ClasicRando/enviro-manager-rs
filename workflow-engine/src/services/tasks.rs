@@ -71,20 +71,18 @@ impl TasksService {
     }
 
     pub async fn create(&self, request: TaskRequest) -> WEResult<Task> {
-        let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query_scalar("select create_task($1,$2,$3,$4)")
-            .bind(request.name)
-            .bind(request.description)
-            .bind(request.task_service_id)
-            .bind(request.url)
-            .fetch_one(&mut transaction)
-            .await;
-        let task_id: TaskId = finish_transaction(transaction, result).await?;
-        match self.read_one(&task_id).await {
-            Ok(Some(task)) => Ok(task),
-            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
-            Err(error) => Err(error),
-        }
+        let result = sqlx::query_as(
+            r#"
+            select task_id, name, description, url, task_service_name
+            from create_task($1,$2,$3,$4)"#,
+        )
+        .bind(request.name)
+        .bind(request.description)
+        .bind(request.task_service_id)
+        .bind(request.url)
+        .fetch_one(self.pool)
+        .await?;
+        Ok(result)
     }
 
     pub async fn read_one(&self, task_id: &TaskId) -> WEResult<Option<Task>> {
