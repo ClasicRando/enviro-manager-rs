@@ -5,15 +5,11 @@ use std::path::PathBuf;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
-fn get_relative_path(path: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let mut result = std::env::current_dir()?;
-    result.push(path.trim_start_matches('/'));
-    Ok(result)
-}
+use crate::{package_dir, workspace_dir};
 
 #[derive(Debug, Deserialize)]
-struct DbBuild {
-    common_dependencies: Vec<String>,
+pub(crate) struct DbBuild {
+    pub(crate) common_dependencies: Vec<String>,
     entries: Vec<DbBuildEntry>,
 }
 
@@ -75,17 +71,16 @@ impl<'e> Iterator for OrderIter<'e> {
     }
 }
 
-async fn db_build(path: PathBuf) -> Result<(String, DbBuild), Box<dyn std::error::Error>> {
-    let dir = path.parent().expect("Directory does not have a parent");
+pub(crate) async fn db_build(path: PathBuf) -> Result<DbBuild, Box<dyn std::error::Error>> {
     let mut file = File::open(&path).await?;
     let mut contents = String::new();
     file.read_to_string(&mut contents).await?;
     let db_build: DbBuild = serde_json::from_str(&contents)?;
-    Ok((dir.to_string_lossy().into_owned(), db_build))
+    Ok(db_build)
 }
 
-async fn read_file(path: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let mut file = File::open(path)
+async fn read_file(path: PathBuf) -> Result<String, Box<dyn std::error::Error>> {
+    let mut file = File::open(&path)
         .await
         .unwrap_or_else(|_| panic!("Could not find file, {:?}", path));
     let mut block = String::new();
@@ -108,11 +103,12 @@ async fn build_common_schema(
     schema: &str,
     pool: &PgPool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let path = get_relative_path(&format!("common-database/{}/build.json", schema))?;
-    let (directory, db_build) = db_build(path).await?;
+    let schema_directory = workspace_dir().join("common-database").join(schema);
+    let path = schema_directory.join("build.json");
+    let db_build = db_build(path).await?;
 
     for entry in db_build.entries_ordered() {
-        let block = read_file(&format!("{}/{}", directory, entry.name)).await?;
+        let block = read_file(schema_directory.join(&entry.name)).await?;
         if let Err(error) = execute_anonymous_block(block, pool).await {
             return Err(format!("Error running schema build {:?}. {}", entry.name, error).into());
         };
@@ -120,12 +116,10 @@ async fn build_common_schema(
     Ok(())
 }
 
-pub async fn build_schema(
-    schema_build_path: &str,
-    pool: &PgPool,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let path = get_relative_path(&format!("{}/build.json", schema_build_path))?;
-    let (directory, db_build) = db_build(path).await?;
+pub async fn build_schema(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
+    let schema_directory = package_dir().join("database");
+    let path = schema_directory.join("build.json");
+    let db_build = db_build(path).await?;
 
     if !db_build.common_dependencies.is_empty() {
         for dep in &db_build.common_dependencies {
@@ -134,7 +128,7 @@ pub async fn build_schema(
     }
 
     for entry in db_build.entries_ordered() {
-        let block = read_file(&format!("{}/{}", directory, entry.name)).await?;
+        let block = read_file(schema_directory.join(&entry.name)).await?;
         if let Err(error) = execute_anonymous_block(block, pool).await {
             return Err(format!("Error running schema build {:?}. {}", entry.name, error).into());
         };
