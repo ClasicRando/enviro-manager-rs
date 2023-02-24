@@ -1,5 +1,5 @@
 {
-    "common_dependencies": [],
+    "common_dependencies": ["data_check"],
     "entries": [
         {
             "name": "schema.pgsql",

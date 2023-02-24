@@ -13,25 +13,28 @@ as $$
 select tq.workflow_run_id, tq.task_order, tq.task_id, tq.parameters, t.url
 from (
     select tq1.workflow_run_id, tq1.task_order, tq1.task_id, tq1.parameters
-    from   workflow_engine.task_queue tq1
-    where  tq1.workflow_run_id = $1
-    and    not exists(
-        select 1
-        from   workflow_engine.task_queue tq2
-        where  tq1.workflow_run_id = tq2.workflow_run_id
-        and    tq2.status in (
-            'Running'::workflow_engine.task_status,
-            'Paused'::workflow_engine.task_status,
-            'Failed'::workflow_engine.task_status,
-            'Rule Broken'::workflow_engine.task_status
+    from workflow_engine.task_queue tq1
+    where
+        tq1.workflow_run_id = $1
+        and not exists(
+            select 1
+            from workflow_engine.task_queue tq2
+            where
+                tq1.workflow_run_id = tq2.workflow_run_id
+                and tq2.status in (
+                    'Running'::workflow_engine.task_status,
+                    'Paused'::workflow_engine.task_status,
+                    'Failed'::workflow_engine.task_status,
+                    'Rule Broken'::workflow_engine.task_status
+                )
         )
-    )
-    and    tq1.status = 'Waiting'::workflow_engine.task_status
+        and tq1.status = 'Waiting'::workflow_engine.task_status
     order by tq1.task_order
     limit 1
     for update
 ) tq
-join   workflow_engine.v_tasks t on tq.task_id = t.task_id;
+join workflow_engine.v_tasks t
+on tq.task_id = t.task_id;
 $$;
 
 comment on function workflow_engine.next_task IS $$
@@ -42,5 +45,6 @@ containing data about the executable task.
 record is updated, immediately commit or rollback on error.
 
 Arguments:
-workflow_run_id:    ID of the workflow run to check for the next task
+workflow_run_id:
+    ID of the workflow run to check for the next task
 $$;

@@ -15,9 +15,13 @@ comment on function workflow_engine.create_interval_job IS $$
 Create a new interval based job
 
 Arguments:
-workflow_id:    ID of the workflow as a template for the new job
-maintainer:     Email of the maintainer of the job
-job_interval:   Positive interval to dictate how frequent this job is run
-next_run:       Optional parameter to decide when the job first runs. Default is to run 1
-                job_interval from the current timestamp
+workflow_id:
+    ID of the workflow as a template for the new job
+maintainer:
+    Email of the maintainer of the job
+job_interval:
+    Positive interval to dictate how frequent this job is run
+next_run:
+    Optional parameter to decide when the job first runs. Default is to run 1
+    job_interval from the current timestamp
 $$;

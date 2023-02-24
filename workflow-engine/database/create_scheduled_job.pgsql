@@ -14,7 +14,10 @@ comment on function workflow_engine.create_scheduled_job IS $$
 Create a new weekly schedule based job 
 
 Arguments:
-workflow_id:    ID of the workflow as a template for the new job
-maintainer:     Email of the maintainer of the job
-job_schedule:   Schedule of 1 or more weekly time slots to run the job
+workflow_id:
+    ID of the workflow as a template for the new job
+maintainer:
+    Email of the maintainer of the job
+job_schedule:
+    Schedule of 1 or more weekly time slots to run the job
 $$;

@@ -18,15 +18,29 @@ create table if not exists workflow_engine.task_queue (
 
 revoke all on workflow_engine.task_queue from public;
 
-comment on table workflow_engine.task_queue is 'Single tasks for a given workflow run. Partitioned by workflow run';
-comment on column workflow_engine.task_queue.workflow_run_id is 'Id of the parent workflow run of this record';
-comment on column workflow_engine.task_queue.task_order is 'Sequential order of task within the workflow run';
-comment on column workflow_engine.task_queue.task_id is 'Id of the task to be executed';
-comment on column workflow_engine.task_queue.status is 'Current status of the task';
-comment on column workflow_engine.task_queue.parameters is 'Parameters passed to the task as unstructured data for custom actions';
-comment on column workflow_engine.task_queue.output is 'Message output as result of task. Usually empty and filled when error occurs';
-comment on column workflow_engine.task_queue.rules is 'Collection of all rules checked/run during task. Failed rules will halt workflow run';
-comment on column workflow_engine.task_queue.task_start is 'Timestamp when task starts';
-comment on column workflow_engine.task_queue.task_end is 'Timestamp of when task ends. Only populated when done but status values other than ''Complete'' can have a value here';
-comment on column workflow_engine.task_queue.progress is 'Progress toward task completion. If not null then between 0 and 100';
-comment on constraint task_queue_pk on workflow_engine.task_queue is 'Records in task queue are unique for a task order per workflow run';
+comment on table workflow_engine.task_queue is
+'Single tasks for a given workflow run. Partitioned by workflow run';
+comment on column workflow_engine.task_queue.workflow_run_id is
+'Id of the parent workflow run of this record';
+comment on column workflow_engine.task_queue.task_order is
+'Sequential order of task within the workflow run';
+comment on column workflow_engine.task_queue.task_id is
+'Id of the task to be executed';
+comment on column workflow_engine.task_queue.status is
+'Current status of the task';
+comment on column workflow_engine.task_queue.parameters is
+'Parameters passed to the task as unstructured data for custom actions';
+comment on column workflow_engine.task_queue.output is
+'Message output as result of task. Usually empty and filled when error occurs';
+comment on column workflow_engine.task_queue.rules is
+'Collection of all rules checked/run during task. Failed rules will halt workflow run';
+comment on column workflow_engine.task_queue.task_start is
+'Timestamp when task starts';
+comment on column workflow_engine.task_queue.task_end is $$
+Timestamp of when task ends. Only populated when done but status values other than ''Complete''
+can have a value here
+$$;
+comment on column workflow_engine.task_queue.progress is
+'Progress toward task completion. If not null then between 0 and 100';
+comment on constraint task_queue_pk on workflow_engine.task_queue is
+'Records in task queue are unique for a task order per workflow run';

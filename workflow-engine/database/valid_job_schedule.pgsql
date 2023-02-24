@@ -25,5 +25,6 @@ Validates the job schedule is not null, contains 1 or more entries and the entri
 Valid entries are when the day_of_week attribute is between 1 and 7.
 
 Arguments:
-job_schedule:    Array of job schedule entries to verify
+job_schedule:
+    Array of job schedule entries to verify
 $$;

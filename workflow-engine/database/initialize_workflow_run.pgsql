@@ -12,17 +12,20 @@ declare
     v_hint text;
     v_context text;
 begin
+    start transaction;
     begin
-        select *
-        into   v_workflow
-        from   workflow_engine.workflows w
-        where  w.workflow_id = $1;
+        select w.workflow_id, w.tasks
+        into v_workflow
+        from workflow_engine.workflows w
+        where w.workflow_id = $1;
     exception
         when no_data_found then
+            commit;
             raise exception 'Cannot find a workflow for %l', $1;
     end;
 
     if v_workflow.deprecated_date is not null then
+        commit;
         raise exception 'Cannot initialize a workflow_run with a deprecated workflow. Consider using workflow_id = %l', v_workflow.new_workflow_id;
     end if;
 
@@ -39,11 +42,13 @@ begin
 
         insert into workflow_engine.task_queue(workflow_run_id,task_order,task_id,parameters)
         select v_workflow_run_id, wt.task_order, wt.task_id, wt.parameters
-        from   workflow_engine.workflow_tasks wt
-        join   workflow_engine.tasks t on wt.task_id = t.task_id
-        where  wt.workflow_id = $1;
+        from workflow_engine.workflow_tasks wt
+        join workflow_engine.tasks t on wt.task_id = t.task_id
+        where wt.workflow_id = $1;
+        commit;
     exception
         when others then
+            rollback;
             get stacked diagnostics
                 v_state   = returned_sqlstate,
                 v_msg     = message_text,
@@ -59,8 +64,6 @@ begin
                 context: %', v_state, v_msg, v_detail, v_hint, v_context;
     end;
 
-    commit;
-
     return v_workflow_run_id;
 end;
 $$;
@@ -74,5 +77,6 @@ statements are completed successfully, everything is committed. If something goe
 existing transaction if let unaltered.
 
 Arguments:
-workflow_id:    ID of the workflow that is used as a template to build the workflow run
+workflow_id:
+    ID of the workflow that is used as a template to build the workflow run
 $$;

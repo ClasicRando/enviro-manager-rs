@@ -9,12 +9,13 @@ language sql
 as $$
 select exists(
     select 1
-    from   pg_trigger trg
-    join   pg_class c on trg.tgrelid = c.oid
-    join   pg_namespace n on c.relnamespace = n.oid
-    where  n.nspname = $1
-    and    c.relname = $2
-    and    trg.tgname = $3
+    from pg_trigger trg
+    join pg_class c on trg.tgrelid = c.oid
+    join pg_namespace n on c.relnamespace = n.oid
+    where
+        n.nspname = $1
+        and c.relname = $2
+        and trg.tgname = $3
 )
 $$;
 

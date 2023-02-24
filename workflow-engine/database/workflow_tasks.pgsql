@@ -9,32 +9,41 @@ declare
 begin
     if TG_OP in ('UPDATE', 'INSERT') then
         begin
-            select distinct workflow_id 
-            into   v_workflow_id
-            from   new_table;
+            select distinct nt.workflow_id 
+            into v_workflow_id
+            from new_table nt;
         exception
             when too_many_rows then
                 raise exception 'When affecting workflow_tasks, only 1 workflow_id can be impacted';
         end;
     else
         begin
-            select distinct workflow_id 
-            into   v_workflow_id
-            from   old_table;
+            select distinct ot.workflow_id 
+            into v_workflow_id
+            from old_table ot;
         exception
             when too_many_rows then
                 raise exception 'When affecting workflow_tasks, only 1 workflow_id can be impacted';
         end;
     end if;
 
-    select string_agg(format('task_id = %s, expected %s, got %s', task_id, rn, task_order), chr(10))
-    into   v_errors
+    select
+        string_agg(
+            format(
+                'task_id = %s, expected %s, got %s',
+                e.task_id,
+                e.rn,
+                e.task_order
+            ),
+            chr(10)
+        )
+    into v_errors
     from (
-        select task_id, task_order, row_number() over (order by task_order) rn
-        from   workflow_engine.workflow_tasks
-        where  workflow_id = v_workflow_id
+        select wt.task_id, wt.task_order, row_number() over (order by wt.task_order) rn
+        from workflow_engine.workflow_tasks wt
+        where wt.workflow_id = v_workflow_id
     ) e
-    where  task_order != rn;
+    where e.task_order != rn;
 
     if v_errors is not null then
         raise exception 'Task order values are not correct. See these instances: %s', v_errors;
@@ -84,11 +93,25 @@ call audit.audit_table('workflow_engine.workflow_tasks');
 
 revoke all on workflow_engine.workflow_tasks from public;
 
-comment on table workflow_engine.workflow_tasks is 'All tasks linked to a parent workflow';
-comment on column workflow_engine.workflow_tasks.workflow_id is 'Id of the parent workflow';
-comment on column workflow_engine.workflow_tasks.task_order is 'Order within the workflow. Must be sequential with no gaps';
-comment on column workflow_engine.workflow_tasks.task_id is 'Id of the task to be executed in the parent workflow at this order position';
-comment on column workflow_engine.workflow_tasks.parameters is 'Parameters to be passed to the executing service to customize behaviour';
-comment on trigger verify_insert_records on workflow_engine.workflow_tasks is 'Trigger to guarentee that a single workflow_id is inserted and the task_order values the sequential with no gaps';
-comment on trigger verify_update_records on workflow_engine.workflow_tasks is 'Trigger to guarentee that a single workflow_id is updated and the task_order values the sequential with no gaps';
-comment on trigger verify_delete_records on workflow_engine.workflow_tasks is 'Trigger to guarentee that a single workflow_id is deleted and the task_order values the sequential with no gaps';
+comment on table workflow_engine.workflow_tasks is
+'All tasks linked to a parent workflow';
+comment on column workflow_engine.workflow_tasks.workflow_id is
+'Id of the parent workflow';
+comment on column workflow_engine.workflow_tasks.task_order is
+'Order within the workflow. Must be sequential with no gaps';
+comment on column workflow_engine.workflow_tasks.task_id is
+'Id of the task to be executed in the parent workflow at this order position';
+comment on column workflow_engine.workflow_tasks.parameters is
+'Parameters to be passed to the executing service to customize behaviour';
+comment on trigger verify_insert_records on workflow_engine.workflow_tasks is $$
+Trigger to guarentee that a single workflow_id is inserted and the task_order values the
+sequential with no gaps
+$$;
+comment on trigger verify_update_records on workflow_engine.workflow_tasks is $$
+Trigger to guarentee that a single workflow_id is inserted and the task_order values the
+sequential with no gaps
+$$;;
+comment on trigger verify_delete_records on workflow_engine.workflow_tasks is $$
+Trigger to guarentee that a single workflow_id is inserted and the task_order values the
+sequential with no gaps
+$$;;

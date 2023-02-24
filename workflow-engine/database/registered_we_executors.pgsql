@@ -37,11 +37,19 @@ call audit.audit_table('workflow_engine.registered_we_executors');
 
 revoke all on workflow_engine.registered_we_executors from public;
 
-comment on table workflow_engine.registered_we_executors is 'Executors registered as working to complete workflow runs';
-comment on column workflow_engine.registered_we_executors.executor_id is 'Unique identifier for each executor';
-comment on column workflow_engine.registered_we_executors.pid is 'Process ID of the application running the executor';
-comment on column workflow_engine.registered_we_executors.username is 'Name of the current user connecting as the executor';
-comment on column workflow_engine.registered_we_executors.application_name is 'Name of the application running the executor';
-comment on column workflow_engine.registered_we_executors.client_addr is 'IP address of the client connected as the executor';
-comment on column workflow_engine.registered_we_executors.client_port is 'Port of the client connected as the exector';
-comment on trigger status_event on workflow_engine.registered_we_executors is 'Trigger run during status updates to notify the required listeners of changes';
+comment on table workflow_engine.registered_we_executors is
+'Executors registered as working to complete workflow runs';
+comment on column workflow_engine.registered_we_executors.executor_id is
+'Unique identifier for each executor';
+comment on column workflow_engine.registered_we_executors.pid is
+'Process ID of the application running the executor';
+comment on column workflow_engine.registered_we_executors.username is
+'Name of the current user connecting as the executor';
+comment on column workflow_engine.registered_we_executors.application_name is
+'Name of the application running the executor';
+comment on column workflow_engine.registered_we_executors.client_addr is
+'IP address of the client connected as the executor';
+comment on column workflow_engine.registered_we_executors.client_port is
+'Port of the client connected as the exector';
+comment on trigger status_event on workflow_engine.registered_we_executors is
+'Trigger run during status updates to notify the required listeners of changes';

@@ -17,8 +17,8 @@ begin
 
     if exists(
         select 1
-        from   workflow_engine.jobs
-        where  current_workflow_run_id = new.workflow_run_id
+        from workflow_engine.jobs j
+        where j.current_workflow_run_id = new.workflow_run_id
     ) and new.status not in (
         'Scheduled'::workflow_engine.workflow_run_status,
         'Running'::workflow_engine.workflow_run_status
@@ -26,9 +26,9 @@ begin
         perform pg_notify(
             'jobs',
             (
-                select job_id::text
-                from   workflow_engine.jobs
-                where  current_workflow_run_id = new.workflow_run_id
+                select j.job_id::text
+                from workflow_engine.jobs j
+                where j.current_workflow_run_id = new.workflow_run_id
             )
         );
     end if;
@@ -77,11 +77,19 @@ call audit.audit_table('workflow_engine.workflow_runs');
 
 revoke all on workflow_engine.workflow_runs from public;
 
-comment on table workflow_engine.workflow_runs is 'Run instance of a given generic workflow';
-comment on column workflow_engine.workflow_runs.workflow_run_id is 'Unique identifier for each workflow run';
-comment on column workflow_engine.workflow_runs.workflow_id is 'Id of the templated workflow executed during the run';
-comment on column workflow_engine.workflow_runs.status is 'Current status of the workflow run';
-comment on column workflow_engine.workflow_runs.executor_id is 'Id of the executor that owns this workflow run. Is null until picked up by executor';
-comment on column workflow_engine.workflow_runs.progress is 'Optional progress that the worker reports as iterations/subtasks are completed';
-comment on trigger workflow_run_status on workflow_engine.workflow_runs is 'Trigger run during status updates to notify the required listeners of changes';
-comment on trigger workflow_run_progress on workflow_engine.workflow_runs is 'Trigger run during progress updates to notify the required listeners of changes';
+comment on table workflow_engine.workflow_runs is
+'Run instance of a given generic workflow';
+comment on column workflow_engine.workflow_runs.workflow_run_id is
+'Unique identifier for each workflow run';
+comment on column workflow_engine.workflow_runs.workflow_id is
+'Id of the templated workflow executed during the run';
+comment on column workflow_engine.workflow_runs.status is
+'Current status of the workflow run';
+comment on column workflow_engine.workflow_runs.executor_id is
+'Id of the executor that owns this workflow run. Is null until picked up by executor';
+comment on column workflow_engine.workflow_runs.progress is
+'Optional progress that the worker reports as iterations/subtasks are completed';
+comment on trigger workflow_run_status on workflow_engine.workflow_runs is
+'Trigger run during status updates to notify the required listeners of changes';
+comment on trigger workflow_run_progress on workflow_engine.workflow_runs is
+'Trigger run during progress updates to notify the required listeners of changes';

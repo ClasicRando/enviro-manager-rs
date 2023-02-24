@@ -6,11 +6,12 @@ declare
     v_is_paused boolean;
     v_workflow_run_id bigint;
 begin
+    start transaction;
     begin
-        select workflow_id, is_paused
-        into   v_workflow_id, v_is_paused
-        from   workflow_engine.jobs
-        where  job_id = $1
+        select j.workflow_id, j.is_paused
+        into v_workflow_id, v_is_paused
+        from workflow_engine.jobs j
+        where j.job_id = $1
         for update;
     exception
         when no_data_found then
@@ -25,24 +26,25 @@ begin
 
     begin
         select workflow_engine.initialize_workflow_run(v_workflow_id)
-        into   v_workflow_run_id;
+        into v_workflow_run_id;
 
         call workflow_engine.schedule_workflow_run(v_workflow_run_id);
 
         update workflow_engine.jobs j
-        set    current_workflow_run_id = v_workflow_run_id,
-               next_run = case
-                            when j.job_type = 'Interval'::workflow_engine.job_type then j.next_run + j.job_interval
-                            else workflow_engine.next_run_job_schedule(j.job_schedule)
-                          end
+        set
+            current_workflow_run_id = v_workflow_run_id,
+            next_run = case
+                when j.job_type = 'Interval'::workflow_engine.job_type
+                    then j.next_run + j.job_interval
+                else workflow_engine.next_run_job_schedule(j.job_schedule)
+            end
         where  j.job_id = $1;
+        commit;
     exception
         when others then
             rollback;
             raise;
     end;
-
-    commit;
 end;
 $$;
 
@@ -56,5 +58,6 @@ Attempts to run the job specified. Will fail when:
 otherwise the transaction will be rolled back before raising/re-raising an exception
 
 Arguments:
-job_id:    ID of the job to run
+job_id:
+    ID of the job to run
 $$;

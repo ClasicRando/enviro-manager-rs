@@ -4,8 +4,8 @@ language sql
 stable
 as $$
 select executor_id
-from   workflow_engine.v_executors
-where  session_active
+from workflow_engine.v_executors
+where session_active
 order by wr_count
 limit 1;
 $$;

@@ -4,11 +4,13 @@ create or replace procedure workflow_engine.start_task_run(
 )
 language sql
 as $$
-update workflow_engine.task_queue
-set    status = 'Running'::workflow_engine.task_status,
-       task_start = now() at time zone 'UTC'
-where  workflow_run_id = $1
-and    task_order = $2;
+update workflow_engine.task_queue tq
+set
+    status = 'Running'::workflow_engine.task_status,
+    task_start = now() at time zone 'UTC'
+where
+    tq.workflow_run_id = $1
+    and tq.task_order = $2;
 $$;
 
 comment on procedure workflow_engine.start_task_run IS $$
@@ -17,6 +19,8 @@ workflow_run_id and a flag to indicate if the workflow run is valid or not. Inva
 by the executor.
 
 Arguments:
-workflow_run_id:    ID of the workflow run that owns the task_order
-task_order:         Task order within the workflow run to be run
+workflow_run_id:
+    ID of the workflow run that owns the task_order
+task_order:
+    Task order within the workflow run to be run
 $$;

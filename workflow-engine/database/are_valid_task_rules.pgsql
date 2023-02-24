@@ -17,9 +17,10 @@ begin
 
     foreach task_rule in array $1
     loop
-        if task_rule.name is null or 
-            not data_check.check_not_blank_or_empty(task_rule.name) or
-            task_rule.failed is null
+        if
+            task_rule.name is null
+            or not data_check.check_not_blank_or_empty(task_rule.name)
+            or task_rule.failed is null
         then
             return false;
         end if;

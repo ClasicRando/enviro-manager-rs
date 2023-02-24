@@ -4,37 +4,39 @@ create or replace procedure workflow_engine.complete_workflow_run(
 language sql
 as $$
 with task_queue_status as (
-    select workflow_run_id,
-           count(0) total_count,
-           count(0) filter (where status = 'Complete'::workflow_engine.task_status) complete_count,
-           count(0) filter (where status = 'Failed'::workflow_engine.task_status) failed_count,
-           count(0) filter (where status = 'Rule Broken'::workflow_engine.task_status) rule_broke_count,
-           count(0) filter (where status = 'Paused'::workflow_engine.task_status) paused_count,
-           count(0) filter (where status = 'Canceled'::workflow_engine.task_status) canceled_count
-    from   workflow_engine.task_queue
-    where  workflow_run_id = $1
-    group by workflow_run_id
+    select
+        tq.workflow_run_id,
+        count(0) total_count,
+        count(0) filter (where tq.status = 'Complete'::workflow_engine.task_status) complete_count,
+        count(0) filter (where tq.status = 'Failed'::workflow_engine.task_status) failed_count,
+        count(0) filter (where tq.status = 'Rule Broken'::workflow_engine.task_status) rule_broke_count,
+        count(0) filter (where tq.status = 'Paused'::workflow_engine.task_status) paused_count,
+        count(0) filter (where tq.status = 'Canceled'::workflow_engine.task_status) canceled_count
+    from workflow_engine.task_queue tq.
+    where workflow_run_id = $1
+    group by tq.workflow_run_id
 )
 update workflow_engine.workflow_runs wr
-set    status = case
-                    when tqs.total_count = tqs.complete_count then 'Complete'::workflow_engine.workflow_run_status
-                    when tqs.failed_count > 0 then 'Failed'::workflow_engine.workflow_run_status
-                    when tqs.rule_broke_count > 0 then 'Paused'::workflow_engine.workflow_run_status
-                    when tqs.paused_count > 0 then 'Paused'::workflow_engine.workflow_run_status
-                    when tqs.canceled_count > 0 then 'Canceled'::workflow_engine.workflow_run_status
-                    else 'Paused'::workflow_engine.workflow_run_status
-                end,
-       executor_id = null,
-       progress = case
-                    when tqs.total_count = tqs.complete_count then 100
-                    when tqs.failed_count > 0 then null
-                    when tqs.rule_broke_count > 0 then 100
-                    when tqs.paused_count > 0 then 100
-                    when tqs.canceled_count > 0 then null
-                    else null
-                  end
-from   task_queue_status tqs
-where  wr.workflow_run_id = tqs.workflow_run_id;
+set
+    status = case
+        when tqs.total_count = tqs.complete_count then 'Complete'::workflow_engine.workflow_run_status
+        when tqs.failed_count > 0 then 'Failed'::workflow_engine.workflow_run_status
+        when tqs.rule_broke_count > 0 then 'Paused'::workflow_engine.workflow_run_status
+        when tqs.paused_count > 0 then 'Paused'::workflow_engine.workflow_run_status
+        when tqs.canceled_count > 0 then 'Canceled'::workflow_engine.workflow_run_status
+        else 'Paused'::workflow_engine.workflow_run_status
+    end,
+    executor_id = null,
+    progress = case
+        when tqs.total_count = tqs.complete_count then 100
+        when tqs.failed_count > 0 then null
+        when tqs.rule_broke_count > 0 then 100
+        when tqs.paused_count > 0 then 100
+        when tqs.canceled_count > 0 then null
+        else null
+    end
+from task_queue_status tqs
+where wr.workflow_run_id = tqs.workflow_run_id;
 $$;
 
 comment on procedure workflow_engine.complete_workflow_run IS $$
@@ -49,5 +51,6 @@ Status is set using logical cascading:
     - otherwise, the status is 'Paused' since the outcome is undefined
 
 Arguments:
-workflow_run_id:    ID of the workflow run
+workflow_run_id:
+    ID of the workflow run
 $$;

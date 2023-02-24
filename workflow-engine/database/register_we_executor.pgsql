@@ -3,9 +3,9 @@ returns bigint
 language sql
 as $$
 insert into workflow_engine.registered_we_executors(pid,username,application_name,client_addr,client_port)
-select pid, usename, application_name, client_addr, client_port
-from   pg_stat_activity
-where  pid = pg_backend_pid()
+select a.pid, a.usename, a.application_name, a.client_addr, a.client_port
+from pg_stat_activity a
+where a.pid = pg_backend_pid()
 returning executor_id;
 $$;
 

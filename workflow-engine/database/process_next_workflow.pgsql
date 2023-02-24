@@ -37,6 +37,7 @@ starting or completing the workflow depending on the is_valid flag collected. Re
 workflow_run_id of the next workflow if it was started successfully. Otherwise returns null.
 
 Arguments:
-executor_id:    ID of the executor to filter workflow runs (i.e. do not pick up workflow runs
-                marked for another executor)
+executor_id:
+    ID of the executor to filter workflow runs (i.e. do not pick up workflow runs marked for
+    another executor)
 $$;

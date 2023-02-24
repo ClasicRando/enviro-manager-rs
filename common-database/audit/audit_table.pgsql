@@ -18,10 +18,10 @@ begin
     end if;
 
     select n.nspname::text, c.relname::text
-    into   _schema, _name
-    from   pg_class c
-    join   pg_namespace n on c.relnamespace = n.oid
-    where  c.oid = target_table::oid;
+    into _schema, _name
+    from pg_class c
+    join pg_namespace n on c.relnamespace = n.oid
+    where c.oid = target_table::oid;
 
     execute format('DROP TRIGGER IF EXISTS audit_trigger_row ON %I.%I', _schema, _name);
     execute format('DROP TRIGGER IF EXISTS audit_trigger_stm ON %I.%I', _schema, _name);
@@ -56,8 +56,13 @@ comment on procedure audit.audit_table(regclass, boolean, boolean, text[]) IS $$
 Add auditing support to a table.
 
 Arguments:
-target_table:     Table name, schema qualified if not on search_path
-audit_rows:       Record each row change, or only audit at a statement level, default is true (i.e. row level)
-audit_query_text: Record the text of the client query that triggered the audit event? default is true
-ignored_cols:     Columns to exclude from update diffs, ignore updates that change only ignored cols. default is none
+target_table:
+    Table name, schema qualified if not on search_path
+audit_rows:
+    Record each row change, or only audit at a statement level, default is true (i.e. row level)
+audit_query_text:
+    Record the text of the client query that triggered the audit event? default is true
+ignored_cols:
+    Columns to exclude from update diffs, ignore updates that change only ignored cols. default is
+    none
 $$;

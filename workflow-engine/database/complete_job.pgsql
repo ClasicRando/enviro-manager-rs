@@ -14,10 +14,10 @@ declare
     v_context text;
 begin
     begin
-        select current_workflow_run_id
-        into   v_workflow_run_id
-        from   workflow_engine.jobs
-        where  job_id = $1
+        select j.current_workflow_run_id
+        into v_workflow_run_id
+        from workflow_engine.jobs j
+        where j.job_id = $1
         for update;
     exception
         when no_data_found then
@@ -30,10 +30,10 @@ begin
         return 'Job must be active to finish';
     end if;
 
-    select status
-    into   v_status
-    from   workflow_engine.workflow_runs
-    where  workflow_run_id = v_workflow_run_id;
+    select wr.status
+    into v_status
+    from workflow_engine.workflow_runs wr
+    where wr.workflow_run_id = v_workflow_run_id;
 
     if v_status in (
         'Scheduled'::workflow_engine.workflow_run_status,
@@ -44,16 +44,17 @@ begin
     end if;
 
     begin
-        update workflow_engine.jobs
-        set    current_workflow_run_id = case
-                                            when v_status = 'Complete'::workflow_engine.workflow_run_status then null
-                                            else current_workflow_run_id
-                                         end,
-               is_paused = case
-                            when v_status = 'Complete'::workflow_engine.workflow_run_status then false
-                            else true
-                           end
-        where  job_id = $1
+        update workflow_engine.jobs j
+        set
+            current_workflow_run_id = case
+                when v_status = 'Complete'::workflow_engine.workflow_run_status then null
+                else current_workflow_run_id
+            end,
+            is_paused = case
+                when v_status = 'Complete'::workflow_engine.workflow_run_status then false
+                else true
+            end
+        where j.job_id = $1
         returning is_paused into v_is_paused;
     exception
         when others then
@@ -75,9 +76,9 @@ begin
     commit;
 
     return case
-            when v_is_paused then format('Paused job due to issue with workflow run = %', v_workflow_run_id)
-            else ''
-           end;
+        when v_is_paused then format('Paused job due to issue with workflow run = %', v_workflow_run_id)
+        else ''
+    end;
 end;
 $$;
 
@@ -93,5 +94,6 @@ Attempts to complete the job specified. Will return an error message when:
 otherwise the transaction will be rolled back before returning a message.
 
 Arguments:
-job_id:    ID of the job to run
+job_id:
+    ID of the job to run
 $$;

@@ -11,10 +11,10 @@ as $$
 begin
 	start transaction;
 	begin
-		select workflow_run_id, task_order, task_id, parameters, url
+		select nt.workflow_run_id, nt.task_order, nt.task_id, nt.parameters, nt.url
 		into $2, $3, $4, $5, $6
-		from next_task($1)
-		where task_order is not null;
+		from next_task($1) nt
+		where nt.task_order is not null;
 		
 		call start_task_run($1, $3);
 	    commit;
@@ -33,4 +33,8 @@ comment on procedure workflow_engine.aquire_next_task IS $$
 Aquire the next task of a given input workflow_run_id. Attempts to fetch a next task and assign
 that task to the specified workflow_run_id. If a next task is not available then it returns a null
 object. If any error is raised then the transaction is rolled back and the exception is reraised.
+
+Arguments:
+p_workflow_run_id:
+	input workflow_run_id value, used to check for a next available task
 $$;

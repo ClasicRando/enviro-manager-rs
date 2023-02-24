@@ -9,14 +9,20 @@ declare
     v_count integer;
 begin
     select count(0)
-    into   v_count
-    from   pg_proc p
-    join   pg_namespace n on p.pronamespace = n.oid
-    where  n.nspname = $1
-    and    p.proname = $2;
+    into v_count
+    from pg_proc p
+    join pg_namespace n on p.pronamespace = n.oid
+    where
+        n.nspname = $1
+        and p.proname = $2;
 
     if v_count != $3 then
-        raise exception 'Function %.% was expected to have % definition(s) but found %', $1, $2, $3, v_count;
+        raise exception
+            'Function %.% was expected to have % definition(s) but found %',
+            $1,
+            $2,
+            $3,
+            v_count;
     end if;
 end;
 $$;

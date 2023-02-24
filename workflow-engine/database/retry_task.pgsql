@@ -5,42 +5,51 @@ create or replace procedure workflow_engine.retry_task(
 language plpgsql
 as $$
 begin
+    start transaction;
     if exists(
         select 1
-        from   workflow_engine.task_queue tq
-        where  tq.workflow_run_id = $1
-        and    tq.task_order = $2
-        and    status not in (
-            'Failed'::workflow_engine.task_status,
-            'Rule Broken'::workflow_engine.task_status
-        )
+        from workflow_engine.task_queue tq
+        where
+            tq.workflow_run_id = $1
+            and tq.task_order = $2
+            and tq.status not in (
+                'Failed'::workflow_engine.task_status,
+                'Rule Broken'::workflow_engine.task_status
+            )
     ) then
-        raise exception 'Cannot retry task. Status must be "Failed" or "Rule Broken"';
+        rollback;
+        raise exception
+            'Cannot retry task. Status must be "Failed" or "Rule Broken"';
     end if;
 
     begin
-        insert into workflow_engine.task_queue_archive(workflow_run_id,task_order,task_id,status,parameters,output,rules,task_start,task_end)
-        select workflow_run_id, task_order, task_id, status, parameters, output, rules, task_start, task_end
-        from   workflow_engine.task_queue
-        where  workflow_run_id = $1
-        and    task_order = $2
+        insert into workflow_engine.task_queue_archive(
+            workflow_run_id,task_order,task_id,status,parameters,output,rules,task_start,task_end
+        )
+        select
+            tq.workflow_run_id, tq.task_order, tq.task_id, tq.status, tq.parameters, tq.output,
+            tq.rules, tq.task_start, tq.task_end
+        from   workflow_engine.task_queue tq
+        where 
+            tq.workflow_run_id = $1
+            and tq.task_order = $2
         for update;
 
         update workflow_engine.task_queue tq
-        set    status = 'Waiting'::workflow_engine.task_status
-        where  tq.workflow_run_id = $1
-        and    tq.task_order = $2;
+        set status = 'Waiting'::workflow_engine.task_status
+        where
+            tq.workflow_run_id = $1
+            and tq.task_order = $2;
 
         update workflow_engine.workflow_runs wr
-        set    status = 'Scheduled'::workflow_engine.workflow_run_status
-        where  wr.workflow_run_id = $1;
+        set status = 'Scheduled'::workflow_engine.workflow_run_status
+        where wr.workflow_run_id = $1;
+        commit;
     exception
         when others then
             rollback;
             raise;
     end;
-
-    commit;
 end;
 $$;
 
@@ -52,6 +61,8 @@ and the parent workflow_run record.
 commands are not successfull.  
 
 Arguments:
-workflow_run_id:    ID of the workflow run that owns the task to retry
-task_order:         Task order within the workflow run to retry
+workflow_run_id:
+    ID of the workflow run that owns the task to retry
+task_order:
+    Task order within the workflow run to retry
 $$;
