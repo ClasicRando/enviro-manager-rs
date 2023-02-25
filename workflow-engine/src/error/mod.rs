@@ -39,6 +39,8 @@ pub enum Error {
     SmtpError(#[from] StmpError),
     #[error("{0}")]
     ParseInt(#[from] std::num::ParseIntError),
+    #[error("Environment Variable error\n{0}")]
+    EnvVar(#[from] std::env::VarError)
 }
 
 /// Generic [Result][std::result::Result] type where the error is always [Error]
