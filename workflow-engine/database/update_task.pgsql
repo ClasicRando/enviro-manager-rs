@@ -27,7 +27,7 @@ name:
 description:
     Short description of the what the task does
 task_service_id:
-    Id of the service that exeuctes the task
+    Id of the service that executes the task
 url:
     Extension url to execute the task on the parent service
 $$;

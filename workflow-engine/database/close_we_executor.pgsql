@@ -41,7 +41,7 @@ task_queue and workflow_runs are updated if the executor still owns any workflow
 
 Arguments:
 executor_id:
-    ID of the exectuor to close
+    ID of the executor to close
 is_cancelled:
     True if executor was a force shutdown and false if a graceful shutdown, default is false
 $$;

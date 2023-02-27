@@ -48,7 +48,7 @@ call audit.audit_table('workflow_engine.jobs');
 revoke all on workflow_engine.jobs from public;
 
 comment on table workflow_engine.jobs is
-'Jobs to be run periodically as definied by the jobs''s schedule/interval';
+'Jobs to be run periodically as defined by the jobs''s schedule/interval';
 comment on column workflow_engine.jobs.job_id is
 'Unique identifier for each job';
 comment on column workflow_engine.jobs.workflow_id is
@@ -56,7 +56,7 @@ comment on column workflow_engine.jobs.workflow_id is
 comment on column workflow_engine.jobs.job_type is
 'Variant of job. If interval, job_interval is non-null. If scheduled, job_schedule is non-null';
 comment on column workflow_engine.jobs.maintainer is
-'Email address to send error notifications if the job failed to run, or a runtime error occured';
+'Email address to send error notifications if the job failed to run, or a runtime error occurred';
 comment on column workflow_engine.jobs.job_interval is $$
 Interval defining when the next run should occur. Relative to the last run datetime. Keep in mind
 runtime when choosing interval for frequent jobs

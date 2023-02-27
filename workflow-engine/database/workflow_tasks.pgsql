@@ -104,14 +104,14 @@ comment on column workflow_engine.workflow_tasks.task_id is
 comment on column workflow_engine.workflow_tasks.parameters is
 'Parameters to be passed to the executing service to customize behaviour';
 comment on trigger verify_insert_records on workflow_engine.workflow_tasks is $$
-Trigger to guarentee that a single workflow_id is inserted and the task_order values the
+Trigger to guarantee that a single workflow_id is inserted and the task_order values the
 sequential with no gaps
 $$;
 comment on trigger verify_update_records on workflow_engine.workflow_tasks is $$
-Trigger to guarentee that a single workflow_id is inserted and the task_order values the
+Trigger to guarantee that a single workflow_id is inserted and the task_order values the
 sequential with no gaps
 $$;;
 comment on trigger verify_delete_records on workflow_engine.workflow_tasks is $$
-Trigger to guarentee that a single workflow_id is inserted and the task_order values the
+Trigger to guarantee that a single workflow_id is inserted and the task_order values the
 sequential with no gaps
 $$;;

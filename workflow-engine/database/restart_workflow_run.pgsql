@@ -55,8 +55,8 @@ comment on procedure workflow_engine.restart_workflow_run IS $$
 Restart a given workflow run if possible. Archives the current state of the tasks and then updates
 all the tasks and workflow_run record.
 
-!NOTE! This procedure auto commits if successfull or performs a rollback if the archive/update
-commands are not successfull.  
+!NOTE! This procedure auto commits if successful or performs a rollback if the archive/update
+commands are not successful.  
 
 Arguments:
 workflow_run_id:

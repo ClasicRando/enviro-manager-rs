@@ -86,11 +86,11 @@ comment on function workflow_engine.complete_job IS $$
 Attempts to complete the job specified. Will return an error message when:
     - the job_id does not match a record
     - the job is not active
-    - the current workflow run was not successfull
+    - the current workflow run was not successful
     - error raised when updating the job
     - the job is paused due to a workflow run issue
 
-!NOTE! This function has transactional controls. If successfull, the transaction is committed,
+!NOTE! This function has transactional controls. If successful, the transaction is committed,
 otherwise the transaction will be rolled back before returning a message.
 
 Arguments:

@@ -54,7 +54,7 @@ Attempts to run the job specified. Will fail when:
     - the job is paused
     - error raised when initializing/scheduling/updating the job
 
-!NOTE! This function has transactional controls. If successfull, the transaction is committed,
+!NOTE! This function has transactional controls. If successful, the transaction is committed,
 otherwise the transaction will be rolled back before raising/re-raising an exception
 
 Arguments:

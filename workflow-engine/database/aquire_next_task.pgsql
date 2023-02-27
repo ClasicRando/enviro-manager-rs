@@ -30,9 +30,9 @@ end;
 $$;
 
 comment on procedure workflow_engine.aquire_next_task IS $$
-Aquire the next task of a given input workflow_run_id. Attempts to fetch a next task and assign
+Acquire the next task of a given input workflow_run_id. Attempts to fetch a next task and assign
 that task to the specified workflow_run_id. If a next task is not available then it returns a null
-object. If any error is raised then the transaction is rolled back and the exception is reraised.
+object. If any error is raised then the transaction is rolled back and the exception is re-raised.
 
 Arguments:
 p_workflow_run_id:

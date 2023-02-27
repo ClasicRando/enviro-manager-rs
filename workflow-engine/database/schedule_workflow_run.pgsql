@@ -21,6 +21,6 @@ Arguments:
 workflow_run_id:
     ID of the workflow to schedule for running
 executor_id:
-    ID of the executor to be manually assinged, default is null (i.e. system decides based upon
+    ID of the executor to be manually assigned, default is null (i.e. system decides based upon
     executor distribution)
 $$;

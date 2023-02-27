@@ -57,8 +57,8 @@ comment on procedure workflow_engine.retry_task IS $$
 Retry a given task if possible. Archives the current state of the task and then updates the task
 and the parent workflow_run record.
 
-!NOTE! This procedure auto commits if successfull or performs a rollback if the archive/update
-commands are not successfull.  
+!NOTE! This procedure auto commits if successful or performs a rollback if the archive/update
+commands are not successful.  
 
 Arguments:
 workflow_run_id:

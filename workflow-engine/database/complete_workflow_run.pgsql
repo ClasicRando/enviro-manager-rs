@@ -46,7 +46,7 @@ Status is set using logical cascading:
     - if all tasks are completed successfully, status is 'Complete'
     - if 1 or more tasks failed, status is 'Failed'
     - if 1 or more tasks have broken rules, status is 'Rule Broken'
-    - if 1 or more tasks are pasued, status is 'Paused'
+    - if 1 or more tasks are paused, status is 'Paused'
     - if 1 or more tasks are canceled, status is 'Canceled'
     - otherwise, the status is 'Paused' since the outcome is undefined
 
