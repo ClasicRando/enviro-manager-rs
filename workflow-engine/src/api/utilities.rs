@@ -57,58 +57,56 @@ pub enum ApiResponse<T: Serialize> {
 }
 
 impl<T: Serialize> ApiResponse<T> {
-    pub fn success(data: T, format: ApiResponse<FormatType>) -> Self {
+    pub fn success(data: T, format: ApiFormatType) -> Self {
         let response = Response::success(data);
         match format {
-            ApiResponse::Json(_) => Self::Json(Json(response)),
-            ApiResponse::MessagePack(_) => Self::MessagePack(MsgPack(response)),
+            ApiFormatType::Json => Self::Json(Json(response)),
+            ApiFormatType::MessagePack => Self::MessagePack(MsgPack(response)),
         }
     }
 
-    pub fn message(message: String, format: ApiResponse<FormatType>) -> Self {
+    pub fn message(message: String, format: ApiFormatType) -> Self {
         let response = Response::message(message);
         match format {
-            ApiResponse::Json(_) => Self::Json(Json(response)),
-            ApiResponse::MessagePack(_) => Self::MessagePack(MsgPack(response)),
+            ApiFormatType::Json => Self::Json(Json(response)),
+            ApiFormatType::MessagePack => Self::MessagePack(MsgPack(response)),
         }
     }
 
-    pub fn failure(message: String, format: ApiResponse<FormatType>) -> Self {
+    pub fn failure(message: String, format: ApiFormatType) -> Self {
         warn!("{}", message);
         let response = Response::failure(message);
         match format {
-            ApiResponse::Json(_) => Self::Json(Json(response)),
-            ApiResponse::MessagePack(_) => Self::MessagePack(MsgPack(response)),
+            ApiFormatType::Json => Self::Json(Json(response)),
+            ApiFormatType::MessagePack => Self::MessagePack(MsgPack(response)),
         }
     }
 
-    pub fn error<E: std::error::Error>(error: E, format: ApiResponse<FormatType>) -> Self {
+    pub fn error<E: std::error::Error>(error: E, format: ApiFormatType) -> Self {
         error!("{}", error);
         let response = Response::error(error);
         match format {
-            ApiResponse::Json(_) => Self::Json(Json(response)),
-            ApiResponse::MessagePack(_) => Self::MessagePack(MsgPack(response)),
+            ApiFormatType::Json => Self::Json(Json(response)),
+            ApiFormatType::MessagePack => Self::MessagePack(MsgPack(response)),
         }
     }
 }
 
-#[derive(Serialize)]
-pub struct FormatType;
+pub enum ApiFormatType {
+    Json,
+    MessagePack,
+}
 
 #[rocket::async_trait]
-impl<'r> FromFormField<'r> for ApiResponse<FormatType> {
+impl<'r> FromFormField<'r> for ApiFormatType {
     fn from_value(field: ValueField<'r>) -> form::Result<'r, Self> {
         match field.value {
-            "json" => Ok(ApiResponse::Json(Json(Response::success(FormatType)))),
-            _ => Ok(ApiResponse::MessagePack(MsgPack(Response::success(
-                FormatType,
-            )))),
+            "json" => Ok(ApiFormatType::Json),
+            _ => Ok(ApiFormatType::MessagePack),
         }
     }
 
     fn default() -> Option<Self> {
-        Some(ApiResponse::MessagePack(MsgPack(Response::success(
-            FormatType,
-        ))))
+        Some(ApiFormatType::MessagePack)
     }
 }

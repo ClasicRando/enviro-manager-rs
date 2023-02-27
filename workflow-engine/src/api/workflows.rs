@@ -4,7 +4,7 @@ use rocket::{
     State,
 };
 
-use super::utilities::{ApiResponse, FormatType};
+use super::utilities::{ApiResponse, ApiFormatType};
 
 use crate::services::workflows::{
     Workflow, WorkflowDeprecationRequest, WorkflowId, WorkflowRequest, WorkflowsService,
@@ -12,7 +12,7 @@ use crate::services::workflows::{
 
 #[get("/workflows?<f>")]
 pub async fn workflows(
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<WorkflowsService>,
 ) -> ApiResponse<Vec<Workflow>> {
     match service.read_many().await {
@@ -24,7 +24,7 @@ pub async fn workflows(
 #[get("/workflows/<workflow_id>?<f>")]
 pub async fn workflow(
     workflow_id: WorkflowId,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<WorkflowsService>,
 ) -> ApiResponse<Workflow> {
     match service.read_one(&workflow_id).await {
@@ -40,7 +40,7 @@ pub async fn workflow(
 async fn create_workflow(
     request: WorkflowRequest,
     service: &WorkflowsService,
-    format: ApiResponse<FormatType>,
+    format: ApiFormatType,
 ) -> ApiResponse<Workflow> {
     match service.create(request).await {
         Ok(workflow) => ApiResponse::success(workflow, format),
@@ -51,7 +51,7 @@ async fn create_workflow(
 #[post("/workflows?<f>", format = "msgpack", data = "<workflow>")]
 pub async fn create_workflow_msgpack(
     workflow: MsgPack<WorkflowRequest>,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<WorkflowsService>,
 ) -> ApiResponse<Workflow> {
     create_workflow(workflow.0, service, f).await
@@ -60,7 +60,7 @@ pub async fn create_workflow_msgpack(
 #[post("/workflows?<f>", format = "json", data = "<workflow>")]
 pub async fn create_workflow_json(
     workflow: Json<WorkflowRequest>,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<WorkflowsService>,
 ) -> ApiResponse<Workflow> {
     create_workflow(workflow.0, service, f).await
@@ -69,7 +69,7 @@ pub async fn create_workflow_json(
 async fn deprecate_workflow(
     request: WorkflowDeprecationRequest,
     service: &WorkflowsService,
-    format: ApiResponse<FormatType>,
+    format: ApiFormatType,
 ) -> ApiResponse<()> {
     match service.deprecate(request).await {
         Ok(workflow_id) => ApiResponse::message(
@@ -83,7 +83,7 @@ async fn deprecate_workflow(
 #[patch("/workflows/deprecate?<f>", format = "msgpack", data = "<request>")]
 pub async fn deprecate_workflow_msgpack(
     request: MsgPack<WorkflowDeprecationRequest>,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<WorkflowsService>,
 ) -> ApiResponse<()> {
     deprecate_workflow(request.0, service, f).await
@@ -92,7 +92,7 @@ pub async fn deprecate_workflow_msgpack(
 #[patch("/workflows/deprecate?<f>", format = "json", data = "<request>")]
 pub async fn deprecate_workflow_json(
     request: Json<WorkflowDeprecationRequest>,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<WorkflowsService>,
 ) -> ApiResponse<()> {
     deprecate_workflow(request.0, service, f).await

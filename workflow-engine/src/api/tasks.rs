@@ -4,13 +4,13 @@ use rocket::{
     State,
 };
 
-use super::utilities::{ApiResponse, FormatType};
+use super::utilities::{ApiResponse, ApiFormatType};
 
 use crate::services::tasks::{Task, TaskId, TaskRequest, TasksService};
 
 #[get("/tasks?<f>")]
 pub async fn tasks(
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<TasksService>,
 ) -> ApiResponse<Vec<Task>> {
     match service.read_many().await {
@@ -22,7 +22,7 @@ pub async fn tasks(
 #[get("/tasks/<task_id>?<f>")]
 pub async fn task(
     task_id: TaskId,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<TasksService>,
 ) -> ApiResponse<Task> {
     match service.read_one(&task_id).await {
@@ -40,7 +40,7 @@ pub async fn task(
 async fn create_task(
     request: TaskRequest,
     service: &TasksService,
-    format: ApiResponse<FormatType>,
+    format: ApiFormatType,
 ) -> ApiResponse<Task> {
     match service.create(request).await {
         Ok(task) => ApiResponse::success(task, format),
@@ -51,7 +51,7 @@ async fn create_task(
 #[post("/tasks?<f>", format = "msgpack", data = "<task>")]
 pub async fn create_task_msgpack(
     task: MsgPack<TaskRequest>,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<TasksService>,
 ) -> ApiResponse<Task> {
     create_task(task.0, service, f).await
@@ -60,7 +60,7 @@ pub async fn create_task_msgpack(
 #[post("/tasks?<f>", format = "json", data = "<task>")]
 pub async fn create_task_json(
     task: Json<TaskRequest>,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<TasksService>,
 ) -> ApiResponse<Task> {
     create_task(task.0, service, f).await

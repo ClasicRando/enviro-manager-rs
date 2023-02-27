@@ -1,12 +1,12 @@
 use rocket::{get, patch, State};
 
-use super::utilities::{ApiResponse, FormatType};
+use super::utilities::{ApiResponse, ApiFormatType};
 
 use crate::services::executors::{Executor, ExecutorId, ExecutorsService};
 
 #[get("/executors?<f>")]
 pub async fn active_executors(
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<ExecutorsService>,
 ) -> ApiResponse<Vec<Executor>> {
     match service.read_active().await {
@@ -18,7 +18,7 @@ pub async fn active_executors(
 #[patch("/executors/shutdown/<executor_id>?<f>")]
 pub async fn shutdown_executor(
     executor_id: ExecutorId,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<ExecutorsService>,
 ) -> ApiResponse<Executor> {
     match service.shutdown(&executor_id).await {
@@ -37,7 +37,7 @@ pub async fn shutdown_executor(
 #[patch("/executors/cancel/<executor_id>?<f>")]
 pub async fn cancel_executor(
     executor_id: ExecutorId,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<ExecutorsService>,
 ) -> ApiResponse<Executor> {
     match service.cancel(&executor_id).await {

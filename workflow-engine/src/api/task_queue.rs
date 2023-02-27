@@ -4,14 +4,14 @@ use rocket::{
     State,
 };
 
-use super::utilities::{ApiResponse, FormatType};
+use super::utilities::{ApiResponse, ApiFormatType};
 
 use crate::services::task_queue::{TaskQueueRequest, TaskQueueService};
 
 async fn task_queue_retry(
     request: TaskQueueRequest,
     service: &TaskQueueService,
-    format: ApiResponse<FormatType>,
+    format: ApiFormatType,
 ) -> ApiResponse<()> {
     match service.retry_task(request).await {
         Ok(_) => ApiResponse::message(
@@ -25,7 +25,7 @@ async fn task_queue_retry(
 #[patch("/task-queue/retry?<f>", format = "json", data = "<request>")]
 pub async fn task_queue_retry_json(
     request: Json<TaskQueueRequest>,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<TaskQueueService>,
 ) -> ApiResponse<()> {
     task_queue_retry(request.0, service, f).await
@@ -34,7 +34,7 @@ pub async fn task_queue_retry_json(
 #[patch("/task-queue/retry?<f>", format = "msgpack", data = "<request>")]
 pub async fn task_queue_retry_msgpack(
     request: MsgPack<TaskQueueRequest>,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<TaskQueueService>,
 ) -> ApiResponse<()> {
     task_queue_retry(request.0, service, f).await
@@ -43,7 +43,7 @@ pub async fn task_queue_retry_msgpack(
 async fn task_queue_complete(
     request: TaskQueueRequest,
     service: &TaskQueueService,
-    format: ApiResponse<FormatType>,
+    format: ApiFormatType,
 ) -> ApiResponse<()> {
     match service.complete_task(request).await {
         Ok(_) => ApiResponse::message(
@@ -59,7 +59,7 @@ async fn task_queue_complete(
 #[patch("/task-queue/complete?<f>", format = "json", data = "<request>")]
 pub async fn task_queue_complete_json(
     request: Json<TaskQueueRequest>,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<TaskQueueService>,
 ) -> ApiResponse<()> {
     task_queue_complete(request.0, service, f).await
@@ -68,7 +68,7 @@ pub async fn task_queue_complete_json(
 #[patch("/task-queue/complete?<f>", format = "msgpack", data = "<request>")]
 pub async fn task_queue_complete_msgpack(
     request: MsgPack<TaskQueueRequest>,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<TaskQueueService>,
 ) -> ApiResponse<()> {
     task_queue_complete(request.0, service, f).await

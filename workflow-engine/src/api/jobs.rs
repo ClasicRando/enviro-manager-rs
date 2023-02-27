@@ -5,13 +5,13 @@ use rocket::{
     State,
 };
 
-use super::utilities::{ApiResponse, FormatType};
+use super::utilities::{ApiResponse, ApiFormatType};
 
 use crate::services::jobs::{Job, JobId, JobRequest, JobsService};
 
-#[get("/cron-jobs?<f>")]
+#[get("/jobs?<f>")]
 pub async fn jobs(
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<JobsService>,
 ) -> ApiResponse<Vec<Job>> {
     match service.read_many().await {
@@ -23,10 +23,10 @@ pub async fn jobs(
     }
 }
 
-#[get("/cron-jobs/<job_id>?<f>")]
+#[get("/jobs/<job_id>?<f>")]
 pub async fn job(
     job_id: JobId,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<JobsService>,
 ) -> ApiResponse<Job> {
     match service.read_one(&job_id).await {
@@ -44,7 +44,7 @@ pub async fn job(
 async fn create_job(
     job: JobRequest,
     service: &State<JobsService>,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
 ) -> ApiResponse<Job> {
     match service.create(job).await {
         Ok(job) => ApiResponse::success(job, f),
@@ -55,19 +55,19 @@ async fn create_job(
     }
 }
 
-#[post("/cron-jobs?<f>", format = "json", data = "<job>")]
+#[post("/jobs?<f>", format = "json", data = "<job>")]
 pub async fn create_job_json(
     job: Json<JobRequest>,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<JobsService>,
 ) -> ApiResponse<Job> {
     create_job(job.0, service, f).await
 }
 
-#[post("/cron-jobs?<f>", format = "msgpack", data = "<job>")]
+#[post("/jobs?<f>", format = "msgpack", data = "<job>")]
 pub async fn create_job_msgpack(
     job: MsgPack<JobRequest>,
-    f: ApiResponse<FormatType>,
+    f: ApiFormatType,
     service: &State<JobsService>,
 ) -> ApiResponse<Job> {
     create_job(job.0, service, f).await
