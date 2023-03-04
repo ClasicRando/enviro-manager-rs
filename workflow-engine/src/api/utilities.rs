@@ -5,49 +5,24 @@ use rocket::serde::json::Json;
 use rocket::serde::msgpack::MsgPack;
 use serde::Serialize;
 
+/// Generic response object within an API response. A response is either a success containing data,
+/// a message to let the user know what happened or an error/failure message.
 #[derive(Serialize)]
-pub struct Response<T: Serialize> {
-    is_success: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    message: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    data: Option<T>,
+#[serde(tag = "type")]
+pub enum Response<T: Serialize> {
+    Success(T),
+    Message(String),
+    Error(String),
 }
 
-impl<T: Serialize> Response<T> {
-    fn success(data: T) -> Self {
-        Self {
-            is_success: true,
-            message: None,
-            data: Some(data),
-        }
-    }
-
-    fn message(message: String) -> Self {
-        Self {
-            is_success: true,
-            message: Some(message),
-            data: None,
-        }
-    }
-
-    fn failure(message: String) -> Self {
-        Self {
-            is_success: false,
-            message: Some(message),
-            data: None,
-        }
-    }
-
-    fn error<E: std::error::Error>(error: E) -> Self {
-        Self {
-            is_success: false,
-            message: Some(format!("Error: {}", error)),
-            data: None,
-        }
-    }
-}
-
+/// [Responder] object for the workflow engine API. The underlining [Response] object can be
+/// serialized as:
+/// 
+/// - JSON
+/// - MessagePack
+/// 
+/// Although there is no deep link between the [ApiResponse] enum and the [ApiFormatType] enum the
+/// two types should be kept with the same options to ensure expected behaviour.
 #[derive(Responder)]
 pub enum ApiResponse<T: Serialize> {
     #[response(status = 200, content_type = "json")]
@@ -57,34 +32,40 @@ pub enum ApiResponse<T: Serialize> {
 }
 
 impl<T: Serialize> ApiResponse<T> {
+    /// Generate a [Response::Success] responder of the specified `format`
     pub fn success(data: T, format: ApiFormatType) -> Self {
-        let response = Response::success(data);
+        let response = Response::Success(data);
         match format {
             ApiFormatType::Json => Self::Json(Json(response)),
             ApiFormatType::MessagePack => Self::MessagePack(MsgPack(response)),
         }
     }
 
+    /// Generate a [Response::Message] responder of the specified `format`
     pub fn message(message: String, format: ApiFormatType) -> Self {
-        let response = Response::message(message);
+        let response = Response::Message(message);
         match format {
             ApiFormatType::Json => Self::Json(Json(response)),
             ApiFormatType::MessagePack => Self::MessagePack(MsgPack(response)),
         }
     }
 
+    /// Generate a [Response::Error] responder of the specified `format`. This is intended for
+    /// errors that were not runtime errors but rather user input issues.
     pub fn failure(message: String, format: ApiFormatType) -> Self {
         warn!("{}", message);
-        let response = Response::failure(message);
+        let response = Response::Error(message);
         match format {
             ApiFormatType::Json => Self::Json(Json(response)),
             ApiFormatType::MessagePack => Self::MessagePack(MsgPack(response)),
         }
     }
 
+    /// Generate a [Response::Error] responder of the specified `format`. This is intended for
+    /// errors that are returned from fallible operations.
     pub fn error<E: std::error::Error>(error: E, format: ApiFormatType) -> Self {
         error!("{}", error);
-        let response = Response::error(error);
+        let response = Response::Error(format!("{}", error));
         match format {
             ApiFormatType::Json => Self::Json(Json(response)),
             ApiFormatType::MessagePack => Self::MessagePack(MsgPack(response)),
@@ -92,6 +73,13 @@ impl<T: Serialize> ApiResponse<T> {
     }
 }
 
+/// API response formatting types. The allowed serialization methods are:
+/// 
+/// - JSON
+/// - MessagePack
+/// 
+/// Although there is no deep link between the [ApiResponse] enum and the [ApiFormatType] enum the
+/// two types should be kept with the same options to ensure expected behaviour.
 pub enum ApiFormatType {
     Json,
     MessagePack,
