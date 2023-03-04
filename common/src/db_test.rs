@@ -1,11 +1,8 @@
 use sqlx::PgPool;
 use std::path::PathBuf;
-use tokio::{
-    fs::{read_dir, File},
-    io::AsyncReadExt,
-};
+use tokio::fs::read_dir;
 
-use crate::{db_build::db_build, package_dir, workspace_dir};
+use crate::{db_build::db_build, package_dir, workspace_dir, read_file};
 
 async fn execute_anonymous_block(block: String, pool: &PgPool) -> Result<(), sqlx::Error> {
     let block = match block.split_whitespace().next() {
@@ -16,13 +13,6 @@ async fn execute_anonymous_block(block: String, pool: &PgPool) -> Result<(), sql
     };
     sqlx::query(&block).execute(pool).await?;
     Ok(())
-}
-
-async fn read_file(path: PathBuf) -> Result<String, Box<dyn std::error::Error>> {
-    let mut file = File::open(path).await?;
-    let mut block = String::new();
-    file.read_to_string(&mut block).await?;
-    Ok(block)
 }
 
 async fn run_tests(tests_path: PathBuf, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {

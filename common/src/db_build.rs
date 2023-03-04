@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
-use crate::{package_dir, workspace_dir};
+use crate::{package_dir, workspace_dir, read_file};
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct DbBuild {
@@ -79,15 +79,6 @@ pub(crate) async fn db_build(path: PathBuf) -> Result<DbBuild, Box<dyn std::erro
     file.read_to_string(&mut contents).await?;
     let db_build: DbBuild = serde_json::from_str(&contents)?;
     Ok(db_build)
-}
-
-async fn read_file(path: PathBuf) -> Result<String, Box<dyn std::error::Error>> {
-    let mut file = File::open(&path)
-        .await
-        .unwrap_or_else(|_| panic!("Could not find file, {:?}", path));
-    let mut block = String::new();
-    file.read_to_string(&mut block).await?;
-    Ok(block)
 }
 
 lazy_static! {
