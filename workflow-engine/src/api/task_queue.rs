@@ -8,6 +8,7 @@ use super::utilities::{ApiResponse, ApiFormatType};
 
 use crate::services::task_queue::{TaskQueueRequest, TaskQueueService};
 
+/// Retry the task queue entry specified  by `request` regardless of the serialized format
 async fn task_queue_retry(
     request: TaskQueueRequest,
     service: &TaskQueueService,
@@ -22,6 +23,7 @@ async fn task_queue_retry(
     }
 }
 
+/// API endpoint to retry the task queue entry specified by `request`
 #[patch("/task-queue/retry?<f>", format = "json", data = "<request>")]
 pub async fn task_queue_retry_json(
     request: Json<TaskQueueRequest>,
@@ -31,6 +33,7 @@ pub async fn task_queue_retry_json(
     task_queue_retry(request.0, service, f).await
 }
 
+/// API endpoint to retry the task queue entry specified by `request`
 #[patch("/task-queue/retry?<f>", format = "msgpack", data = "<request>")]
 pub async fn task_queue_retry_msgpack(
     request: MsgPack<TaskQueueRequest>,
@@ -40,6 +43,7 @@ pub async fn task_queue_retry_msgpack(
     task_queue_retry(request.0, service, f).await
 }
 
+/// Complete the task queue entry specified by `request` regardless of the serialized format
 async fn task_queue_complete(
     request: TaskQueueRequest,
     service: &TaskQueueService,
@@ -56,6 +60,7 @@ async fn task_queue_complete(
     }
 }
 
+/// API endpoint complete the task queue entry specified by `request`
 #[patch("/task-queue/complete?<f>", format = "json", data = "<request>")]
 pub async fn task_queue_complete_json(
     request: Json<TaskQueueRequest>,
@@ -65,6 +70,7 @@ pub async fn task_queue_complete_json(
     task_queue_complete(request.0, service, f).await
 }
 
+/// API endpoint  complete the task queue entry specified by `request`
 #[patch("/task-queue/complete?<f>", format = "msgpack", data = "<request>")]
 pub async fn task_queue_complete_msgpack(
     request: MsgPack<TaskQueueRequest>,

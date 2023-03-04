@@ -4,6 +4,7 @@ use super::utilities::{ApiResponse, ApiFormatType};
 
 use crate::services::executors::{Executor, ExecutorId, ExecutorsService};
 
+/// API endpoint to fetch all active executors
 #[get("/executors?<f>")]
 pub async fn active_executors(
     f: ApiFormatType,
@@ -15,6 +16,7 @@ pub async fn active_executors(
     }
 }
 
+/// API endpoint to start the graceful shutdown of the executor specified by `executor_id`
 #[patch("/executors/shutdown/<executor_id>?<f>")]
 pub async fn shutdown_executor(
     executor_id: ExecutorId,
@@ -34,6 +36,7 @@ pub async fn shutdown_executor(
     }
 }
 
+/// API endpoint to the forceful shutdown of the exectuor specified by `executor_id`
 #[patch("/executors/cancel/<executor_id>?<f>")]
 pub async fn cancel_executor(
     executor_id: ExecutorId,

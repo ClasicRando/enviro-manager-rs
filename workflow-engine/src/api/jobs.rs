@@ -9,6 +9,7 @@ use super::utilities::{ApiResponse, ApiFormatType};
 
 use crate::services::jobs::{Job, JobId, JobRequest, JobsService};
 
+/// API endpoint to fetch all `Job`s currently registered
 #[get("/jobs?<f>")]
 pub async fn jobs(
     f: ApiFormatType,
@@ -23,6 +24,7 @@ pub async fn jobs(
     }
 }
 
+/// API endpoint to fetch the [Job] details of a cron job specified by `job_id`
 #[get("/jobs/<job_id>?<f>")]
 pub async fn job(
     job_id: JobId,
@@ -41,6 +43,8 @@ pub async fn job(
     }
 }
 
+/// Create a new [Job] using the provided [JobRequest] details regardless of the request
+/// serialization format
 async fn create_job(
     job: JobRequest,
     service: &State<JobsService>,
@@ -55,6 +59,8 @@ async fn create_job(
     }
 }
 
+/// API endpoint to create a new [Job] using the provided [JobRequest] details serialized as JSON
+/// data
 #[post("/jobs?<f>", format = "json", data = "<job>")]
 pub async fn create_job_json(
     job: Json<JobRequest>,
@@ -64,6 +70,8 @@ pub async fn create_job_json(
     create_job(job.0, service, f).await
 }
 
+/// API endpoint to create a new [Job] using the provided [JobRequest] details serialized as
+/// MessagePack data
 #[post("/jobs?<f>", format = "msgpack", data = "<job>")]
 pub async fn create_job_msgpack(
     job: MsgPack<JobRequest>,

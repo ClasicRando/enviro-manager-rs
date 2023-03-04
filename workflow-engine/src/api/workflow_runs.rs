@@ -4,6 +4,8 @@ use super::utilities::{ApiResponse, ApiFormatType};
 
 use crate::services::workflow_runs::{WorkflowRun, WorkflowRunId, WorkflowRunsService};
 
+/// API endpoint to fetch the specified workflow run by the `workflow_run_id`. Returns a single
+/// [WorkflowRun] if the run can be found
 #[get("/workflow_runs/<workflow_run_id>?<f>")]
 pub async fn workflow_runs(
     workflow_run_id: WorkflowRunId,
@@ -23,6 +25,8 @@ pub async fn workflow_runs(
     }
 }
 
+/// API endpoint to initialize a workflow run for the specified `workflow_id`. Returns the new
+/// [WorkflowRun] if the `workflow_id` is valid and the init does not fail. 
 #[post("/workflow_runs/init/<workflow_id>?<f>")]
 pub async fn init_workflow_run(
     workflow_id: i64,
@@ -35,6 +39,8 @@ pub async fn init_workflow_run(
     }
 }
 
+/// API endpoint to cancel the workflow run specified by the `workflow_run_id`. Returns the
+/// canceled [WorkflowRun] if the operation was a success.
 #[patch("/workflow_runs/cancel/<workflow_run_id>?<f>")]
 pub async fn cancel_workflow_run(
     workflow_run_id: WorkflowRunId,
@@ -54,6 +60,8 @@ pub async fn cancel_workflow_run(
     }
 }
 
+/// API endpoint to set a workflow run specified by `workflow_run_id` as `Scheduled`. Returns the
+/// [WorkflowRun] if the operation was successful
 #[patch("/workflow_runs/schedule/<workflow_run_id>?<f>")]
 pub async fn schedule_workflow_run(
     workflow_run_id: WorkflowRunId,
@@ -73,6 +81,8 @@ pub async fn schedule_workflow_run(
     }
 }
 
+/// API endpoint to restart a workflow run specified by `workflow_run_id`. Returns the
+/// [WorkflowRun] if the operation was successful
 #[put("/workflow_runs/restart/<workflow_run_id>?<f>")]
 pub async fn restart_workflow_run(
     workflow_run_id: WorkflowRunId,

@@ -10,6 +10,7 @@ use crate::services::workflows::{
     Workflow, WorkflowDeprecationRequest, WorkflowId, WorkflowRequest, WorkflowsService,
 };
 
+/// API endpoint to fetch all workflows. Returns an array of [WorkFlow] records.
 #[get("/workflows?<f>")]
 pub async fn workflows(
     f: ApiFormatType,
@@ -21,6 +22,8 @@ pub async fn workflows(
     }
 }
 
+/// API endpoint to fetch a workflow specified by `workflow_id`. Returns a single [Workflow] record
+/// if any exists.
 #[get("/workflows/<workflow_id>?<f>")]
 pub async fn workflow(
     workflow_id: WorkflowId,
@@ -37,6 +40,7 @@ pub async fn workflow(
     }
 }
 
+/// Create a workflow specified  by `request` regardless of the serialized format
 async fn create_workflow(
     request: WorkflowRequest,
     service: &WorkflowsService,
@@ -48,6 +52,7 @@ async fn create_workflow(
     }
 }
 
+/// API endpoint to create a new workflow using MessagePack encoded data from `workflow`
 #[post("/workflows?<f>", format = "msgpack", data = "<workflow>")]
 pub async fn create_workflow_msgpack(
     workflow: MsgPack<WorkflowRequest>,
@@ -57,6 +62,7 @@ pub async fn create_workflow_msgpack(
     create_workflow(workflow.0, service, f).await
 }
 
+/// API endpoint to create a new workflow using JSON encoded data from `workflow`
 #[post("/workflows?<f>", format = "json", data = "<workflow>")]
 pub async fn create_workflow_json(
     workflow: Json<WorkflowRequest>,
@@ -66,6 +72,7 @@ pub async fn create_workflow_json(
     create_workflow(workflow.0, service, f).await
 }
 
+/// Deprecate a workflow specified  by `request` regardless of the serialized format
 async fn deprecate_workflow(
     request: WorkflowDeprecationRequest,
     service: &WorkflowsService,
@@ -80,6 +87,7 @@ async fn deprecate_workflow(
     }
 }
 
+/// API endpoint to deprecate a workflow specified by the MessagePack encoded data from `request`
 #[patch("/workflows/deprecate?<f>", format = "msgpack", data = "<request>")]
 pub async fn deprecate_workflow_msgpack(
     request: MsgPack<WorkflowDeprecationRequest>,
@@ -89,6 +97,7 @@ pub async fn deprecate_workflow_msgpack(
     deprecate_workflow(request.0, service, f).await
 }
 
+/// API endpoint to deprecate a workflow specified by the JSON encoded data from `request`
 #[patch("/workflows/deprecate?<f>", format = "json", data = "<request>")]
 pub async fn deprecate_workflow_json(
     request: Json<WorkflowDeprecationRequest>,
