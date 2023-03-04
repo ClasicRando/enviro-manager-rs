@@ -13,8 +13,7 @@ begin
             and t1.status = 'Running'::workflow_engine.workflow_run_status
     ) then
         rollback;
-        raise exception
-            'Cannot restart a workflow run that is in progress. ' ||
+        raise exception using message = 'Cannot restart a workflow run that is in progress. ' ||
             'Please cancel the workflow run before restarting';
     end if;
 
