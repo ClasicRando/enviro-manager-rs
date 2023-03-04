@@ -18,18 +18,6 @@
             ]
         },
         {
-            "name": "type_exists.pgsql",
-            "dependencies": [
-                "schema.pgsql"
-            ]
-        },
-        {
-            "name": "trigger_exists.pgsql",
-            "dependencies": [
-                "schema.pgsql"
-            ]
-        },
-        {
             "name": "check_function_definition.pgsql",
             "dependencies": [
                 "schema.pgsql"

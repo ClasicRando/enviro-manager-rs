@@ -1,11 +1,9 @@
-if not data_check.type_exists('workflow_engine','task_rule') then
-    create type workflow_engine.task_rule as
-    (
-        name text,
-        failed boolean,
-        message text
-    );
-end if;
+create type workflow_engine.task_rule as
+(
+    name text,
+    failed boolean,
+    message text
+);
 
 comment on type workflow_engine.task_rule IS $$
 Describes rules checked during task execution.

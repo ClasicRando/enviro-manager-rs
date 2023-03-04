@@ -1,3 +1,5 @@
+use lazy_static::lazy_static;
+use regex::Regex;
 use serde::Deserialize;
 use sqlx::PgPool;
 use std::collections::HashSet;
@@ -88,10 +90,33 @@ async fn read_file(path: PathBuf) -> Result<String, Box<dyn std::error::Error>> 
     Ok(block)
 }
 
+lazy_static! {
+    static ref TYPE_REGEX: Regex = Regex::new(r"^create type (?P<schema>[^.]+)\.(?P<name>[^.]+) as(?P<definition>[^;]+);").unwrap();
+}
+
+fn process_type_definition(block: String) -> String {
+    let block = TYPE_REGEX.replace(
+        &block,
+        r#"
+        if not exists(
+            select 1
+            from pg_namespace n
+            join pg_type t on n.oid = t.typnamespace
+            where
+                n.nspname = '$schema'
+                and t.typname = '$name'
+        ) then
+            create type ${schema}.$name as $definition;
+        end if;
+        "#);
+    format!("do $body$\nbegin\n{}\nend;\n$body$;", block)
+}
+
 async fn execute_anonymous_block(block: String, pool: &PgPool) -> Result<(), sqlx::Error> {
     let block = match block.split_whitespace().next() {
         Some("do") => block,
         Some("begin" | "declare") => format!("do $body$\n{}\n$body$;", block),
+        Some(_) if TYPE_REGEX.is_match(&block) => process_type_definition(block),
         Some(_) => format!("do $body$\nbegin\n{}\nend;\n$body$;", block),
         None => block,
     };
@@ -121,10 +146,8 @@ pub async fn build_schema(pool: &PgPool) -> Result<(), Box<dyn std::error::Error
     let path = schema_directory.join("build.json");
     let db_build = db_build(path).await?;
 
-    if !db_build.common_dependencies.is_empty() {
-        for dep in &db_build.common_dependencies {
-            build_common_schema(dep, pool).await?
-        }
+    for dep in &db_build.common_dependencies {
+        build_common_schema(dep, pool).await?
     }
 
     for entry in db_build.entries_ordered() {
