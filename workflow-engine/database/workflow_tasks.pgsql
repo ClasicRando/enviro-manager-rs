@@ -110,8 +110,8 @@ $$;
 comment on trigger verify_update_records on workflow_engine.workflow_tasks is $$
 Trigger to guarantee that a single workflow_id is inserted and the task_order values the
 sequential with no gaps
-$$;;
+$$;
 comment on trigger verify_delete_records on workflow_engine.workflow_tasks is $$
 Trigger to guarantee that a single workflow_id is inserted and the task_order values the
 sequential with no gaps
-$$;;
+$$;

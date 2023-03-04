@@ -12,7 +12,7 @@ with task_queue_status as (
         count(0) filter (where tq.status = 'Rule Broken'::workflow_engine.task_status) rule_broke_count,
         count(0) filter (where tq.status = 'Paused'::workflow_engine.task_status) paused_count,
         count(0) filter (where tq.status = 'Canceled'::workflow_engine.task_status) canceled_count
-    from workflow_engine.task_queue tq.
+    from workflow_engine.task_queue tq
     where workflow_run_id = $1
     group by tq.workflow_run_id
 )
