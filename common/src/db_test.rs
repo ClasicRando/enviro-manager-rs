@@ -25,19 +25,12 @@ async fn read_file(path: PathBuf) -> Result<String, Box<dyn std::error::Error>> 
     Ok(block)
 }
 
-async fn run_common_db_tests(
-    pool: &PgPool,
-    common_db_name: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let tests = workspace_dir()
-        .join("common-database")
-        .join(common_db_name)
-        .join("tests");
-    if !tests.exists() {
+async fn run_tests(tests_path: PathBuf, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
+    if !tests_path.exists() {
         return Ok(())
     }
 
-    let mut entries = read_dir(tests).await?;
+    let mut entries = read_dir(tests_path).await?;
     while let Some(file) = entries.next_entry().await? {
         let block = read_file(file.path()).await?;
         let result = execute_anonymous_block(block, pool).await;
@@ -51,6 +44,17 @@ async fn run_common_db_tests(
     Ok(())
 }
 
+async fn run_common_db_tests(
+    pool: &PgPool,
+    common_db_name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let tests = workspace_dir()
+        .join("common-database")
+        .join(common_db_name)
+        .join("tests");
+    run_tests(tests, pool).await
+}
+
 pub async fn run_db_tests(pool: PgPool) -> Result<(), Box<dyn std::error::Error>> {
     let schema_directory = package_dir().join("database");
     let build_file = schema_directory.join("build.json");
@@ -60,16 +64,5 @@ pub async fn run_db_tests(pool: PgPool) -> Result<(), Box<dyn std::error::Error>
     }
 
     let tests = schema_directory.join("tests");
-    let mut entries = read_dir(tests).await?;
-    while let Some(file) = entries.next_entry().await? {
-        let block = read_file(file.path()).await?;
-        let result = execute_anonymous_block(block, &pool).await;
-        assert!(
-            result.is_ok(),
-            "Failed running test in {:?}\n{}",
-            file.path(),
-            result.unwrap_err()
-        )
-    }
-    Ok(())
+    run_tests(tests, &pool).await
 }
