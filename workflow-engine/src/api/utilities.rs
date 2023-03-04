@@ -7,7 +7,7 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct Response<T: Serialize> {
-    code: i32,
+    is_success: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     message: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -17,7 +17,7 @@ pub struct Response<T: Serialize> {
 impl<T: Serialize> Response<T> {
     fn success(data: T) -> Self {
         Self {
-            code: 200,
+            is_success: true,
             message: None,
             data: Some(data),
         }
@@ -25,7 +25,7 @@ impl<T: Serialize> Response<T> {
 
     fn message(message: String) -> Self {
         Self {
-            code: 200,
+            is_success: true,
             message: Some(message),
             data: None,
         }
@@ -33,7 +33,7 @@ impl<T: Serialize> Response<T> {
 
     fn failure(message: String) -> Self {
         Self {
-            code: 400,
+            is_success: false,
             message: Some(message),
             data: None,
         }
@@ -41,7 +41,7 @@ impl<T: Serialize> Response<T> {
 
     fn error<E: std::error::Error>(error: E) -> Self {
         Self {
-            code: 500,
+            is_success: false,
             message: Some(format!("Error: {}", error)),
             data: None,
         }
