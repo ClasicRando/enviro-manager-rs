@@ -2,22 +2,11 @@ use sqlx::PgPool;
 use std::path::PathBuf;
 use tokio::fs::read_dir;
 
-use crate::{db_build::db_build, package_dir, workspace_dir, read_file};
-
-async fn execute_anonymous_block(block: String, pool: &PgPool) -> Result<(), sqlx::Error> {
-    let block = match block.split_whitespace().next() {
-        Some("do") => block,
-        Some("begin" | "declare") => format!("do $body$\n{}\n$body$;", block),
-        Some(_) => format!("do $body$\nbegin\n{}\nend;\n$body$;", block),
-        None => block,
-    };
-    sqlx::query(&block).execute(pool).await?;
-    Ok(())
-}
+use crate::{db_build::db_build, execute_anonymous_block, package_dir, read_file, workspace_dir};
 
 async fn run_tests(tests_path: PathBuf, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     if !tests_path.exists() {
-        return Ok(())
+        return Ok(());
     }
 
     let mut entries = read_dir(tests_path).await?;

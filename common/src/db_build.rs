@@ -1,5 +1,3 @@
-use lazy_static::lazy_static;
-use regex::Regex;
 use serde::Deserialize;
 use sqlx::PgPool;
 use std::collections::HashSet;
@@ -7,12 +5,12 @@ use std::path::PathBuf;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
-use crate::{package_dir, workspace_dir, read_file};
+use crate::{execute_anonymous_block, package_dir, read_file, workspace_dir};
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct DbBuild {
     pub(crate) common_dependencies: Vec<String>,
-    entries: Vec<DbBuildEntry>,
+    pub(crate) entries: Vec<DbBuildEntry>,
 }
 
 impl DbBuild {
@@ -22,8 +20,8 @@ impl DbBuild {
 }
 
 #[derive(Debug, Deserialize)]
-struct DbBuildEntry {
-    name: String,
+pub(crate) struct DbBuildEntry {
+    pub(crate) name: String,
     dependencies: Vec<String>,
 }
 
@@ -79,40 +77,6 @@ pub(crate) async fn db_build(path: PathBuf) -> Result<DbBuild, Box<dyn std::erro
     file.read_to_string(&mut contents).await?;
     let db_build: DbBuild = serde_json::from_str(&contents)?;
     Ok(db_build)
-}
-
-lazy_static! {
-    static ref TYPE_REGEX: Regex = Regex::new(r"^create type (?P<schema>[^.]+)\.(?P<name>[^.]+) as(?P<definition>[^;]+);").unwrap();
-}
-
-fn process_type_definition(block: String) -> String {
-    let block = TYPE_REGEX.replace(
-        &block,
-        r#"
-        if not exists(
-            select 1
-            from pg_namespace n
-            join pg_type t on n.oid = t.typnamespace
-            where
-                n.nspname = '$schema'
-                and t.typname = '$name'
-        ) then
-            create type ${schema}.$name as $definition;
-        end if;
-        "#);
-    format!("do $body$\nbegin\n{}\nend;\n$body$;", block)
-}
-
-async fn execute_anonymous_block(block: String, pool: &PgPool) -> Result<(), sqlx::Error> {
-    let block = match block.split_whitespace().next() {
-        Some("do") => block,
-        Some("begin" | "declare") => format!("do $body$\n{}\n$body$;", block),
-        Some(_) if TYPE_REGEX.is_match(&block) => process_type_definition(block),
-        Some(_) => format!("do $body$\nbegin\n{}\nend;\n$body$;", block),
-        None => block,
-    };
-    sqlx::query(&block).execute(pool).await?;
-    Ok(())
 }
 
 async fn build_common_schema(
