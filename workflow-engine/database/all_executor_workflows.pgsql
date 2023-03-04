@@ -15,7 +15,7 @@ select
         from workflow_engine.task_queue tq
         where
             tq.workflow_run_id = wr.workflow_run_id
-            and q.status not in (
+            and tq.status not in (
                 'Waiting'::workflow_engine.task_status,
                 'Complete'::workflow_engine.task_status
             )
