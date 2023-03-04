@@ -1,6 +1,6 @@
 use rocket::{get, patch, post, put, State};
 
-use super::utilities::{ApiResponse, ApiFormatType};
+use super::utilities::{ApiFormatType, ApiResponse};
 
 use crate::services::workflow_runs::{WorkflowRun, WorkflowRunId, WorkflowRunsService};
 
@@ -26,7 +26,7 @@ pub async fn workflow_runs(
 }
 
 /// API endpoint to initialize a workflow run for the specified `workflow_id`. Returns the new
-/// [WorkflowRun] if the `workflow_id` is valid and the init does not fail. 
+/// [WorkflowRun] if the `workflow_id` is valid and the init does not fail.
 #[post("/workflow_runs/init/<workflow_id>?<f>")]
 pub async fn init_workflow_run(
     workflow_id: i64,

@@ -4,16 +4,13 @@ use rocket::{
     State,
 };
 
-use super::utilities::{ApiResponse, ApiFormatType};
+use super::utilities::{ApiFormatType, ApiResponse};
 
 use crate::services::tasks::{Task, TaskId, TaskRequest, TasksService};
 
 /// API endpoint to fetch all tasks. Return an array of [Task] entries
 #[get("/tasks?<f>")]
-pub async fn tasks(
-    f: ApiFormatType,
-    service: &State<TasksService>,
-) -> ApiResponse<Vec<Task>> {
+pub async fn tasks(f: ApiFormatType, service: &State<TasksService>) -> ApiResponse<Vec<Task>> {
     match service.read_many().await {
         Ok(tasks) => ApiResponse::success(tasks, f),
         Err(error) => ApiResponse::error(error, f),

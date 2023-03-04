@@ -5,16 +5,13 @@ use rocket::{
     State,
 };
 
-use super::utilities::{ApiResponse, ApiFormatType};
+use super::utilities::{ApiFormatType, ApiResponse};
 
 use crate::services::jobs::{Job, JobId, JobRequest, JobsService};
 
 /// API endpoint to fetch all `Job`s currently registered
 #[get("/jobs?<f>")]
-pub async fn jobs(
-    f: ApiFormatType,
-    service: &State<JobsService>,
-) -> ApiResponse<Vec<Job>> {
+pub async fn jobs(f: ApiFormatType, service: &State<JobsService>) -> ApiResponse<Vec<Job>> {
     match service.read_many().await {
         Ok(jobs) => ApiResponse::success(jobs, f),
         Err(error) => {

@@ -4,7 +4,7 @@ use rocket::{
     State,
 };
 
-use super::utilities::{ApiResponse, ApiFormatType};
+use super::utilities::{ApiFormatType, ApiResponse};
 
 use crate::services::task_queue::{TaskQueueRequest, TaskQueueService};
 

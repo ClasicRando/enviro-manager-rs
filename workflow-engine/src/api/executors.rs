@@ -1,6 +1,6 @@
 use rocket::{get, patch, State};
 
-use super::utilities::{ApiResponse, ApiFormatType};
+use super::utilities::{ApiFormatType, ApiResponse};
 
 use crate::services::executors::{Executor, ExecutorId, ExecutorsService};
 
