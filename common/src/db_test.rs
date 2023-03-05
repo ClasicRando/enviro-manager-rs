@@ -43,9 +43,9 @@ lazy_static! {
     .unwrap();
 }
 
-async fn check_enum(block: String, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
+async fn check_for_enum(block: String, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     let Some(captures) = ENUM_REGEX.captures(&block) else {
-        Err(format!("Block was a not a match to the ENUM_REGEX"))?
+        return Ok(())
     };
     let Some(schema) = captures.name("schema") else {
         Err(format!("No 'schema' capture group present in enum definition"))?
@@ -80,9 +80,7 @@ pub async fn run_db_tests(pool: PgPool) -> Result<(), Box<dyn std::error::Error>
 
     for entry in db_build.entries {
         let block = read_file(schema_directory.join(&entry.name)).await?;
-        if ENUM_REGEX.is_match(&block) {
-            check_enum(block, &pool).await?
-        }
+        check_for_enum(block, &pool).await?
     }
 
     let tests = schema_directory.join("tests");
