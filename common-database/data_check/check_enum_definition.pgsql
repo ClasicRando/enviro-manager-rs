@@ -43,10 +43,13 @@ $$;
 
 comment on procedure data_check.check_enum_definition IS $$
 Checks pg catalog tables to ensure that a given schema qualified enum matches the definition found
-is the codebase.
+in the codebase.
 
 Arguments:
-schema_name:    Schema name to check
-enum_name:      Function name to check
-labels:         Collection of labels expected for the enum
+schema_name:
+    Schema name to check
+enum_name:
+    Function name to check
+labels:
+    Collection of labels expected for the enum
 $$;
