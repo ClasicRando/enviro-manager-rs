@@ -28,6 +28,12 @@
             "dependencies": [
                 "schema.pgsql"
             ]
+        },
+        {
+            "name": "check_composite_definition.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
         }
     ]
 }
