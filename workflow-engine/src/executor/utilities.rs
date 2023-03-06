@@ -10,7 +10,6 @@ pub type WorkflowRunWorkerResult = JoinHandle<(WorkflowRunId, Option<Error>)>;
 pub enum ExecutorNotificationSignal {
     Cancel,
     Shutdown,
-    Cleanup,
     NoOp,
 }
 
@@ -19,7 +18,6 @@ impl From<&str> for ExecutorNotificationSignal {
         match value {
             "cancel" => Self::Cancel,
             "shutdown" => Self::Shutdown,
-            "cleanup" => Self::Cleanup,
             _ => Self::NoOp,
         }
     }
@@ -31,8 +29,7 @@ impl ExecutorNotificationSignal {
         match self {
             ExecutorNotificationSignal::Cancel => true,
             ExecutorNotificationSignal::Shutdown
-            | ExecutorNotificationSignal::NoOp
-            | ExecutorNotificationSignal::Cleanup => false,
+            | ExecutorNotificationSignal::NoOp => false,
         }
     }
 }

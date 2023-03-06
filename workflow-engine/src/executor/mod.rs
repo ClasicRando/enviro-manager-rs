@@ -24,7 +24,7 @@ use crate::{
 };
 
 enum ExecutorNextOperation {
-    Continue(ExecutorNotificationSignal),
+    Continue,
     Break(ExecutorNotificationSignal),
     NextWorkflowRun(WorkflowRunId, WorkflowRunWorkerResult),
     Listen,
@@ -166,9 +166,9 @@ impl Executor {
                 .await?
             };
             match next_operation {
-                ExecutorNextOperation::Continue(signal) => {
+                ExecutorNextOperation::Continue => {
                     is_listen_mode = false;
-                    executor_signal = signal;
+                    executor_signal = ExecutorNotificationSignal::NoOp;
                     continue;
                 }
                 ExecutorNextOperation::Break(signal) => {
@@ -246,10 +246,10 @@ impl Executor {
         };
         let Ok(workflow_run_id) = notification.payload().parse() else {
             warn!("Cannot parse workflow_run_id from `{}`", notification.payload());
-            return Ok(ExecutorNextOperation::Continue(ExecutorNotificationSignal::NoOp));
+            return Ok(ExecutorNextOperation::Continue);
         };
         let Some(handle) = self.wr_handles.remove(&workflow_run_id) else {
-            return Ok(ExecutorNextOperation::Continue(ExecutorNotificationSignal::NoOp))
+            return Ok(ExecutorNextOperation::Continue)
         };
 
         if !handle.is_finished() {
@@ -260,9 +260,7 @@ impl Executor {
             self.handle_join_error(&workflow_run_id, error)
         }
         self.wr_service.cancel(&workflow_run_id).await?;
-        Ok(ExecutorNextOperation::Continue(
-            ExecutorNotificationSignal::NoOp,
-        ))
+        Ok(ExecutorNextOperation::Continue)
     }
 
     fn handle_workflow_run_scheduled_notification(
@@ -272,9 +270,7 @@ impl Executor {
         match result {
             Ok(_) => {
                 info!("Notification of workflow run scheduled. Starting loop again.");
-                Ok(ExecutorNextOperation::Continue(
-                    ExecutorNotificationSignal::NoOp,
-                ))
+                Ok(ExecutorNextOperation::Continue)
             }
             Err(error) => {
                 error!("Error receiving workflow run notification.\n{:?}", error);
@@ -303,9 +299,7 @@ impl Executor {
             ExecutorNotificationSignal::Cancel | ExecutorNotificationSignal::Shutdown => {
                 ExecutorNextOperation::Break(executor_signal)
             }
-            ExecutorNotificationSignal::Cleanup | ExecutorNotificationSignal::NoOp => {
-                ExecutorNextOperation::Continue(executor_signal)
-            }
+            ExecutorNotificationSignal::NoOp => ExecutorNextOperation::Continue,
         })
     }
 
