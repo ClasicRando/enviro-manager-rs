@@ -9,7 +9,13 @@ declare
     v_message text;
 begin
     with db_attributes as (
-        select a.attname, t2.typname
+        select
+            a.attname,
+            case
+                when t2.typnamespace = t.typnamespace
+                    then n.nspname||'.'||regexp_replace(t2.typname,'^_(.+)$','\1[]')
+                else regexp_replace(t2.typname,'^_(.+)$','\1[]')
+            end typname
         from pg_type t
         join pg_namespace n on t.typnamespace = n.oid
         join pg_class c on t.typrelid = c.oid
