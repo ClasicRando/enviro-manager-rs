@@ -12,8 +12,8 @@ begin
     call data_check.check_function_definition(v_schema, 'complete_task');
     call data_check.check_function_definition(v_schema, 'complete_workflow_run_move');
     call data_check.check_function_definition(v_schema, 'complete_workflow_run');
-    call data_check.check_function_definition(v_schema, 'create_interval_job');
-    call data_check.check_function_definition(v_schema, 'create_scheduled_job');
+    call data_check.check_function_definition('job', 'create_interval_job');
+    call data_check.check_function_definition('job', 'create_scheduled_job');
     call data_check.check_function_definition(v_schema, 'create_workflow');
     call data_check.check_function_definition(v_schema, 'deprecate_workflow');
     call data_check.check_function_definition(v_schema, 'fail_task_run');

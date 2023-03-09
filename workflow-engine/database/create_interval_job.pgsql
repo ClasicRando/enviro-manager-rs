@@ -1,4 +1,4 @@
-create or replace function workflow_engine.create_interval_job(
+create or replace function job.create_interval_job(
     workflow_id bigint,
     maintainer text,
     job_interval interval,
@@ -6,12 +6,12 @@ create or replace function workflow_engine.create_interval_job(
 ) returns bigint
 language sql
 as $$
-insert into workflow_engine.jobs(workflow_id,job_type,maintainer,job_interval,next_run)
-values($1,'Interval'::workflow_engine.job_type,$2,$3,coalesce($4, now() at time zone 'UTC' + $3))
+insert into job.jobs(workflow_id,job_type,maintainer,job_interval,next_run)
+values($1,'Interval'::job.job_type,$2,$3,coalesce($4, now() at time zone 'UTC' + $3))
 returning job_id;
 $$;
 
-comment on function workflow_engine.create_interval_job IS $$
+comment on function job.create_interval_job IS $$
 Create a new interval based job
 
 Arguments:

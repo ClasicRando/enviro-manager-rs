@@ -1,6 +1,6 @@
-create or replace view workflow_engine.v_queued_jobs as
+create or replace view job.v_queued_jobs as
 select j.job_id, j.next_run
-from workflow_engine.jobs j
+from job.jobs j
 where 
     not j.is_paused
     and not exists(
@@ -11,6 +11,6 @@ where
     )
 order by j.next_run;
 
-comment on view workflow_engine.v_queued_jobs IS $$
+comment on view job.v_queued_jobs IS $$
 Get all jobs that are not paused and is not currently running
 $$;

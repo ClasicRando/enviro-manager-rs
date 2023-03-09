@@ -1,4 +1,4 @@
-create or replace procedure workflow_engine.run_job(job_id bigint)
+create or replace procedure job.run_job(job_id bigint)
 language plpgsql
 as $$
 declare
@@ -10,7 +10,7 @@ begin
     begin
         select j.workflow_id, j.is_paused
         into v_workflow_id, v_is_paused
-        from workflow_engine.jobs j
+        from job.jobs j
         where j.job_id = $1
         for update;
     exception
@@ -30,13 +30,13 @@ begin
 
         call workflow_engine.schedule_workflow_run(v_workflow_run_id);
 
-        update workflow_engine.jobs j
+        update job.jobs j
         set
             current_workflow_run_id = v_workflow_run_id,
             next_run = case
-                when j.job_type = 'Interval'::workflow_engine.job_type
+                when j.job_type = 'Interval'::job.job_type
                     then j.next_run + j.job_interval
-                else workflow_engine.next_run_job_schedule(j.job_schedule)
+                else job.next_run_job_schedule(j.job_schedule)
             end
         where  j.job_id = $1;
         commit;
@@ -48,7 +48,7 @@ begin
 end;
 $$;
 
-comment on procedure workflow_engine.run_job IS $$
+comment on procedure job.run_job IS $$
 Attempts to run the job specified. Will fail when:
     - the job_id does not match a record
     - the job is paused

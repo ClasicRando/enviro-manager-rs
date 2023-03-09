@@ -17,7 +17,7 @@ begin
 
     if exists(
         select 1
-        from workflow_engine.jobs j
+        from job.jobs j
         where j.current_workflow_run_id = new.workflow_run_id
     ) and new.status not in (
         'Scheduled'::workflow_engine.workflow_run_status,
@@ -27,7 +27,7 @@ begin
             'jobs',
             (
                 select j.job_id::text
-                from workflow_engine.jobs j
+                from job.jobs j
                 where j.current_workflow_run_id = new.workflow_run_id
             )
         );

@@ -1,4 +1,4 @@
-create or replace function workflow_engine.job_change()
+create or replace function job.job_change()
 returns trigger
 language plpgsql
 as $$
@@ -8,24 +8,24 @@ begin
 end;
 $$;
 
-create table if not exists workflow_engine.jobs (
+create table if not exists job.jobs (
     job_id bigint primary key generated always as identity,
     workflow_id bigint not null references workflow_engine.workflows match simple
         on delete restrict
         on update cascade,
-    job_type workflow_engine.job_type not null,
+    job_type job.job_type not null,
     maintainer text not null check(data_check.check_not_blank_or_empty(maintainer)),
     job_interval interval check(
         case
-            when job_type = 'Interval'::workflow_engine.job_type
+            when job_type = 'Interval'::job.job_type
                 then job_interval is not null and job_interval > interval '0 second'
             else job_interval is null
         end
     ),
-    job_schedule workflow_engine.schedule_entry[] check(
+    job_schedule job.schedule_entry[] check(
         case
-            when job_type = 'Scheduled'::workflow_engine.job_type
-                then workflow_engine.valid_job_schedule(job_schedule)
+            when job_type = 'Scheduled'::job.job_type
+                then job.valid_job_schedule(job_schedule)
             else job_schedule is null
         end
     ),
@@ -36,42 +36,42 @@ create table if not exists workflow_engine.jobs (
         on update cascade
 );
 
-drop trigger if exists job_change_trig on workflow_engine.jobs;
+drop trigger if exists job_change_trig on job.jobs;
 create trigger job_change_trig
     after update or insert or delete
-    on workflow_engine.jobs
+    on job.jobs
     for each statement
-    execute function workflow_engine.job_change();
+    execute function job.job_change();
 
-call audit.audit_table('workflow_engine.jobs');
+call audit.audit_table('job.jobs');
 
-revoke all on workflow_engine.jobs from public;
+revoke all on job.jobs from public;
 
-comment on table workflow_engine.jobs is
+comment on table job.jobs is
 'Jobs to be run periodically as defined by the jobs''s schedule/interval';
-comment on column workflow_engine.jobs.job_id is
+comment on column job.jobs.job_id is
 'Unique identifier for each job';
-comment on column workflow_engine.jobs.workflow_id is
+comment on column job.jobs.workflow_id is
 'Id of the templated workflow executed during the job run';
-comment on column workflow_engine.jobs.job_type is
+comment on column job.jobs.job_type is
 'Variant of job. If interval, job_interval is non-null. If scheduled, job_schedule is non-null';
-comment on column workflow_engine.jobs.maintainer is
+comment on column job.jobs.maintainer is
 'Email address to send error notifications if the job failed to run, or a runtime error occurred';
-comment on column workflow_engine.jobs.job_interval is $$
+comment on column job.jobs.job_interval is $$
 Interval defining when the next run should occur. Relative to the last run datetime. Keep in mind
 runtime when choosing interval for frequent jobs
 $$;
-comment on column workflow_engine.jobs.job_schedule is $$
+comment on column job.jobs.job_schedule is $$
 Schedule within a week as to when the job should be run. Allows for uneven running but is
 restricted to at least a weekly run
 $$;
-comment on column workflow_engine.jobs.is_paused is $$
+comment on column job.jobs.is_paused is $$
 Indicates a user flagged this job to be paused or the most recent job failed and the job is
 automatically set to paused to avoid re-run issues
 $$;
-comment on column workflow_engine.jobs.next_run is
+comment on column job.jobs.next_run is
 'Next time the job should be run. Decided by the schedule/interval';
-comment on column workflow_engine.jobs.current_workflow_run_id is
+comment on column job.jobs.current_workflow_run_id is
 'If the job is currently running, this will link to a workflow_run record';
-comment on trigger job_change_trig on workflow_engine.jobs is
+comment on trigger job_change_trig on job.jobs is
 'Trigger run during any change to the records to notify the job worker of new changes.';

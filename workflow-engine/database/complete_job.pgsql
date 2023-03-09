@@ -1,4 +1,4 @@
-create or replace function workflow_engine.complete_job(
+create or replace function job.complete_job(
     job_id bigint
 ) returns text
 language plpgsql
@@ -16,7 +16,7 @@ begin
     begin
         select j.current_workflow_run_id
         into v_workflow_run_id
-        from workflow_engine.jobs j
+        from job.jobs j
         where j.job_id = $1
         for update;
     exception
@@ -44,7 +44,7 @@ begin
     end if;
 
     begin
-        update workflow_engine.jobs j
+        update job.jobs j
         set
             current_workflow_run_id = case
                 when v_status = 'Complete'::workflow_engine.workflow_run_status then null
@@ -82,7 +82,7 @@ begin
 end;
 $$;
 
-comment on function workflow_engine.complete_job IS $$
+comment on function job.complete_job IS $$
 Attempts to complete the job specified. Will return an error message when:
     - the job_id does not match a record
     - the job is not active

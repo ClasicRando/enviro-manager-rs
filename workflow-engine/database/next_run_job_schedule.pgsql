@@ -1,5 +1,5 @@
-create or replace function workflow_engine.next_run_job_schedule(
-    job_schedule workflow_engine.schedule_entry[]
+create or replace function job.next_run_job_schedule(
+    job_schedule job.schedule_entry[]
 ) returns timestamp without time zone
 immutable
 returns null on null input
@@ -31,7 +31,7 @@ order by next_run
 limit 1;
 $$;
 
-comment on function workflow_engine.next_run_job_schedule IS $$
+comment on function job.next_run_job_schedule IS $$
 Returns the next schedule entry to run (for a 'Schedule' type job) as a future timestamp.
 
 Arguments:

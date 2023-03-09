@@ -260,7 +260,7 @@ impl JobsService {
         interval: &PgInterval,
         next_run: &Option<NaiveDateTime>,
     ) -> WEResult<JobId> {
-        let job_id = sqlx::query_scalar("select create_interval_cron_job($1,$2,$3)")
+        let job_id = sqlx::query_scalar("select job.create_interval_job($1,$2,$3)")
             .bind(workflow_id)
             .bind(maintainer)
             .bind(interval)
@@ -276,7 +276,7 @@ impl JobsService {
         maintainer: &str,
         schedule: &[ScheduleEntry],
     ) -> WEResult<JobId> {
-        let job_id = sqlx::query_scalar("select create_scheduled_cron_job($1,$2,$3)")
+        let job_id = sqlx::query_scalar("select job.create_scheduled_job($1,$2,$3)")
             .bind(workflow_id)
             .bind(maintainer)
             .bind(schedule)
@@ -290,7 +290,7 @@ impl JobsService {
             r#"
             select job_id, workflow_id, workflow_name, job_type, maintainer, job_schedule, job_interval, is_paused,
                    next_run, current_workflow_run_id, workflow_run_status, progress, executor_id
-            from   v_jobs
+            from   job.v_jobs
             where  job_id = $1"#,
         )
         .bind(job_id)
@@ -304,7 +304,7 @@ impl JobsService {
             r#"
             select job_id, workflow_id, workflow_name, job_type, maintainer, job_schedule, job_interval, is_paused,
                    next_run, current_workflow_run_id, workflow_run_status, progress, executor_id
-            from   v_jobs"#,
+            from   job.v_jobs"#,
         )
         .fetch_all(self.pool)
         .await?;
@@ -315,7 +315,7 @@ impl JobsService {
         let result = sqlx::query_as(
             r#"
             select job_id, next_run
-            from   v_queued_jobs"#,
+            from   job.v_queued_jobs"#,
         )
         .fetch_all(self.pool)
         .await?;
@@ -323,7 +323,7 @@ impl JobsService {
     }
 
     pub async fn run_job(&self, job_id: &JobId) -> WEResult<Option<Job>> {
-        sqlx::query("call run_job($1)")
+        sqlx::query("call job.run_job($1)")
             .bind(job_id)
             .execute(self.pool)
             .await?;
@@ -332,7 +332,7 @@ impl JobsService {
 
     pub async fn complete_job(&self, job_id: &JobId) -> WEResult<Option<Job>> {
         let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query_scalar("select complete_job($1)")
+        let result = sqlx::query_scalar("select job.complete_job($1)")
             .bind(job_id)
             .fetch_one(&mut transaction)
             .await;
