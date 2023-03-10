@@ -1,13 +1,13 @@
-create or replace procedure workflow_engine.clean_executors()
+create or replace procedure executor.clean_executors()
 language sql
 as $$
 with executors as (
-    update workflow_engine.registered_we_executors e
+    update executor.executors e
     set
-        status = 'Canceled'::workflow_engine.executor_status,
+        status = 'Canceled'::executor.executor_status,
         exec_end = now() at time zone 'utc'
     where
-        e.status = 'Active'::workflow_engine.executor_status
+        e.status = 'Active'::executor.executor_status
         and e.pid not in (select pid from pg_stat_activity)
     returning executor_id
 ), workflows as (
@@ -27,7 +27,7 @@ where
     and tq.status = 'Running'::task.task_status;
 $$;
 
-comment on procedure workflow_engine.clean_executors IS $$
+comment on procedure executor.clean_executors IS $$
 Cleans any executors that are no longer attached to the database but have not been shutdown
 correctly. Also cleans all the workflows and task queue entires attached to the invalid
 executors.

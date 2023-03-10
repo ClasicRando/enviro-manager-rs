@@ -6,7 +6,7 @@ declare
     v_next_executor bigint;
 begin
     if new.status = 'Scheduled'::workflow_engine.workflow_run_status and new.executor_id is null then
-        v_next_executor := next_executor();
+        v_next_executor := executor.next_executor();
         if v_next_executor is not null then
             new.executor_id = v_next_executor;
             perform pg_notify('wr_scheduled_'||v_next_executor, new.workflow_run_id::text);
@@ -53,7 +53,7 @@ create table if not exists workflow_engine.workflow_runs (
         on delete restrict
         on update cascade,
     status workflow_engine.workflow_run_status not null default 'Waiting'::workflow_engine.workflow_run_status,
-    executor_id bigint references workflow_engine.registered_we_executors match simple
+    executor_id bigint references executor.executors match simple
         on delete set null
         on update cascade,
     progress smallint check(case when progress is not null then progress between 0 and 100 else true end)

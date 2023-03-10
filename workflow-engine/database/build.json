@@ -75,7 +75,7 @@
             ]
         },
         {
-            "name": "registered_we_executors.pgsql",
+            "name": "executors.pgsql",
             "dependencies": [
                 "schema.pgsql",
                 "executor_status.pgsql"
@@ -87,7 +87,7 @@
                 "schema.pgsql",
                 "workflow_run_status.pgsql",
                 "workflows.pgsql",
-                "registered_we_executors.pgsql"
+                "executors.pgsql"
             ],
             "soft-dependencies": [
                 "jobs.pgsql"
@@ -99,7 +99,7 @@
                 "schema.pgsql",
                 "workflow_runs.pgsql",
                 "executor_status.pgsql",
-                "registered_we_executors.pgsql"
+                "executors.pgsql"
             ]
         },
         {
@@ -138,17 +138,17 @@
             ]
         },
         {
-            "name": "register_we_executor.pgsql",
+            "name": "register_executor.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "registered_we_executors.pgsql"
+                "executors.pgsql"
             ]
         },
         {
-            "name": "close_we_executor.pgsql",
+            "name": "close_executor.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "registered_we_executors.pgsql",
+                "executors.pgsql",
                 "workflow_runs.pgsql",
                 "task_queue.pgsql",
                 "workflow_run_status.pgsql",
@@ -239,7 +239,7 @@
             "name": "cancel_executor.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "registered_we_executors.pgsql",
+                "executors.pgsql",
                 "executor_status.pgsql"
             ]
         },
@@ -276,7 +276,7 @@
             "name": "clean_executors.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "registered_we_executors.pgsql",
+                "executors.pgsql",
                 "executor_status.pgsql",
                 "task_queue.pgsql",
                 "task_status.pgsql",
@@ -288,14 +288,14 @@
             "name": "post_executor_error_message.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "registered_we_executors.pgsql"
+                "executors.pgsql"
             ]
         },
         {
             "name": "shutdown_executor.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "registered_we_executors.pgsql",
+                "executors.pgsql",
                 "executor_status.pgsql"
             ]
         },

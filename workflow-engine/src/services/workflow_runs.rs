@@ -269,7 +269,7 @@ impl WorkflowRunsService {
         let result = sqlx::query_as(
             r#"
             select workflow_run_id, status, is_valid
-            from   all_executor_workflows($1)"#,
+            from executor.all_executor_workflows($1)"#,
         )
         .bind(executor_id)
         .fetch_all(self.pool)

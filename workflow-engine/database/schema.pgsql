@@ -13,6 +13,11 @@ revoke all on schema task from public;
 grant usage on schema task to workflow_engine_user;
 comment on schema task is 'Task related objects for the workflow engine';
 
+create schema if not exists executor authorization workflow_engine_admin;
+revoke all on schema executor from public;
+grant usage on schema executor to workflow_engine_user;
+comment on schema executor is 'Executor related objects for the workflow engine';
+
 alter schema audit owner to workflow_engine_admin;
 revoke all on schema audit from public;
 alter schema data_check owner to workflow_engine_admin;

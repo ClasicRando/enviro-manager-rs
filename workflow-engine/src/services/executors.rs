@@ -69,7 +69,7 @@ impl ExecutorsService {
     }
 
     pub async fn register_executor(&self) -> WEResult<ExecutorId> {
-        let executor_id = sqlx::query_scalar("select register_we_executor()")
+        let executor_id = sqlx::query_scalar("select executor.register_executor()")
             .fetch_one(self.pool)
             .await?;
         Ok(executor_id)
@@ -78,10 +78,11 @@ impl ExecutorsService {
     pub async fn read_one(&self, executor_id: &ExecutorId) -> WEResult<Option<Executor>> {
         let result = sqlx::query_as(
             r#"
-            select executor_id, pid, username, application_name, client_addr, client_port, exec_start
-                   session_active, workflow_run_count
-            from   v_executors
-            where  executor_id = $1"#,
+            select
+                e.executor_id, e.pid, e.username, e.application_name, e.client_addr, e.client_port,
+                e.exec_start, e.session_active, e.workflow_run_count
+            from executor.v_executors e
+            where e.executor_id = $1"#,
         )
         .bind(executor_id)
         .fetch_optional(self.pool)
@@ -92,9 +93,9 @@ impl ExecutorsService {
     pub async fn read_status(&self, executor_id: &ExecutorId) -> WEResult<Option<ExecutorStatus>> {
         let result = sqlx::query_scalar(
             r#"
-            select status
-            from   registered_we_executors
-            where  executor_id = $1"#,
+            select e.status
+            from executor.executors e
+            where e.executor_id = $1"#,
         )
         .bind(executor_id)
         .fetch_optional(self.pool)
@@ -105,9 +106,10 @@ impl ExecutorsService {
     pub async fn read_many(&self) -> WEResult<Vec<Executor>> {
         let result = sqlx::query_as(
             r#"
-            select executor_id, pid, username, application_name, client_addr, client_port, exec_start
-                   session_active, workflow_run_count
-            from   v_executors"#,
+            select
+                e.executor_id, e.pid, e.username, e.application_name, e.client_addr, e.client_port,
+                e.exec_start, e.session_active, e.workflow_run_count
+            from executor.v_executors e"#,
         )
         .fetch_all(self.pool)
         .await?;
@@ -117,10 +119,11 @@ impl ExecutorsService {
     pub async fn read_active(&self) -> WEResult<Vec<Executor>> {
         let result = sqlx::query_as(
             r#"
-            select executor_id, pid, username, application_name, client_addr, client_port, exec_start
-                   session_active, workflow_run_count
-            from   v_executors
-            where  status = 'Active'::executor_status"#,
+            select
+                e.executor_id, e.pid, e.username, e.application_name, e.client_addr, e.client_port,
+                e.exec_start, e.session_active, e.workflow_run_count
+            from executor.v_executors e
+            where e.status = 'Active'::executor.executor_status"#,
         )
         .fetch_all(self.pool)
         .await?;
@@ -141,7 +144,7 @@ impl ExecutorsService {
     }
 
     pub async fn shutdown(&self, executor_id: &ExecutorId) -> WEResult<Option<Executor>> {
-        sqlx::query("call shutdown_executor($1)")
+        sqlx::query("call executor.shutdown_executor($1)")
             .bind(executor_id)
             .execute(self.pool)
             .await?;
@@ -149,7 +152,7 @@ impl ExecutorsService {
     }
 
     pub async fn cancel(&self, executor_id: &ExecutorId) -> WEResult<Option<Executor>> {
-        sqlx::query("call cancel_executor($1)")
+        sqlx::query("call executor.cancel_executor($1)")
             .bind(executor_id)
             .execute(self.pool)
             .await?;
@@ -157,7 +160,7 @@ impl ExecutorsService {
     }
 
     pub async fn close(&self, executor_id: &ExecutorId, is_cancelled: bool) -> WEResult<()> {
-        sqlx::query("call close_we_executor($1,$2)")
+        sqlx::query("call executor.close_executor($1,$2)")
             .bind(executor_id)
             .bind(is_cancelled)
             .execute(self.pool)
@@ -167,7 +170,7 @@ impl ExecutorsService {
 
     pub async fn post_error(&self, executor_id: &ExecutorId, error: WEError) -> WEResult<()> {
         let message = format!("{}", error);
-        let sql_result = sqlx::query("call post_executor_error_message($1,$2)")
+        let sql_result = sqlx::query("call executor.post_executor_error_message($1,$2)")
             .bind(executor_id)
             .bind(&message)
             .execute(self.pool)
@@ -183,7 +186,7 @@ impl ExecutorsService {
     }
 
     pub async fn clean_executors(&self) -> WEResult<()> {
-        sqlx::query("call clean_executors()")
+        sqlx::query("call executor.clean_executors()")
             .execute(self.pool)
             .await?;
         Ok(())

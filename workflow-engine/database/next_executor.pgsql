@@ -1,16 +1,16 @@
-create or replace function workflow_engine.next_executor()
+create or replace function executor.next_executor()
 returns bigint
 language sql
 stable
 as $$
 select executor_id
-from workflow_engine.v_executors
+from executor.v_executors
 where session_active
 order by wr_count
 limit 1;
 $$;
 
-comment on function workflow_engine.next_executor IS $$
+comment on function executor.next_executor IS $$
 Get the next available executor to pick up a workflow run. Ensures the executor's session is active
 and give priority to the executor with the least number of workflow runs.
 
