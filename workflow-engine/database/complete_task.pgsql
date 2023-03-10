@@ -1,4 +1,4 @@
-create or replace procedure workflow_engine.complete_task(
+create or replace procedure workflow.complete_task(
     workflow_run_id bigint,
     task_order integer
 )
@@ -32,9 +32,9 @@ begin
         from task.task_queue tq
         group by tq.workflow_run_id
     )
-    update workflow_engine.workflow_runs wr
+    update workflow.workflow_runs wr
     set
-        status = 'Scheduled'::workflow_engine.workflow_run_status,
+        status = 'Scheduled'::workflow.workflow_run_status,
         progress = round((t.complete_count / cast(t.total_tasks as real)) * 100)::smallint
     from tasks t
     where
@@ -43,7 +43,7 @@ begin
 end;
 $$;
 
-comment on procedure workflow_engine.complete_task IS $$
+comment on procedure workflow.complete_task IS $$
 Manually complete a task that is paused to continue with workflow run.
 
 Arguments:

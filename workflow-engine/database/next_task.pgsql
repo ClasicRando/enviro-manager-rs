@@ -1,4 +1,4 @@
-create or replace function workflow_engine.next_task(
+create or replace function workflow.next_task(
     workflow_run_id bigint
 ) returns table (
     workflow_run_id bigint,
@@ -37,7 +37,7 @@ join task.v_tasks t
 on tq.task_id = t.task_id;
 $$;
 
-comment on function workflow_engine.next_task IS $$
+comment on function workflow.next_task IS $$
 Get the next available task for the given workflow_run_id. Returns at most 1 row of a row
 containing data about the executable task.
 

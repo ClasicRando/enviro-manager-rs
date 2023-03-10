@@ -25,10 +25,10 @@ begin
     end if;
 
     begin
-        select workflow_engine.initialize_workflow_run(v_workflow_id)
+        select workflow.initialize_workflow_run(v_workflow_id)
         into v_workflow_run_id;
 
-        call workflow_engine.schedule_workflow_run(v_workflow_run_id);
+        call workflow.schedule_workflow_run(v_workflow_run_id);
 
         update job.jobs j
         set

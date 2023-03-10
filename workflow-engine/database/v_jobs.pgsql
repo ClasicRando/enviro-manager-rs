@@ -5,9 +5,9 @@ select
     j.current_workflow_run_id, wr.status workflow_run_status, wr.progress,
     wr.executor_id
 from job.jobs j
-join workflow_engine.workflows w
+join workflow.workflows w
 on j.workflow_id = w.workflow_id
-left join workflow_engine.workflow_runs wr
+left join workflow.workflow_runs wr
 on j.current_workflow_run_id = wr.workflow_run_id;
 
 comment on view job.v_jobs IS $$

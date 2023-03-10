@@ -135,7 +135,7 @@ impl ExecutorsService {
         executor_id: &ExecutorId,
     ) -> WEResult<Option<WorkflowRunId>> {
         let workflow_run_id: Option<WorkflowRunId> =
-            sqlx::query_scalar("call workflow_engine.process_next_workflow($1,$2)")
+            sqlx::query_scalar("call workflow.process_next_workflow($1,$2)")
                 .bind(executor_id)
                 .bind(None::<i64>)
                 .fetch_optional(self.pool)

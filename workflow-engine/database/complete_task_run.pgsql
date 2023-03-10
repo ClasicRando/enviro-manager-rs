@@ -1,4 +1,4 @@
-create or replace procedure workflow_engine.complete_task_run(
+create or replace procedure workflow.complete_task_run(
     workflow_run_id bigint,
     task_order integer,
     is_paused boolean,
@@ -29,7 +29,7 @@ with tasks as (
     from task.task_queue tq
     group by tq.workflow_run_id
 )
-update workflow_engine.workflow_runs wr
+update workflow.workflow_runs wr
 set
     progress = round((t.complete_count / cast(t.total_tasks as real)) * 100)::smallint
 from tasks t
@@ -38,7 +38,7 @@ where
     and wr.workflow_run_id = $1;
 $$;
 
-comment on procedure workflow_engine.complete_task_run IS $$
+comment on procedure workflow.complete_task_run IS $$
 Set the task record as done with either a 'Rule Broken', 'Paused' or 'Complete' status. Optional
 message as output is also available
 

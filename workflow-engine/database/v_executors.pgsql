@@ -9,7 +9,7 @@ select
     ) as session_active,
     (
         select count(wr.workflow_run_id)
-        from workflow_engine.workflow_runs wr
+        from workflow.workflow_runs wr
         where wr.executor_id = re.executor_id
     ) as wr_count
 from executor.executors re

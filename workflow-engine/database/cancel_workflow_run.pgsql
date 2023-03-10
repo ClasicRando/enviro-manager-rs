@@ -1,11 +1,11 @@
-create or replace procedure workflow_engine.cancel_workflow_run(
+create or replace procedure workflow.cancel_workflow_run(
     workflow_run_id bigint
 )
 language sql
 as $$
-update workflow_engine.workflow_runs wr
+update workflow.workflow_runs wr
 set
-    status = 'Canceled'::workflow_engine.workflow_run_status,
+    status = 'Canceled'::workflow.workflow_run_status,
     executor_id = null
 where wr.workflow_run_id = $1;
 
@@ -19,7 +19,7 @@ where
     and tq.status = 'Running'::task.task_status;
 $$;
 
-comment on procedure workflow_engine.cancel_workflow_run IS $$
+comment on procedure workflow.cancel_workflow_run IS $$
 Cancel workflow run by setting workflow run status and updating any running tasks to the 'Canceled'
 status with an appropriate output message.
 

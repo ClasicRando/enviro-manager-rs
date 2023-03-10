@@ -1,11 +1,11 @@
-create or replace function workflow_engine.create_workflow(
+create or replace function workflow.create_workflow(
     name text,
     tasks task.workflow_task_request[]
 ) returns bigint
 language sql
 as $$
 with workflow as (
-    insert into workflow_engine.workflows(name)
+    insert into workflow.workflows(name)
     values($1)
     returning workflow_id
 ), workflow_tasks as (
@@ -19,7 +19,7 @@ select distinct wt.workflow_id
 from workflow_tasks wt
 $$;
 
-comment on function workflow_engine.create_workflow IS $$
+comment on function workflow.create_workflow IS $$
 Create a new template workflow, aliased as the provided name and including the tasks provided.
 Returns the new workflow id.
 

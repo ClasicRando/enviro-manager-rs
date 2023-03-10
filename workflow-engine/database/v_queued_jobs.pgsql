@@ -5,7 +5,7 @@ where
     not j.is_paused
     and not exists(
         select 1
-        from workflow_engine.workflow_runs wr
+        from workflow.workflow_runs wr
         where j.current_workflow_run_id = wr.workflow_run_id
         and wr.status != 'Complete'
     )

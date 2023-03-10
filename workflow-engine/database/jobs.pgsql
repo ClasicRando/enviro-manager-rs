@@ -10,7 +10,7 @@ $$;
 
 create table if not exists job.jobs (
     job_id bigint primary key generated always as identity,
-    workflow_id bigint not null references workflow_engine.workflows match simple
+    workflow_id bigint not null references workflow.workflows match simple
         on delete restrict
         on update cascade,
     job_type job.job_type not null,
@@ -31,7 +31,7 @@ create table if not exists job.jobs (
     ),
     is_paused boolean not null default false,
     next_run timestamp without time zone not null check(next_run > now() at time zone 'UTC'),
-    current_workflow_run_id bigint references workflow_engine.workflow_runs match simple
+    current_workflow_run_id bigint references workflow.workflow_runs match simple
         on delete restrict
         on update cascade
 );

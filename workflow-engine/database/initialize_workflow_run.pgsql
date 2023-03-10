@@ -1,11 +1,11 @@
-create or replace function workflow_engine.initialize_workflow_run(
+create or replace function workflow.initialize_workflow_run(
     workflow_id bigint
 ) returns bigint
 language plpgsql
 as $$
 declare
     v_workflow_run_id bigint;
-    v_workflow workflow_engine.workflows;
+    v_workflow workflow.workflows;
     v_state text;
     v_msg text;
     v_detail text;
@@ -16,7 +16,7 @@ begin
     begin
         select w.workflow_id, w.tasks
         into v_workflow
-        from workflow_engine.workflows w
+        from workflow.workflows w
         where w.workflow_id = $1;
     exception
         when no_data_found then
@@ -30,7 +30,7 @@ begin
     end if;
 
     begin
-        insert into workflow_engine.workflow_runs(workflow_id)
+        insert into workflow.workflow_runs(workflow_id)
         values($1)
         returning workflow_run_id into v_workflow_run_id;
 
@@ -68,7 +68,7 @@ begin
 end;
 $$;
 
-comment on function workflow_engine.initialize_workflow_run IS $$
+comment on function workflow.initialize_workflow_run IS $$
 Create a new workflow run entry and child tasks in task_queue using the workflow_id provided as a
 template.
 

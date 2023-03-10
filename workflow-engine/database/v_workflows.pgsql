@@ -1,4 +1,4 @@
-create or replace view workflow_engine.v_workflows as
+create or replace view workflow.v_workflows as
 with w_tasks as (
     select
         wt.workflow_id,
@@ -19,10 +19,10 @@ with w_tasks as (
     group by wt.workflow_id
 )
 select w.workflow_id, w.name, wt.tasks
-from workflow_engine.workflows w
+from workflow.workflows w
 join w_tasks wt
 on w.workflow_id = wt.workflow_id;
 
-comment on view workflow_engine.v_workflows IS $$
+comment on view workflow.v_workflows IS $$
 Utility view, showing all workflows and their task details (as an array of workflow_task instances)
 $$;

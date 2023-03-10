@@ -1,4 +1,4 @@
-create or replace function workflow_engine.next_workflow(
+create or replace function workflow.next_workflow(
     executor_id bigint
 ) returns table(
     workflow_run_id bigint,
@@ -18,7 +18,7 @@ select
                 'Complete'::task.task_status
             )
     ) is_valid
-from workflow_engine.workflow_runs wr
+from workflow.workflow_runs wr
 where
     status = 'Scheduled'::task.workflow_run_status
     and (executor_id is null or executor_id = $1)
@@ -26,7 +26,7 @@ limit 1
 for update skip locked;
 $$;
 
-comment on function workflow_engine.next_workflow IS $$
+comment on function workflow.next_workflow IS $$
 Get the next available workflow run for the given executor. Returns at most 1 row of a
 workflow_run_id and a flag to indicate if the workflow run is valid or not. Invalid runs are reset
 by the executor.

@@ -54,7 +54,7 @@ end;
 $$;
 
 create table if not exists task.workflow_tasks (
-    workflow_id bigint not null references workflow_engine.workflows match simple
+    workflow_id bigint not null references workflow.workflows match simple
         on delete restrict
         on update cascade,
     task_order integer not null,

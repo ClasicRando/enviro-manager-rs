@@ -1,4 +1,4 @@
-create or replace procedure workflow_engine.retry_task(
+create or replace procedure workflow.retry_task(
     workflow_run_id bigint,
     task_order integer
 )
@@ -41,8 +41,8 @@ begin
             tq.workflow_run_id = $1
             and tq.task_order = $2;
 
-        update workflow_engine.workflow_runs wr
-        set status = 'Scheduled'::workflow_engine.workflow_run_status
+        update workflow.workflow_runs wr
+        set status = 'Scheduled'::workflow.workflow_run_status
         where wr.workflow_run_id = $1;
         commit;
     exception
@@ -53,7 +53,7 @@ begin
 end;
 $$;
 
-comment on procedure workflow_engine.retry_task IS $$
+comment on procedure workflow.retry_task IS $$
 Retry a given task if possible. Archives the current state of the task and then updates the task
 and the parent workflow_run record.
 

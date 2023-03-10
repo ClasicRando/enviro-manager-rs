@@ -1,4 +1,4 @@
-create or replace procedure workflow_engine.fail_task_run(
+create or replace procedure workflow.fail_task_run(
     workflow_run_id bigint,
     task_order integer,
     message text
@@ -22,7 +22,7 @@ begin
 end;
 $$;
 
-comment on procedure workflow_engine.fail_task_run IS $$
+comment on procedure workflow.fail_task_run IS $$
 Set the task record as 'Failed' with a required message to explain the failure
 
 Arguments:

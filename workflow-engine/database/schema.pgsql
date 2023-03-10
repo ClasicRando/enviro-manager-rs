@@ -18,6 +18,11 @@ revoke all on schema executor from public;
 grant usage on schema executor to workflow_engine_user;
 comment on schema executor is 'Executor related objects for the workflow engine';
 
+create schema if not exists workflow authorization workflow_engine_admin;
+revoke all on schema workflow from public;
+grant usage on schema workflow to workflow_engine_user;
+comment on schema workflow is 'Workflow related objects for the workflow engine';
+
 alter schema audit owner to workflow_engine_admin;
 revoke all on schema audit from public;
 alter schema data_check owner to workflow_engine_admin;

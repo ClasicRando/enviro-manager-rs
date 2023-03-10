@@ -1,5 +1,5 @@
 create table if not exists task.task_queue (
-    workflow_run_id bigint not null references workflow_engine.workflow_runs match simple
+    workflow_run_id bigint not null references workflow.workflow_runs match simple
         on delete restrict
         on update cascade,
     task_order int not null,

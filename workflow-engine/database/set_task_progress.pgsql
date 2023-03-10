@@ -1,4 +1,4 @@
-create or replace procedure workflow_engine.set_task_progress(
+create or replace procedure workflow.set_task_progress(
     workflow_run_id bigint,
     task_order integer,
     progress smallint
@@ -13,7 +13,7 @@ where
     and tq.status = 'Running'::task.task_status;
 $$;
 
-comment on procedure workflow_engine.set_task_progress IS $$
+comment on procedure workflow.set_task_progress IS $$
 Set the progress property of a task_queue record.
 
 Arguments:

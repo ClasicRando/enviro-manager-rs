@@ -14,13 +14,13 @@ set
 where e.executor_id = $1;
 
 with workflow_runs as (
-    update workflow_engine.workflow_runs wr
+    update workflow.workflow_runs wr
     set
-        status = 'Canceled'::workflow_engine.workflow_run_status,
+        status = 'Canceled'::workflow.workflow_run_status,
         executor_id = null
     where
         wr.executor_id = $1
-        and wr.status = 'Running'::workflow_engine.workflow_run_status
+        and wr.status = 'Running'::workflow.workflow_run_status
     returning workflow_run_id
 )
 update task.task_queue tq

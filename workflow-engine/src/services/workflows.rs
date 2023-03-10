@@ -93,7 +93,7 @@ impl WorkflowsService {
 
     // TODO: Alter create_workflow to return Workflow data
     pub async fn create(&self, request: WorkflowRequest) -> WEResult<Workflow> {
-        let workflow_id = sqlx::query_scalar("select create_workflow($1,$2)")
+        let workflow_id = sqlx::query_scalar("select workflow.create_workflow($1,$2)")
             .bind(request.name)
             .bind(request.tasks)
             .fetch_one(self.pool)
@@ -108,9 +108,9 @@ impl WorkflowsService {
     pub async fn read_one(&self, workflow_id: &WorkflowId) -> WEResult<Option<Workflow>> {
         let result = sqlx::query_as(
             r#"
-            select workflow_id, name, tasks
-            from   v_workflows
-            where  workflow_id = $1"#,
+            select w.workflow_id, w.name, w.tasks
+            from workflow.v_workflows w
+            where w.workflow_id = $1"#,
         )
         .bind(workflow_id)
         .fetch_optional(self.pool)
@@ -121,8 +121,8 @@ impl WorkflowsService {
     pub async fn read_many(&self) -> WEResult<Vec<Workflow>> {
         let result = sqlx::query_as(
             r#"
-            select workflow_id, name, tasks
-            from   v_workflows"#,
+            select w.workflow_id, w.name, w.tasks
+            from workflow.v_workflows w"#,
         )
         .fetch_all(self.pool)
         .await?;
@@ -130,7 +130,7 @@ impl WorkflowsService {
     }
 
     pub async fn deprecate(&self, request: WorkflowDeprecationRequest) -> WEResult<i64> {
-        sqlx::query("call deprecate_workflow($1,$2)")
+        sqlx::query("call workflow.deprecate_workflow($1,$2)")
             .bind(request.workflow_id)
             .bind(request.new_workflow_id)
             .execute(self.pool)

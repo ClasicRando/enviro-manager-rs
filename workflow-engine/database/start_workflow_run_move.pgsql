@@ -1,4 +1,4 @@
-create or replace procedure workflow_engine.start_workflow_run_move(
+create or replace procedure workflow.start_workflow_run_move(
     workflow_run_id bigint
 )
 language sql
@@ -19,7 +19,7 @@ where
     );
 $$;
 
-comment on procedure workflow_engine.start_workflow_run_move IS $$
+comment on procedure workflow.start_workflow_run_move IS $$
 Starts the process of transitioning the workflow run to a new executor (or to the 'Scheduled' pool
 of workflow runs). Sets the first task_queue record that isn't 'Waiting' to 'Paused'.
 

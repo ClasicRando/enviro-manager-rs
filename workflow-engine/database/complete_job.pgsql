@@ -5,7 +5,7 @@ language plpgsql
 as $$
 declare
     v_workflow_run_id bigint;
-    v_status workflow_engine.workflow_run_status;
+    v_status workflow.workflow_run_status;
     v_is_paused boolean;
     v_state text;
     v_msg text;
@@ -32,12 +32,12 @@ begin
 
     select wr.status
     into v_status
-    from workflow_engine.workflow_runs wr
+    from workflow.workflow_runs wr
     where wr.workflow_run_id = v_workflow_run_id;
 
     if v_status in (
-        'Scheduled'::workflow_engine.workflow_run_status,
-        'Running'::workflow_engine.workflow_run_status
+        'Scheduled'::workflow.workflow_run_status,
+        'Running'::workflow.workflow_run_status
     ) then
         rollback;
         return 'Workflow must be done to complete job';
@@ -47,11 +47,11 @@ begin
         update job.jobs j
         set
             current_workflow_run_id = case
-                when v_status = 'Complete'::workflow_engine.workflow_run_status then null
+                when v_status = 'Complete'::workflow.workflow_run_status then null
                 else current_workflow_run_id
             end,
             is_paused = case
-                when v_status = 'Complete'::workflow_engine.workflow_run_status then false
+                when v_status = 'Complete'::workflow.workflow_run_status then false
                 else true
             end
         where j.job_id = $1

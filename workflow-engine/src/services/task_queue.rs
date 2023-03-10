@@ -171,7 +171,7 @@ impl TaskQueueService {
         &self,
         workflow_run_id: &WorkflowRunId,
     ) -> WEResult<Option<TaskQueueRecord>> {
-        let task_queue_record = sqlx::query_as("call workflow_engine.aquire_next_task($1)")
+        let task_queue_record = sqlx::query_as("call workflow.acquire_next_task($1)")
             .bind(workflow_run_id)
             .fetch_optional(self.pool)
             .await?;

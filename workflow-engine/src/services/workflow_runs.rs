@@ -182,7 +182,7 @@ impl WorkflowRunsService {
     }
 
     pub async fn initialize(&self, workflow_id: i64) -> WEResult<WorkflowRun> {
-        let workflow_run_id = sqlx::query_scalar("select initialize_workflow_run($1)")
+        let workflow_run_id = sqlx::query_scalar("select workflow.initialize_workflow_run($1)")
             .bind(workflow_id)
             .fetch_one(self.pool)
             .await?;
@@ -196,9 +196,11 @@ impl WorkflowRunsService {
     pub async fn read_one(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
         let result = sqlx::query_as(
             r#"
-            select workflow_run_id, workflow_id, status, executor_id, progress, tasks
-            from   v_workflow_runs
-            where  workflow_run_id = $1"#,
+            select
+                wr.workflow_run_id, wr.workflow_id, wr.status, wr.executor_id, wr.progress,
+                wr.tasks
+            from workflow.v_workflow_runs wr
+            where workflow_run_id = $1"#,
         )
         .bind(workflow_run_id)
         .fetch_optional(self.pool)
@@ -209,8 +211,10 @@ impl WorkflowRunsService {
     pub async fn read_many(&self) -> WEResult<Vec<WorkflowRun>> {
         let result = sqlx::query_as(
             r#"
-            select workflow_run_id, workflow_id, status, executor_id, progress, tasks
-            from   v_workflow_runs"#,
+            select
+                wr.workflow_run_id, wr.workflow_id, wr.status, wr.executor_id, wr.progress,
+                wr.tasks
+            from workflow.v_workflow_runs wr"#,
         )
         .fetch_all(self.pool)
         .await?;
@@ -218,7 +222,7 @@ impl WorkflowRunsService {
     }
 
     pub async fn cancel(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
-        sqlx::query("call cancel_workflow_run($1)")
+        sqlx::query("call workflow.cancel_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(self.pool)
             .await?;
@@ -226,7 +230,7 @@ impl WorkflowRunsService {
     }
 
     pub async fn schedule(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
-        sqlx::query("call schedule_workflow_run($1)")
+        sqlx::query("call workflow.schedule_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(self.pool)
             .await?;
@@ -238,7 +242,7 @@ impl WorkflowRunsService {
         workflow_run_id: &WorkflowRunId,
         executor_id: &ExecutorId,
     ) -> WEResult<Option<WorkflowRun>> {
-        sqlx::query("call schedule_workflow_run($1,$2)")
+        sqlx::query("call workflow.schedule_workflow_run($1,$2)")
             .bind(workflow_run_id)
             .bind(executor_id)
             .execute(self.pool)
@@ -247,7 +251,7 @@ impl WorkflowRunsService {
     }
 
     pub async fn restart(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
-        sqlx::query("call restart_workflow_run($1)")
+        sqlx::query("call workflow.restart_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(self.pool)
             .await?;
@@ -255,7 +259,7 @@ impl WorkflowRunsService {
     }
 
     pub async fn complete(&self, workflow_run_id: &WorkflowRunId) -> WEResult<()> {
-        sqlx::query("call complete_workflow_run($1)")
+        sqlx::query("call workflow.complete_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(self.pool)
             .await?;
@@ -281,7 +285,7 @@ impl WorkflowRunsService {
         &self,
         workflow_run_id: &WorkflowRunId,
     ) -> WEResult<Option<WorkflowRun>> {
-        sqlx::query("call start_workflow_run_move($1)")
+        sqlx::query("call workflow.start_workflow_run_move($1)")
             .bind(workflow_run_id)
             .execute(self.pool)
             .await?;
@@ -292,7 +296,7 @@ impl WorkflowRunsService {
         &self,
         workflow_run_id: &WorkflowRunId,
     ) -> WEResult<Option<WorkflowRun>> {
-        sqlx::query("call complete_workflow_run_move($1)")
+        sqlx::query("call workflow.complete_workflow_run_move($1)")
             .bind(workflow_run_id)
             .execute(self.pool)
             .await?;

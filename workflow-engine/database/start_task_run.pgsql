@@ -1,4 +1,4 @@
-create or replace procedure workflow_engine.start_task_run(
+create or replace procedure workflow.start_task_run(
     workflow_run_id bigint,
     task_order int
 )
@@ -13,7 +13,7 @@ where
     and tq.task_order = $2;
 $$;
 
-comment on procedure workflow_engine.start_task_run IS $$
+comment on procedure workflow.start_task_run IS $$
 Get the next available workflow run for the given executor. Returns at most 1 row of a
 workflow_run_id and a flag to indicate if the workflow run is valid or not. Invalid runs are reset
 by the executor.

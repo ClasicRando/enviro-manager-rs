@@ -1,4 +1,4 @@
-create or replace procedure workflow_engine.complete_workflow_run(
+create or replace procedure workflow.complete_workflow_run(
     workflow_run_id bigint
 )
 language sql
@@ -16,15 +16,15 @@ with task_queue_status as (
     where workflow_run_id = $1
     group by tq.workflow_run_id
 )
-update workflow_engine.workflow_runs wr
+update workflow.workflow_runs wr
 set
     status = case
-        when tqs.total_count = tqs.complete_count then 'Complete'::workflow_engine.workflow_run_status
-        when tqs.failed_count > 0 then 'Failed'::workflow_engine.workflow_run_status
-        when tqs.rule_broke_count > 0 then 'Paused'::workflow_engine.workflow_run_status
-        when tqs.paused_count > 0 then 'Paused'::workflow_engine.workflow_run_status
-        when tqs.canceled_count > 0 then 'Canceled'::workflow_engine.workflow_run_status
-        else 'Paused'::workflow_engine.workflow_run_status
+        when tqs.total_count = tqs.complete_count then 'Complete'::workflow.workflow_run_status
+        when tqs.failed_count > 0 then 'Failed'::workflow.workflow_run_status
+        when tqs.rule_broke_count > 0 then 'Paused'::workflow.workflow_run_status
+        when tqs.paused_count > 0 then 'Paused'::workflow.workflow_run_status
+        when tqs.canceled_count > 0 then 'Canceled'::workflow.workflow_run_status
+        else 'Paused'::workflow.workflow_run_status
     end,
     executor_id = null,
     progress = case
@@ -39,7 +39,7 @@ from task_queue_status tqs
 where wr.workflow_run_id = tqs.workflow_run_id;
 $$;
 
-comment on procedure workflow_engine.complete_workflow_run IS $$
+comment on procedure workflow.complete_workflow_run IS $$
 Finish a workflow run, checking the task queue to assign a status.
 
 Status is set using logical cascading:

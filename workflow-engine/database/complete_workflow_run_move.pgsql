@@ -1,4 +1,4 @@
-create or replace procedure workflow_engine.complete_workflow_run_move(
+create or replace procedure workflow.complete_workflow_run_move(
     workflow_run_id bigint
 )
 language sql
@@ -19,13 +19,13 @@ where
         for update skip locked
     );
 
-update workflow_engine.workflow_runs wr
-set status = 'Scheduled'::workflow_engine.workflow_run_status
+update workflow.workflow_runs wr
+set status = 'Scheduled'::workflow.workflow_run_status
 where wr.workflow_run_id = $1;
 commit;
 $$;
 
-comment on procedure workflow_engine.complete_workflow_run_move IS $$
+comment on procedure workflow.complete_workflow_run_move IS $$
 Finish the transition of a workflow run to another executor. Sets the first 'Paused' task to
 'Waiting', then set the workflow run to 'Scheduled' so the next available executor can pick it up.
 

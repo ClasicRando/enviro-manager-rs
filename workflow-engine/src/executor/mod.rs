@@ -23,6 +23,23 @@ use crate::{
     },
 };
 
+/// Next operations available to an [Executor] after performing various checks on the status of
+/// listeners, queues and signals.
+///
+/// [Continue][ExecutorNextOperation::Continue] and [Break][ExecutorNextOperation::Break] are both
+/// results of a notification sent to the executor using the built-in LISTEN/NOTIFY system from
+/// postgresql. They represent a required operation of the same name be applied to the main loop
+/// of the [Executor]. [Break][ExecutorNextOperation::Break] contains the notification signal type
+/// that was sent to cause a break to happen to dictate the kind of shutdown to occur (forced or
+/// graceful).
+/// 
+/// [NextWorkflowRun][ExecutorNextOperation::NextWorkflowRun] occurs when a workflow run is
+/// available for the [Executor] to run. This variant is provided once the workflow run has
+/// started and the [WorkflowRunId] and [JoinHandle] are returned within the variant.
+/// 
+/// [Listen][ExecutorNextOperation::Listen] occurs when no new workflows are available to process
+/// and the executor should move into standby mode. This means the executor is only listening for
+/// wake-up notifications are a SIGINT signal.
 enum ExecutorNextOperation {
     Continue,
     Break(ExecutorNotificationSignal),

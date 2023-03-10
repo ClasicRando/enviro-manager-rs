@@ -1,4 +1,4 @@
-create or replace procedure workflow_engine.process_next_workflow(
+create or replace procedure workflow.process_next_workflow(
     executor_id bigint,
     out workflow_run_id bigint
 )
@@ -31,7 +31,7 @@ begin
 end;
 $$;
 
-comment on procedure workflow_engine.process_next_workflow IS $$
+comment on procedure workflow.process_next_workflow IS $$
 Process the next available workflow run for the given executor. Checks the next available workflow,
 starting or completing the workflow depending on the is_valid flag collected. Returns the
 workflow_run_id of the next workflow if it was started successfully. Otherwise returns null.
