@@ -106,10 +106,11 @@ impl TaskQueueService {
     pub async fn read_one(&self, request: TaskQueueRequest) -> WEResult<Option<TaskQueueRecord>> {
         let result = sqlx::query_as(
             r#"
-            select workflow_run_id, task_order, task_id, parameters, url
-            from   task_queue
-            where  workflow_run_id = $1
-            and    task_order = $2"#,
+            select tq.workflow_run_id, tq.task_order, tq.task_id, tq.parameters, tq.url
+            from task.task_queue tq
+            where
+                tq.workflow_run_id = $1
+                and tq.task_order = $2"#,
         )
         .bind(request.workflow_run_id)
         .bind(request.task_order)

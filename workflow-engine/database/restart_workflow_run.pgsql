@@ -18,19 +18,19 @@ begin
     end if;
 
     begin
-        insert into workflow_engine.task_queue_archive(
+        insert into task.task_queue_archive(
             workflow_run_id,task_order,task_id,status,parameters,output,rules,task_start,task_end
         )
         select
             tq.workflow_run_id, tq.task_order, tq.task_id, tq.status, tq.parameters, tq.output,
             tq.rules, tq.task_start, tq.task_end
-        from workflow_engine.task_queue tq
+        from task.task_queue tq
         where tq.workflow_run_id = $1
         for update;
 
-        update workflow_engine.task_queue tq
+        update task.task_queue tq
         set
-            status = 'Waiting'::workflow_engine.task_status,
+            status = 'Waiting'::task.task_status,
             output = null,
             task_start = null,
             task_end = null

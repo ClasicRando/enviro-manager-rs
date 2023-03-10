@@ -15,11 +15,11 @@ with tasks as (
                 tq.task_start,
                 tq.task_end,
                 tq.progress
-            )::workflow_engine.workflow_run_task
+            )::task.workflow_run_task
             order by tq.task_id
         ) as tasks
-    from workflow_engine.task_queue tq
-    join workflow_engine.tasks t on t.task_id = tq.task_id
+    from task.task_queue tq
+    join task.tasks t on t.task_id = tq.task_id
     group by tq.workflow_run_id
 )
 select wr.workflow_run_id, wr.workflow_id, wr.status, wr.executor_id, wr.progress, t.tasks

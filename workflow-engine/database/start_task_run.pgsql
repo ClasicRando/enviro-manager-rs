@@ -4,9 +4,9 @@ create or replace procedure workflow_engine.start_task_run(
 )
 language sql
 as $$
-update workflow_engine.task_queue tq
+update task.task_queue tq
 set
-    status = 'Running'::workflow_engine.task_status,
+    status = 'Running'::task.task_status,
     task_start = now() at time zone 'UTC'
 where
     tq.workflow_run_id = $1

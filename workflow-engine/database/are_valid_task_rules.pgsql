@@ -1,11 +1,11 @@
-create or replace function workflow_engine.are_valid_task_rules(
-    workflow_engine.task_rule[]
+create or replace function task.are_valid_task_rules(
+    task.task_rule[]
 ) returns boolean
 language plpgsql
 immutable
 as $$
 declare
-    task_rule workflow_engine.task_rule;
+    task_rule task.task_rule;
 begin
     if $1 is null then
         return true;
@@ -29,7 +29,7 @@ begin
 end;
 $$;
 
-comment on function workflow_engine.are_valid_task_rules IS $$
+comment on function task.are_valid_task_rules IS $$
 Check to confirm array of task rules are valid. Returns false when the array is empty or any entry
 contains a null/blank/empty name or a null failed flag.
 $$;

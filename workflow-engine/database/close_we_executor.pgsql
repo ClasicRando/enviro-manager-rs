@@ -23,15 +23,15 @@ with workflow_runs as (
         and wr.status = 'Running'::workflow_engine.workflow_run_status
     returning workflow_run_id
 )
-update workflow_engine.task_queue tq
+update task.task_queue tq
 set
-    status = 'Canceled'::workflow_engine.task_status,
+    status = 'Canceled'::task.task_status,
     task_end = now() at time zone 'UTC',
     output = 'Task executor canceled workflow run'
 from workflow_runs wr
 where
     wr.workflow_run_id = tq.workflow_run_id
-    and tq.status = 'Running'::workflow_engine.task_status;
+    and tq.status = 'Running'::task.task_status;
 $$;
 
 comment on procedure workflow_engine.close_we_executor IS $$

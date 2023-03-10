@@ -7,18 +7,18 @@ as $$
 begin
     if exists(
         select 1
-        from workflow_engine.task_queue tq
+        from task.task_queue tq
         where
             tq.workflow_run_id = $1
             and tq.task_order = $2
-            and tq.status != 'Paused'::workflow_engine.task_status
+            and tq.status != 'Paused'::task.task_status
     ) then
         raise 'Cannot complete task. Status must be "Paused"';
     end if;
 
-    update workflow_engine.task_queue tq
+    update task.task_queue tq
     set
-        status = 'Complete'::workflow_engine.task_status,
+        status = 'Complete'::task.task_status,
         progress = 100
     where
         tq.workflow_run_id = $1
@@ -27,9 +27,9 @@ begin
     with tasks as (
         select
             tq.workflow_run_id,
-            count(0) filter (where tq.status = 'Complete'::workflow_engine.task_status) complete_count,
+            count(0) filter (where tq.status = 'Complete'::task.task_status) complete_count,
             count(0) total_tasks
-        from workflow_engine.task_queue tq
+        from task.task_queue tq
         group by tq.workflow_run_id
     )
     update workflow_engine.workflow_runs wr

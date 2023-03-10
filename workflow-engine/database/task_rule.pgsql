@@ -1,11 +1,11 @@
-create type workflow_engine.task_rule as
+create type task.task_rule as
 (
     name text,
     failed boolean,
     message text
 );
 
-comment on type workflow_engine.task_rule IS $$
+comment on type task.task_rule IS $$
 Describes rules checked during task execution.
 
 Attributes:

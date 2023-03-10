@@ -10,15 +10,15 @@ begin
         raise exception 'Message parameter must be non-null and not empty';
     end if;
 
-    update workflow_engine.task_queue tq
+    update task.task_queue tq
     set
-        status = 'Failed'::workflow_engine.task_status,
+        status = 'Failed'::task.task_status,
         output = $3,
         task_end = now() at time zone 'UTC'
     where
         tq.workflow_run_id = $1
         and tq.task_order = $2
-        and tq.status = 'Running'::workflow_engine.task_status;
+        and tq.status = 'Running'::task.task_status;
 end;
 $$;
 

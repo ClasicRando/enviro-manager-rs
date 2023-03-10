@@ -19,12 +19,12 @@ with executors as (
     where wr.executor_id = e.executor_id
     returning workflow_run_id
 )
-update workflow_engine.task_queue tq
-set status = 'Canceled'::workflow_engine.task_status
+update task.task_queue tq
+set status = 'Canceled'::task.task_status
 from workflows w
 where 
     tq.workflow_run_id = w.workflow_run_id
-    and tq.status = 'Running'::workflow_engine.task_status;
+    and tq.status = 'Running'::task.task_status;
 $$;
 
 comment on procedure workflow_engine.clean_executors IS $$

@@ -1,20 +1,20 @@
 create or replace procedure workflow_engine.append_task_rule(
     workflow_run_id bigint,
     task_order integer,
-    rule workflow_engine.task_rule
+    rule task.task_rule
 )
 language sql
 as $$
-update workflow_engine.task_queue tq
+update task.task_queue tq
 set
-    rules = coalesce(rules,'{}'::workflow_engine.task_rule[]) || $3
+    rules = coalesce(rules,'{}'::task.task_rule[]) || $3
 where
     tq.workflow_run_id = $1
     and tq.task_order = $2
-    and tq.status = 'Running'::workflow_engine.task_status;
+    and tq.status = 'Running'::task.task_status;
 $$;
 
-comment on procedure workflow_engine.append_task_rule IS $$
+comment on procedure task.append_task_rule IS $$
 Add a new task rule to a task queue record.
 
 Arguments:

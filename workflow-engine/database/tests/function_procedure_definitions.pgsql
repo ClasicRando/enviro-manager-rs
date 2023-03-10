@@ -2,7 +2,7 @@ declare
     v_schema text := 'workflow_engine';
 begin
     call data_check.check_function_definition(v_schema, 'all_executor_workflows');
-    call data_check.check_function_definition(v_schema, 'append_task_rule');
+    call data_check.check_function_definition('task', 'append_task_rule');
     call data_check.check_function_definition(v_schema, 'cancel_executor');
     call data_check.check_function_definition(v_schema, 'cancel_workflow_run');
     call data_check.check_function_definition(v_schema, 'clean_executors');
@@ -37,5 +37,5 @@ begin
     call data_check.check_function_definition(v_schema, 'valid_job_schedule');
     call data_check.check_function_definition(v_schema, 'workflow_run_status_event');
     call data_check.check_function_definition(v_schema, 'workflow_progress_event');
-    call data_check.check_function_definition(v_schema, 'workflow_tasks_check');
+    call data_check.check_function_definition('task', 'workflow_tasks_check');
 end;

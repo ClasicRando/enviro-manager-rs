@@ -5,12 +5,12 @@ create or replace procedure workflow_engine.set_task_progress(
 )
 language sql
 as $$
-update workflow_engine.task_queue tq
+update task.task_queue tq
 set progress = $3
 where
     tq.workflow_run_id = $1
     and tq.task_order = $2
-    and tq.status = 'Running'::workflow_engine.task_status;
+    and tq.status = 'Running'::task.task_status;
 $$;
 
 comment on procedure workflow_engine.set_task_progress IS $$

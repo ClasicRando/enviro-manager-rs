@@ -7,12 +7,12 @@ with task_queue_status as (
     select
         tq.workflow_run_id,
         count(0) total_count,
-        count(0) filter (where tq.status = 'Complete'::workflow_engine.task_status) complete_count,
-        count(0) filter (where tq.status = 'Failed'::workflow_engine.task_status) failed_count,
-        count(0) filter (where tq.status = 'Rule Broken'::workflow_engine.task_status) rule_broke_count,
-        count(0) filter (where tq.status = 'Paused'::workflow_engine.task_status) paused_count,
-        count(0) filter (where tq.status = 'Canceled'::workflow_engine.task_status) canceled_count
-    from workflow_engine.task_queue tq
+        count(0) filter (where tq.status = 'Complete'::task.task_status) complete_count,
+        count(0) filter (where tq.status = 'Failed'::task.task_status) failed_count,
+        count(0) filter (where tq.status = 'Rule Broken'::task.task_status) rule_broke_count,
+        count(0) filter (where tq.status = 'Paused'::task.task_status) paused_count,
+        count(0) filter (where tq.status = 'Canceled'::task.task_status) canceled_count
+    from task.task_queue tq
     where workflow_run_id = $1
     group by tq.workflow_run_id
 )

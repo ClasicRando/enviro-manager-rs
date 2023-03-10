@@ -1,4 +1,4 @@
-create or replace procedure workflow_engine.update_task(
+create or replace procedure task.update_task(
     task_id bigint,
     name text,
     description text,
@@ -7,7 +7,7 @@ create or replace procedure workflow_engine.update_task(
 )
 language sql
 as $$
-update workflow_engine.tasks t
+update task.tasks t
 set
     name = $2,
     description = $3,
@@ -16,7 +16,7 @@ set
 where t.task_id = $1;
 $$;
 
-comment on procedure workflow_engine.update_task IS $$
+comment on procedure task.update_task IS $$
 Update a task with new details. Always requires a full update.
 
 Arguments:

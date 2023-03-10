@@ -35,15 +35,15 @@ begin
         returning workflow_run_id into v_workflow_run_id;
 
         execute format(
-            'create table "workflow_engine".%I partition of workflow_engine.task_queue for values in (%L)',
+            'create table "task".%I partition of task.task_queue for values in (%L)',
             'task_queue_'||v_workflow_run_id,
             v_workflow_run_id
         );
 
-        insert into workflow_engine.task_queue(workflow_run_id,task_order,task_id,parameters)
+        insert into task.task_queue(workflow_run_id,task_order,task_id,parameters)
         select v_workflow_run_id, wt.task_order, wt.task_id, wt.parameters
-        from workflow_engine.workflow_tasks wt
-        join workflow_engine.tasks t on wt.task_id = t.task_id
+        from task.workflow_tasks wt
+        join task.tasks t on wt.task_id = t.task_id
         where wt.workflow_id = $1;
         commit;
     exception

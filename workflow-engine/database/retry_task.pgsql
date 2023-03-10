@@ -8,13 +8,13 @@ begin
     start transaction;
     if exists(
         select 1
-        from workflow_engine.task_queue tq
+        from task.task_queue tq
         where
             tq.workflow_run_id = $1
             and tq.task_order = $2
             and tq.status not in (
-                'Failed'::workflow_engine.task_status,
-                'Rule Broken'::workflow_engine.task_status
+                'Failed'::task.task_status,
+                'Rule Broken'::task.task_status
             )
     ) then
         rollback;
@@ -23,20 +23,20 @@ begin
     end if;
 
     begin
-        insert into workflow_engine.task_queue_archive(
+        insert into task.task_queue_archive(
             workflow_run_id,task_order,task_id,status,parameters,output,rules,task_start,task_end
         )
         select
             tq.workflow_run_id, tq.task_order, tq.task_id, tq.status, tq.parameters, tq.output,
             tq.rules, tq.task_start, tq.task_end
-        from   workflow_engine.task_queue tq
+        from task.task_queue tq
         where 
             tq.workflow_run_id = $1
             and tq.task_order = $2
         for update;
 
-        update workflow_engine.task_queue tq
-        set status = 'Waiting'::workflow_engine.task_status
+        update task.task_queue tq
+        set status = 'Waiting'::task.task_status
         where
             tq.workflow_run_id = $1
             and tq.task_order = $2;

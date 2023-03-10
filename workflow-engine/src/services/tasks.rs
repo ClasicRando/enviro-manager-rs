@@ -71,7 +71,7 @@ impl TasksService {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
-            from create_task($1,$2,$3,$4)"#,
+            from task.create_task($1,$2,$3,$4)"#,
         )
         .bind(request.name)
         .bind(request.description)
@@ -86,8 +86,8 @@ impl TasksService {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
-            from   v_tasks
-            where  task_id = $1"#,
+            from task.v_tasks
+            where task_id = $1"#,
         )
         .bind(task_id)
         .fetch_optional(self.pool)
@@ -99,7 +99,7 @@ impl TasksService {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
-            from   v_tasks"#,
+            from task.v_tasks"#,
         )
         .fetch_all(self.pool)
         .await?;
@@ -107,7 +107,7 @@ impl TasksService {
     }
 
     pub async fn update(&self, task_id: &TaskId, request: TaskRequest) -> WEResult<Option<Task>> {
-        sqlx::query("call update_task($1,$2,$3,$4,$5)")
+        sqlx::query("call task.update_task($1,$2,$3,$4,$5)")
             .bind(task_id)
             .bind(request.name)
             .bind(request.description)

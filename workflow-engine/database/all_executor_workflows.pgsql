@@ -12,12 +12,12 @@ select
     wr.workflow_run_id, wr.status,
     not exists(
         select 1
-        from workflow_engine.task_queue tq
+        from task.task_queue tq
         where
             tq.workflow_run_id = wr.workflow_run_id
             and tq.status not in (
-                'Waiting'::workflow_engine.task_status,
-                'Complete'::workflow_engine.task_status
+                'Waiting'::task.task_status,
+                'Complete'::task.task_status
             )
     ) is_valid
 from workflow_engine.workflow_runs wr

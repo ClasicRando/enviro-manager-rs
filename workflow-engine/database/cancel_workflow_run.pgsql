@@ -9,14 +9,14 @@ set
     executor_id = null
 where wr.workflow_run_id = $1;
 
-update workflow_engine.task_queue tq
+update task.task_queue tq
 set
-    status = 'Canceled'::workflow_engine.task_status,
+    status = 'Canceled'::task.task_status,
     task_end = now() at time zone 'UTC',
     output = 'Workflow run canceled'
 where
     tq.workflow_run_id = $1
-    and tq.status = 'Running'::workflow_engine.task_status;
+    and tq.status = 'Running'::task.task_status;
 $$;
 
 comment on procedure workflow_engine.cancel_workflow_run IS $$

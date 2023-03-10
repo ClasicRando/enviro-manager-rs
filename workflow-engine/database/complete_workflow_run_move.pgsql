@@ -4,16 +4,16 @@ create or replace procedure workflow_engine.complete_workflow_run_move(
 language sql
 as $$
 begin;
-update workflow_engine.task_queue tq
-set status = 'Waiting'::workflow_engine.task_status
+update task.task_queue tq
+set status = 'Waiting'::task.task_status
 where 
     tq.workflow_run_id = $1
     and tq.task_order = (
         select tq2.task_order
-        from workflow_engine.task_queue tq2
+        from task.task_queue tq2
         where
             tq2.workflow_run_id = $1
-            and tq2.status = 'Paused'::workflow_engine.task_status
+            and tq2.status = 'Paused'::task.task_status
         order by tq2.task_order
         limit 1
         for update skip locked

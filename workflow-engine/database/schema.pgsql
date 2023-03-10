@@ -6,7 +6,12 @@ comment on schema workflow_engine is 'Main area for workflow engine related obje
 create schema if not exists job authorization workflow_engine_admin;
 revoke all on schema job from public;
 grant usage on schema job to workflow_engine_user;
-comment on schema workflow_engine is 'Job related objects for the workflow engine';
+comment on schema job is 'Job related objects for the workflow engine';
+
+create schema if not exists task authorization workflow_engine_admin;
+revoke all on schema task from public;
+grant usage on schema task to workflow_engine_user;
+comment on schema task is 'Task related objects for the workflow engine';
 
 alter schema audit owner to workflow_engine_admin;
 revoke all on schema audit from public;

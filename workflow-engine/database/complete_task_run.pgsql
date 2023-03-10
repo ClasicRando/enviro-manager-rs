@@ -6,12 +6,12 @@ create or replace procedure workflow_engine.complete_task_run(
 )
 language sql
 as $$
-update workflow_engine.task_queue tq
+update task.task_queue tq
 set   
     status = case
-        when exists(select 1 from unnest(rules) where failed) then 'Rule Broken'::workflow_engine.task_status
-        when $3 then 'Paused'::workflow_engine.task_status
-        else 'Complete'::workflow_engine.task_status
+        when exists(select 1 from unnest(rules) where failed) then 'Rule Broken'::task.task_status
+        when $3 then 'Paused'::task.task_status
+        else 'Complete'::task.task_status
     end,
     output = $4,
     task_end = now() at time zone 'UTC',
@@ -19,14 +19,14 @@ set
 where
     tq.workflow_run_id = $1
     and tq.task_order = $2
-    and tq.status = 'Running'::workflow_engine.task_status;
+    and tq.status = 'Running'::task.task_status;
 
 with tasks as (
     select
         tq.workflow_run_id,
-        count(0) filter (where tq.status = 'Complete'::workflow_engine.task_status) complete_count,
+        count(0) filter (where tq.status = 'Complete'::task.task_status) complete_count,
         count(0) total_tasks
-    from workflow_engine.task_queue tq
+    from task.task_queue tq
     group by tq.workflow_run_id
 )
 update workflow_engine.workflow_runs wr

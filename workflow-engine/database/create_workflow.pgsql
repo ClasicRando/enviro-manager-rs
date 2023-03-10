@@ -1,6 +1,6 @@
 create or replace function workflow_engine.create_workflow(
     name text,
-    tasks workflow_engine.workflow_task_request[]
+    tasks task.workflow_task_request[]
 ) returns bigint
 language sql
 as $$
@@ -9,14 +9,14 @@ with workflow as (
     values($1)
     returning workflow_id
 ), workflow_tasks as (
-    insert into workflow_engine.workflow_tasks(workflow_id, task_order, task_id, parameters)
+    insert into task.workflow_tasks(workflow_id, task_order, task_id, parameters)
     select w.workflow_id, row_number() over (), t.task_id, t.parameters
     from workflow w
     cross join unnest($2) t
     returning workflow_id
 )
 select distinct wt.workflow_id
-from   workflow_tasks wt
+from workflow_tasks wt
 $$;
 
 comment on function workflow_engine.create_workflow IS $$

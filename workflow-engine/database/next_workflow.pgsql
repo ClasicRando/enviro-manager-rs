@@ -10,17 +10,17 @@ select
     workflow_run_id,
     not exists(
         select 1
-        from workflow_engine.task_queue tq
+        from task.task_queue tq
         where
             tq.workflow_run_id = wr.workflow_run_id
             and tq.status not in (
-                'Waiting'::workflow_engine.task_status,
-                'Complete'::workflow_engine.task_status
+                'Waiting'::task.task_status,
+                'Complete'::task.task_status
             )
     ) is_valid
 from workflow_engine.workflow_runs wr
 where
-    status = 'Scheduled'::workflow_engine.workflow_run_status
+    status = 'Scheduled'::task.workflow_run_status
     and (executor_id is null or executor_id = $1)
 limit 1
 for update skip locked;
