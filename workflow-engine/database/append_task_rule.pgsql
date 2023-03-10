@@ -14,7 +14,7 @@ where
     and tq.status = 'Running'::task.task_status;
 $$;
 
-comment on procedure task.append_task_rule IS $$
+comment on procedure workflow.append_task_rule IS $$
 Add a new task rule to a task queue record.
 
 Arguments:

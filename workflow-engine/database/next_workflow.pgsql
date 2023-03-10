@@ -20,7 +20,7 @@ select
     ) is_valid
 from workflow.workflow_runs wr
 where
-    status = 'Scheduled'::task.workflow_run_status
+    status = 'Scheduled'::workflow.workflow_run_status
     and (executor_id is null or executor_id = $1)
 limit 1
 for update skip locked;
