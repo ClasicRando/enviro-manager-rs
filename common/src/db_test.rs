@@ -6,22 +6,47 @@ use tokio::fs::read_dir;
 
 use crate::{db_build::db_build, execute_anonymous_block, package_dir, read_file, workspace_dir};
 
+async fn run_test_directory(tests_path: PathBuf, pool: &PgPool) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    if !tests_path.exists() {
+        return Ok(vec![]);
+    }
+
+    let mut results = Vec::new();
+    let mut entries = read_dir(tests_path).await?;
+    while let Some(file) = entries.next_entry().await? {
+        let block = read_file(file.path()).await?;
+        let result = execute_anonymous_block(block, pool).await;
+        if let Err(error) = result {
+            results.push(format!("Failed running test in {:?}\n{}", file.path(), error))
+        }
+    }
+    Ok(results)
+}
+
 async fn run_tests(tests_path: PathBuf, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     if !tests_path.exists() {
         return Ok(());
     }
 
+    let mut results = Vec::new();
     let mut entries = read_dir(tests_path).await?;
     while let Some(file) = entries.next_entry().await? {
+        if file.file_type().await?.is_dir() {
+            let mut result = run_test_directory(file.path(), pool).await?;
+            results.append(&mut result);
+            continue;
+        }
         let block = read_file(file.path()).await?;
         let result = execute_anonymous_block(block, pool).await;
-        assert!(
-            result.is_ok(),
-            "Failed running test in {:?}\n{}",
-            file.path(),
-            result.unwrap_err()
-        )
+        if let Err(error) = result {
+            results.push(format!("Failed running test in {:?}\n{}", file.path(), error))
+        }
     }
+    assert!(
+        results.is_empty(),
+        "Failed database tests\n{}",
+        results.join("\n")
+    );
     Ok(())
 }
 
