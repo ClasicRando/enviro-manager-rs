@@ -4,9 +4,15 @@ use sqlx::PgPool;
 use std::path::PathBuf;
 use tokio::fs::read_dir;
 
-use crate::{db_build::db_build, execute_anonymous_block, package_dir, read_file, workspace_dir};
+use crate::{
+    db_build::{build_schema, db_build},
+    execute_anonymous_block, package_dir, read_file, workspace_dir,
+};
 
-async fn run_test_directory(tests_path: PathBuf, pool: &PgPool) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+async fn run_test_directory(
+    tests_path: PathBuf,
+    pool: &PgPool,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     if !tests_path.exists() {
         return Ok(vec![]);
     }
@@ -17,7 +23,11 @@ async fn run_test_directory(tests_path: PathBuf, pool: &PgPool) -> Result<Vec<St
         let block = read_file(file.path()).await?;
         let result = execute_anonymous_block(block, pool).await;
         if let Err(error) = result {
-            results.push(format!("Failed running test in {:?}\n{}", file.path(), error))
+            results.push(format!(
+                "Failed running test in {:?}\n{}",
+                file.path(),
+                error
+            ))
         }
     }
     Ok(results)
@@ -39,7 +49,11 @@ async fn run_tests(tests_path: PathBuf, pool: &PgPool) -> Result<(), Box<dyn std
         let block = read_file(file.path()).await?;
         let result = execute_anonymous_block(block, pool).await;
         if let Err(error) = result {
-            results.push(format!("Failed running test in {:?}\n{}", file.path(), error))
+            results.push(format!(
+                "Failed running test in {:?}\n{}",
+                file.path(),
+                error
+            ))
         }
     }
     assert!(
@@ -127,9 +141,19 @@ async fn check_for_composite(block: &str, pool: &PgPool) -> Result<(), Box<dyn s
 }
 
 pub async fn run_db_tests(pool: PgPool) -> Result<(), Box<dyn std::error::Error>> {
-    let schema_directory = package_dir().join("database");
+    let package_dir = package_dir();
+    build_schema(&pool).await?;
+
+    let test_refresh_script = package_dir.join("database").join("test_data.pgsql");
+    if test_refresh_script.exists() {
+        let block = read_file(test_refresh_script).await?;
+        execute_anonymous_block(block, &pool).await?;
+    }
+
+    let schema_directory = package_dir.join("database");
     let build_file = schema_directory.join("build.json");
     let db_build = db_build(build_file).await?;
+
     for common_schema in &db_build.common_dependencies {
         run_common_db_tests(&pool, common_schema).await?;
     }
