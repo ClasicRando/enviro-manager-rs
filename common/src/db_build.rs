@@ -88,7 +88,7 @@ async fn build_common_schema(
     let db_build = db_build(path).await?;
 
     for entry in db_build.entries_ordered() {
-        let block = read_file(schema_directory.join(&entry.name)).await?;
+        let block = read_file(&schema_directory.join(&entry.name)).await?;
         if let Err(error) = execute_anonymous_block(block, pool).await {
             return Err(format!("Error running schema build {:?}. {}", entry.name, error).into());
         };
@@ -106,7 +106,7 @@ pub async fn build_schema(pool: &PgPool) -> Result<(), Box<dyn std::error::Error
     }
 
     for entry in db_build.entries_ordered() {
-        let block = read_file(schema_directory.join(&entry.name)).await?;
+        let block = read_file(&schema_directory.join(&entry.name)).await?;
         if let Err(error) = execute_anonymous_block(block, pool).await {
             return Err(format!("Error running schema build {:?}. {}", entry.name, error).into());
         };

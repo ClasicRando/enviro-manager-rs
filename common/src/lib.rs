@@ -17,8 +17,8 @@ fn workspace_dir() -> PathBuf {
     package_dir().join("..")
 }
 
-async fn read_file(path: PathBuf) -> Result<String, Box<dyn std::error::Error>> {
-    let mut file = File::open(&path)
+async fn read_file(path: &PathBuf) -> Result<String, Box<dyn std::error::Error>> {
+    let mut file = File::open(path)
         .await
         .unwrap_or_else(|_| panic!("Could not find file, {:?}", path));
     let mut block = String::new();

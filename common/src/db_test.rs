@@ -2,30 +2,42 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use sqlx::PgPool;
 use std::path::PathBuf;
-use tokio::fs::read_dir;
+use tokio::{
+    fs::{read_dir, File},
+    io::{AsyncBufReadExt, BufReader},
+};
 
 use crate::{
     db_build::{build_schema, db_build},
     execute_anonymous_block, package_dir, read_file, workspace_dir,
 };
 
+async fn read_tests_list(
+    test_directory: &PathBuf,
+) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
+    let mut result = Vec::new();
+    let tests_file = test_directory.join("tests.txt");
+    let file = File::open(&tests_file).await?;
+    let mut reader = BufReader::new(file).lines();
+    while let Some(line) = reader.next_line().await? {
+        result.push(test_directory.join(&line));
+    }
+    return Ok(result);
+}
+
 async fn run_test_directory(
-    tests_path: PathBuf,
+    tests_path: &PathBuf,
     pool: &PgPool,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    if !tests_path.exists() {
-        return Ok(vec![]);
-    }
-
     let mut results = Vec::new();
-    let mut entries = read_dir(tests_path).await?;
-    while let Some(file) = entries.next_entry().await? {
-        let block = read_file(file.path()).await?;
+    let tests = read_tests_list(tests_path).await?;
+    for file in tests {
+        let block = read_file(&file).await?;
         let result = execute_anonymous_block(block, pool).await;
         if let Err(error) = result {
             results.push(format!(
                 "Failed running test in {:?}\n{}",
-                file.path(),
+                file,
                 error
             ))
         }
@@ -41,17 +53,18 @@ async fn run_tests(tests_path: PathBuf, pool: &PgPool) -> Result<(), Box<dyn std
     let mut results = Vec::new();
     let mut entries = read_dir(tests_path).await?;
     while let Some(file) = entries.next_entry().await? {
+        let file_path = file.path();
         if file.file_type().await?.is_dir() {
-            let mut result = run_test_directory(file.path(), pool).await?;
+            let mut result = run_test_directory(&file_path, pool).await?;
             results.append(&mut result);
             continue;
         }
-        let block = read_file(file.path()).await?;
+        let block = read_file(&file_path).await?;
         let result = execute_anonymous_block(block, pool).await;
         if let Err(error) = result {
             results.push(format!(
                 "Failed running test in {:?}\n{}",
-                file.path(),
+                file_path,
                 error
             ))
         }
@@ -146,7 +159,7 @@ pub async fn run_db_tests(pool: PgPool) -> Result<(), Box<dyn std::error::Error>
 
     let test_refresh_script = package_dir.join("database").join("test_data.pgsql");
     if test_refresh_script.exists() {
-        let block = read_file(test_refresh_script).await?;
+        let block = read_file(&test_refresh_script).await?;
         execute_anonymous_block(block, &pool).await?;
     }
 
@@ -159,7 +172,7 @@ pub async fn run_db_tests(pool: PgPool) -> Result<(), Box<dyn std::error::Error>
     }
 
     for entry in db_build.entries {
-        let block = read_file(schema_directory.join(&entry.name)).await?;
+        let block = read_file(&schema_directory.join(&entry.name)).await?;
         check_for_enum(&block, &pool).await?;
         check_for_composite(&block, &pool).await?;
     }
