@@ -17,6 +17,17 @@ impl DbBuild {
     fn entries_ordered(&self) -> OrderIter<'_> {
         OrderIter::new(&self.entries)
     }
+
+    async fn run(&self, schema_directory: &PathBuf, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
+        for dep in &self.common_dependencies {
+            build_common_schema(dep, pool).await?
+}
+
+        for entry in self.entries_ordered() {
+            entry.run(schema_directory, pool).await?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -32,6 +43,14 @@ impl DbBuildEntry {
                 .dependencies
                 .iter()
                 .all(|d| completed.contains(d.as_str()))
+    }
+
+    async fn run(&self, schema_directory: &PathBuf, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
+        let block = read_file(&schema_directory.join(&self.name)).await?;
+        if let Err(error) = execute_anonymous_block(block, pool).await {
+            return Err(format!("Error running schema build {:?}. {}", self.name, error).into());
+        };
+        Ok(())
     }
 }
 
@@ -89,13 +108,14 @@ async fn build_common_schema(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let schema_directory = workspace_dir().join("common-database").join(schema);
     let path = schema_directory.join("build.json");
+    if !path.exists() {
+        Err(format!("Cannot find a 'build.json' file for common schema '{}'", schema))?;
+    }
+
     let db_build = db_build(path).await?;
 
     for entry in db_build.entries_ordered() {
-        let block = read_file(&schema_directory.join(&entry.name)).await?;
-        if let Err(error) = execute_anonymous_block(block, pool).await {
-            return Err(format!("Error running schema build {:?}. {}", entry.name, error).into());
-        };
+        entry.run(&schema_directory, pool).await?;
     }
     Ok(())
 }
@@ -105,15 +125,6 @@ pub async fn build_schema(pool: &PgPool) -> Result<(), Box<dyn std::error::Error
     let path = schema_directory.join("build.json");
     let db_build = db_build(path).await?;
 
-    for dep in &db_build.common_dependencies {
-        build_common_schema(dep, pool).await?
-    }
-
-    for entry in db_build.entries_ordered() {
-        let block = read_file(&schema_directory.join(&entry.name)).await?;
-        if let Err(error) = execute_anonymous_block(block, pool).await {
-            return Err(format!("Error running schema build {:?}. {}", entry.name, error).into());
-        };
-    }
+    db_build.run(&schema_directory, pool).await?;
     Ok(())
 }
