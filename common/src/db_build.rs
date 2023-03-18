@@ -18,13 +18,17 @@ impl DbBuild {
         OrderIter::new(&self.entries)
     }
 
-    async fn run(&self, schema_directory: &PathBuf, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
+    async fn run(
+        &self,
+        directory: &PathBuf,
+        pool: &PgPool,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         for dep in &self.common_dependencies {
             build_common_schema(dep, pool).await?
 }
 
         for entry in self.entries_ordered() {
-            entry.run(schema_directory, pool).await?;
+            entry.run(directory, pool).await?;
         }
         Ok(())
     }
@@ -45,8 +49,13 @@ impl DbBuildEntry {
                 .all(|d| completed.contains(d.as_str()))
     }
 
-    async fn run(&self, schema_directory: &PathBuf, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
-        let block = read_file(&schema_directory.join(&self.name)).await?;
+    async fn run(
+        &self,
+        directory: &PathBuf,
+        pool: &PgPool,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let path = directory.join(&self.name);
+        let block = read_file(&path).await?;
         if let Err(error) = execute_anonymous_block(block, pool).await {
             return Err(format!("Error running schema build {:?}. {}", self.name, error).into());
         };
@@ -94,7 +103,8 @@ impl<'e> Iterator for OrderIter<'e> {
     }
 }
 
-pub(crate) async fn db_build(path: PathBuf) -> Result<DbBuild, Box<dyn std::error::Error>> {
+pub(crate) async fn db_build(directory: &PathBuf) -> Result<DbBuild, Box<dyn std::error::Error>> {
+    let path = directory.join("build.json");
     let mut file = File::open(&path).await?;
     let mut contents = String::new();
     file.read_to_string(&mut contents).await?;
@@ -107,12 +117,7 @@ async fn build_common_schema(
     pool: &PgPool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let schema_directory = workspace_dir().join("common-database").join(schema);
-    let path = schema_directory.join("build.json");
-    if !path.exists() {
-        Err(format!("Cannot find a 'build.json' file for common schema '{}'", schema))?;
-    }
-
-    let db_build = db_build(path).await?;
+    let db_build = db_build(&schema_directory).await?;
 
     for entry in db_build.entries_ordered() {
         entry.run(&schema_directory, pool).await?;
@@ -121,10 +126,9 @@ async fn build_common_schema(
 }
 
 pub async fn build_schema(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
-    let schema_directory = package_dir().join("database");
-    let path = schema_directory.join("build.json");
-    let db_build = db_build(path).await?;
+    let database_directory = package_dir().join("database");
+    let db_build = db_build(&database_directory).await?;
 
-    db_build.run(&schema_directory, pool).await?;
+    db_build.run(&database_directory, pool).await?;
     Ok(())
 }

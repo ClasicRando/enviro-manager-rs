@@ -164,8 +164,7 @@ pub async fn run_db_tests(pool: PgPool) -> Result<(), Box<dyn std::error::Error>
     }
 
     let schema_directory = package_dir.join("database");
-    let build_file = schema_directory.join("build.json");
-    let db_build = db_build(build_file).await?;
+    let db_build = db_build(&schema_directory).await?;
 
     for common_schema in &db_build.common_dependencies {
         run_common_db_tests(&pool, common_schema).await?;
