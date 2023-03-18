@@ -26,15 +26,19 @@ pub(crate) struct DbBuildEntry {
 }
 
 impl DbBuildEntry {
-    fn dependencies_met(&self, completed: &HashSet<String>) -> bool {
-        self.dependencies.is_empty() || self.dependencies.iter().all(|d| completed.contains(d))
+    fn dependencies_met<'e>(&self, completed: &'e HashSet<&'e str>) -> bool {
+        self.dependencies.is_empty()
+            || self
+                .dependencies
+                .iter()
+                .all(|d| completed.contains(d.as_str()))
     }
 }
 
 struct OrderIter<'e> {
     entries: &'e Vec<DbBuildEntry>,
     returned: HashSet<usize>,
-    completed: HashSet<String>,
+    completed: HashSet<&'e str>,
 }
 
 impl<'e> OrderIter<'e> {
@@ -60,7 +64,7 @@ impl<'e> Iterator for OrderIter<'e> {
             }
             if entry.dependencies_met(&self.completed) {
                 self.returned.insert(i);
-                self.completed.insert(entry.name.clone());
+                self.completed.insert(&entry.name);
                 return Some(entry);
             }
         }
