@@ -155,7 +155,7 @@ async fn check_for_composite(block: &str, pool: &PgPool) -> Result<(), Box<dyn s
 
 pub async fn run_db_tests(pool: PgPool) -> Result<(), Box<dyn std::error::Error>> {
     let package_dir = package_dir();
-    build_schema(&pool).await?;
+    build_database(&pool).await?;
 
     let test_refresh_script = package_dir.join("database").join("test_data.pgsql");
     if test_refresh_script.exists() {

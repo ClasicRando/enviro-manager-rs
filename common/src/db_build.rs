@@ -125,7 +125,7 @@ async fn build_common_schema(
     Ok(())
 }
 
-pub async fn build_schema(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn build_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     let database_directory = package_dir().join("database");
     let db_build = db_build(&database_directory).await?;
 
