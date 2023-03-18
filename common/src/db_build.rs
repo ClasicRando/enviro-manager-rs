@@ -36,13 +36,13 @@ impl DbBuildEntry {
 }
 
 struct OrderIter<'e> {
-    entries: &'e Vec<DbBuildEntry>,
+    entries: &'e [DbBuildEntry],
     returned: HashSet<usize>,
     completed: HashSet<&'e str>,
 }
 
 impl<'e> OrderIter<'e> {
-    fn new(entries: &'e Vec<DbBuildEntry>) -> Self {
+    fn new(entries: &'e [DbBuildEntry]) -> Self {
         Self {
             entries,
             returned: HashSet::new(),
