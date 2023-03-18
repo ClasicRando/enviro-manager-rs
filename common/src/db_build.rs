@@ -1,12 +1,21 @@
 use serde::Deserialize;
 use sqlx::PgPool;
-use std::path::PathBuf;
 use std::collections::HashSet;
+use std::path::PathBuf;
 use tokio::fs::File;
 use tokio::io::AsyncReadExt;
 
 use crate::{execute_anonymous_block, package_dir, read_file, workspace_dir};
 
+/// Database builder object defining the common database dependencies and the schema entires
+/// required.
+///
+/// Common dependencies are found within the `common-database` folder within the root workspace and
+/// each entry in the vector specifies a name of the common schema required.
+///
+/// Entires are files within the package's database directory (or sub directories). Files can be a
+/// single object, multiple linked objects (e.g. a table and it's indexes) or a standalone script
+/// that must run.
 #[derive(Debug, Deserialize)]
 pub(crate) struct DbBuild {
     pub(crate) common_dependencies: Vec<String>,
@@ -14,10 +23,15 @@ pub(crate) struct DbBuild {
 }
 
 impl DbBuild {
+    /// Returns the `entires` wrapped in a custom [Iterator] that orders the results by the next
+    /// available entry that can be built. This ensures that an entry is only built once all
+    /// dependencies are met.
     fn entries_ordered(&self) -> OrderIter<'_> {
         OrderIter::new(&self.entries)
     }
 
+    /// Run the database build operations by building the common schema requirements then
+    /// proceeding to run each [DbBuildEntry] to completion.
     async fn run(
         &self,
         directory: &PathBuf,
@@ -25,7 +39,7 @@ impl DbBuild {
     ) -> Result<(), Box<dyn std::error::Error>> {
         for dep in &self.common_dependencies {
             build_common_schema(dep, pool).await?
-}
+        }
 
         for entry in self.entries_ordered() {
             entry.run(directory, pool).await?;
@@ -34,6 +48,9 @@ impl DbBuild {
     }
 }
 
+/// Database build entry specifying the name of the build unit contained with the `database`
+/// directory of the current package as well as any other required units that must have already
+/// been created.
 #[derive(Debug, Deserialize)]
 pub(crate) struct DbBuildEntry {
     pub(crate) name: String,
@@ -41,6 +58,8 @@ pub(crate) struct DbBuildEntry {
 }
 
 impl DbBuildEntry {
+    /// Returns true if the `completed` units provided contain all the required dependencies of
+    /// the build entry.
     fn dependencies_met<'e>(&self, completed: &'e HashSet<&'e str>) -> bool {
         self.dependencies.is_empty()
             || self
@@ -49,6 +68,9 @@ impl DbBuildEntry {
                 .all(|d| completed.contains(d.as_str()))
     }
 
+    /// Run the build entry by fetching the entries file contents (relative path to the
+    /// `directory` passed) and executing the entry's contents as an anonymous block against the
+    /// `pool`.
     async fn run(
         &self,
         directory: &PathBuf,
@@ -63,6 +85,10 @@ impl DbBuildEntry {
     }
 }
 
+/// Ordered [Iterator] providing the build entries in order of when units can be created/executed.
+///
+/// Contains the original vector of entries to be created as well as the name and indexes of the
+/// completed entries.
 struct OrderIter<'e> {
     entries: &'e [DbBuildEntry],
     returned: HashSet<usize>,
@@ -70,6 +96,7 @@ struct OrderIter<'e> {
 }
 
 impl<'e> OrderIter<'e> {
+    /// Create a new [OrderIter] with build `entires` provided.
     fn new(entries: &'e [DbBuildEntry]) -> Self {
         Self {
             entries,
@@ -103,6 +130,9 @@ impl<'e> Iterator for OrderIter<'e> {
     }
 }
 
+/// Extract a [DbBuild] instance using the `directory` provided. The `directory` should point to a
+/// directory that contains a "build.json" file that can be deserializable into the [DbBuild]
+/// struct.
 pub(crate) async fn db_build(directory: &PathBuf) -> Result<DbBuild, Box<dyn std::error::Error>> {
     let path = directory.join("build.json");
     let mut file = File::open(&path).await?;
@@ -112,6 +142,8 @@ pub(crate) async fn db_build(directory: &PathBuf) -> Result<DbBuild, Box<dyn std
     Ok(db_build)
 }
 
+/// Build the common `schema` by name. Extracts a [DbBuild] instance from the specified `schema`
+/// directory, building each entry in order as required by dependency hierarchy.
 async fn build_common_schema(
     schema: &str,
     pool: &PgPool,
@@ -125,6 +157,9 @@ async fn build_common_schema(
     Ok(())
 }
 
+/// Build the database as specified by the `database` directory of the current package. Build order
+/// and units are found using the 'build.json' file in the `database` directory. See [DbBuild] for
+/// expected JSON structure.
 pub async fn build_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     let database_directory = package_dir().join("database");
     let db_build = db_build(&database_directory).await?;
