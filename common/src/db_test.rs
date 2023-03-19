@@ -8,7 +8,7 @@ use tokio::{
 };
 
 use crate::{
-    db_build::{build_schema, db_build},
+    db_build::{build_database, db_build},
     execute_anonymous_block, package_dir, read_file, workspace_dir,
 };
 
