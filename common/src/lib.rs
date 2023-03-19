@@ -34,7 +34,7 @@ async fn read_file(path: &PathBuf) -> Result<String, Box<dyn std::error::Error>>
 
 lazy_static! {
     static ref TYPE_REGEX: Regex =
-        Regex::new(r"^create type (?P<schema>[^.]+)\.(?P<name>[^.]+) as(?P<definition>[^;]+);")
+        Regex::new(r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+)\s+as(?P<definition>[^;]+);")
             .unwrap();
 }
 
