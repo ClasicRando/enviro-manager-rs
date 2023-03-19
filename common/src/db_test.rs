@@ -12,6 +12,8 @@ use crate::{
     execute_anonymous_block, package_dir, read_file, workspace_dir,
 };
 
+/// Read the list of tests that is contained within the `test_directory`. Returns the test names as
+/// a vector of [PathBuf]. 
 async fn read_tests_list(
     test_directory: &PathBuf,
 ) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
@@ -25,6 +27,8 @@ async fn read_tests_list(
     return Ok(result);
 }
 
+/// Run the tests found within the `tests_path` directory. Parses the provided 'tests.txt' file
+/// found within the directory and runs the prescribed tests.
 async fn run_test_directory(
     tests_path: &PathBuf,
     pool: &PgPool,
@@ -35,16 +39,18 @@ async fn run_test_directory(
         let block = read_file(&file).await?;
         let result = execute_anonymous_block(block, pool).await;
         if let Err(error) = result {
-            results.push(format!(
-                "Failed running test in {:?}\n{}",
-                file,
-                error
-            ))
+            results.push(format!("Failed running test in {:?}\n{}", file, error))
         }
     }
     Ok(results)
 }
 
+/// Runs the tests found within the main `tests_path` directory provided. Reads every entry in the
+/// directory, handling files as standalone tests that are executed and directories as test
+/// directories that contain a 'tests.txt' file with the required tests within the directory.
+/// 
+/// Every test is run unless an error outside the tests is raised. All test results are packed into
+/// a result vector and the vector is checked for contents at the end to show all failing tests.
 async fn run_tests(tests_path: PathBuf, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     if !tests_path.exists() {
         return Ok(());
@@ -62,11 +68,7 @@ async fn run_tests(tests_path: PathBuf, pool: &PgPool) -> Result<(), Box<dyn std
         let block = read_file(&file_path).await?;
         let result = execute_anonymous_block(block, pool).await;
         if let Err(error) = result {
-            results.push(format!(
-                "Failed running test in {:?}\n{}",
-                file_path,
-                error
-            ))
+            results.push(format!("Failed running test in {:?}\n{}", file_path, error))
         }
     }
     assert!(
@@ -77,6 +79,7 @@ async fn run_tests(tests_path: PathBuf, pool: &PgPool) -> Result<(), Box<dyn std
     Ok(())
 }
 
+/// Run all tests for a common database schema. See [run_tests] for details on execution.
 async fn run_common_db_tests(
     pool: &PgPool,
     common_db_name: &str,
@@ -99,6 +102,9 @@ lazy_static! {
     .unwrap();
 }
 
+/// Check a database build unit to see if it defines an enum creation. If it does, it checks to see
+/// if all it's specified labels can be found within the database's definition of the enum. If the
+/// unit is not an enum, then the function exits immediately with an [Ok].
 async fn check_for_enum(block: &str, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     let Some(captures) = ENUM_REGEX.captures(block) else {
         return Ok(())
@@ -126,6 +132,9 @@ async fn check_for_enum(block: &str, pool: &PgPool) -> Result<(), Box<dyn std::e
     Ok(())
 }
 
+/// Check a database build unit to see if it defines a composite creation. If it does, it checks to
+/// see if all it's specified attributes can be found within the database's definition of the
+/// composite. If the unit is not a composite, then the function exits immediately with an [Ok].
 async fn check_for_composite(block: &str, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     let Some(captures) = COMPOSITE_REGEX.captures(block) else {
         return Ok(())
@@ -153,6 +162,20 @@ async fn check_for_composite(block: &str, pool: &PgPool) -> Result<(), Box<dyn s
     Ok(())
 }
 
+/// Run all database tests for the current package against the provided connection `pool`.
+/// 
+/// The database is automatically updated where possible using the [build_database] command and if
+/// the database directory of the package contains a 'test_data.pgsql' file, that is also run to
+/// refresh the test database.
+/// 
+/// For common database dependencies that exist within the database's 'build.json' file, all tests
+/// are run as well to ensure behaviour works as intended.
+/// 
+/// Outside of the tests provided within the `tests` sub directory of `database`, all enum and
+/// composite creation units that match the expected format are also checked since a change in
+/// either type definition might not make it to the database and since Postgresql does not support
+/// any replace or update DDL statements for either type definition. In those cases a full refresh
+/// of the database might be required or manual alter statements must be created.
 pub async fn run_db_tests(pool: PgPool) -> Result<(), Box<dyn std::error::Error>> {
     let package_dir = package_dir();
     build_database(&pool).await?;
