@@ -1,30 +1,35 @@
 create or replace function task.workflow_tasks_check()
 returns trigger
 language plpgsql
-stable
+volatile
 as $$
 declare
     v_workflow_id bigint;
+    v_workflow_id_count int;
     v_errors text;
 begin
     if TG_OP in ('UPDATE', 'INSERT') then
-        begin
-            select distinct nt.workflow_id 
-            into v_workflow_id
-            from new_table nt;
-        exception
-            when too_many_rows then
-                raise exception 'When affecting workflow_tasks, only 1 workflow_id can be impacted';
-        end;
+        select count(distinct nt.workflow_id)
+        into v_workflow_id_count
+        from new_table nt;
+        
+        select nt.workflow_id
+        into v_workflow_id
+        from new_table nt
+        limit 1;
     else
-        begin
-            select distinct ot.workflow_id 
-            into v_workflow_id
-            from old_table ot;
-        exception
-            when too_many_rows then
-                raise exception 'When affecting workflow_tasks, only 1 workflow_id can be impacted';
-        end;
+        select count(distinct ot.workflow_id)
+        into v_workflow_id_count
+        from old_table ot;
+        
+        select ot.workflow_id
+        into v_workflow_id
+        from old_table ot
+        limit 1;
+    end if;
+    
+    if v_workflow_id_count > 1 then
+        raise exception 'When affecting workflow_tasks, only 1 workflow_id can be impacted';
     end if;
 
     select
@@ -46,7 +51,7 @@ begin
     where e.task_order != rn;
 
     if v_errors is not null then
-        raise exception 'Task order values are not correct. See these instances: %s', v_errors;
+        raise exception 'Task order values are not correct. See these instances: %', v_errors;
     end if;
 
     return null;
@@ -77,7 +82,7 @@ drop trigger if exists verify_update_records on task.workflow_tasks;
 create trigger verify_update_records
     after update
     on task.workflow_tasks
-    referencing new table as new_table
+    referencing new table as new_table old table as old_table
     for each statement
     execute function task.workflow_tasks_check();
 
