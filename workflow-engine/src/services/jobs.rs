@@ -332,7 +332,7 @@ impl JobsService {
 
     pub async fn complete_job(&self, job_id: &JobId) -> WEResult<Option<Job>> {
         let mut transaction = self.pool.begin().await?;
-        let result = sqlx::query_scalar("select job.complete_job($1)")
+        let result = sqlx::query_scalar("call job.complete_job($1)")
             .bind(job_id)
             .fetch_one(&mut transaction)
             .await;
