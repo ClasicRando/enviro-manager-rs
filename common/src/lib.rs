@@ -74,12 +74,46 @@ async fn execute_anonymous_block(block: String, pool: &PgPool) -> Result<(), sql
     Ok(())
 }
 
+/// Container for multiple optional errors that could arise from an execution of an anonymous block
+/// of sql code with a rolled back transaction.
+#[derive(Default)]
+pub struct RolledBackTransactionResult {
+    block_error: Option<sqlx::Error>,
+    transaction_error: Option<sqlx::Error>,
+}
+
+impl RolledBackTransactionResult {
+    /// Add or replace the current `block_error` attribute with `error`
+    fn with_block_error(&mut self, error: sqlx::Error) {
+        self.block_error = Some(error);
+    }
+
+    /// Add or replace the current `transaction_error` attribute with `error`
+    fn with_transaction_error(&mut self, error: sqlx::Error) {
+        self.transaction_error = Some(error);
+    }
+
+    /// Add errors within the result instance to the provided `error_list`, formatted with the test
+    /// `path` in the message.
+    pub(crate) fn add_to_error_list(self, path: &PathBuf, error_list: &mut Vec<String>) {
+        if let Some(error) = self.block_error {
+            error_list.push(format!("Failed running test in {:?}\n{}", path, error))
+        }
+        if let Some(error) = self.transaction_error {
+            error_list.push(format!(
+                "Failed during rollback of test in {:?}\n{}",
+                path, error
+            ))
+        }
+    }
+}
+
 /// Execute the provided `block` of Postgresql code against the `pool`. If the block does not match
 /// the required formatting to be an anonymous block, the code is wrapped in the required code to
 /// ensure the execution can be completed. The entire block is executed within a rolled back
 /// transaction, returning the errors of the block and transaction rollback, if any, respectively
 /// within a tuple.
-async fn execute_anonymous_block_transaction(block: String, pool: &PgPool) -> (Option<sqlx::Error>, Option<sqlx::Error>) {
+async fn execute_anonymous_block_transaction(block: String, pool: &PgPool) -> RolledBackTransactionResult {
     let block = match block.split_whitespace().next() {
         Some("do") => block,
         Some("begin" | "declare") => format!("do $body$\n{}\n$body$;", block),
@@ -88,16 +122,19 @@ async fn execute_anonymous_block_transaction(block: String, pool: &PgPool) -> (O
         None => block,
     };
 
+    let mut result = RolledBackTransactionResult::default();
     let mut transaction = match pool.begin().await {
         Ok(inner) => inner,
-        Err(error) => return (Some(error), None),
+        Err(error) => {
+            result.with_block_error(error);
+            return result;
+        }
     };
-    let result = match sqlx::query(&block).execute(&mut transaction).await {
-        Ok(_) => None,
-        Err(error) => Some(error),
-    };
-    match transaction.rollback().await {
-        Ok(_) => (result, None),
-        Err(error) => (result, Some(error)),
+    if let Err(error) = sqlx::query(&block).execute(&mut transaction).await {
+        result.with_block_error(error);
     }
+    if let Err(error) = transaction.rollback().await {
+        result.with_transaction_error(error);
+    }
+    result
 }
