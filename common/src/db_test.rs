@@ -1,30 +1,63 @@
 use lazy_static::lazy_static;
 use regex::Regex;
+use serde::Deserialize;
 use sqlx::PgPool;
 use std::path::PathBuf;
 use tokio::{
     fs::{read_dir, File},
-    io::{AsyncBufReadExt, BufReader},
+    io::AsyncReadExt,
 };
 
 use crate::{
     db_build::{build_database, db_build},
-    execute_anonymous_block, package_dir, read_file, workspace_dir,
+    execute_anonymous_block, execute_anonymous_block_transaction, package_dir, read_file,
+    workspace_dir,
 };
 
+/// Represents a single entry in the list of test directory entries. Deserialized from a
+/// `test.json` found within a test directory. `name` points to the file to read & run and
+/// `rollback` tells the test runner to execute the file within a rolled back transaction.
+#[derive(Deserialize)]
+struct TestListEntry {
+    name: String,
+    rollback: bool,
+}
+
+impl TestListEntry {
+    async fn run_test(&self, pool: &PgPool, results: &mut Vec<String>) {
+        let path = PathBuf::from(&self.name);
+        let block = match read_file(&path).await {
+            Ok(inner) => inner,
+            Err(error) => {
+                results.push(format!("Failed reading test file {:?}\n{}", path, error));
+                return;
+            }
+        };
+
+        if self.rollback {
+            let result = execute_anonymous_block_transaction(block, pool).await;
+            result.add_to_error_list(&path, results);
+            return;
+        }
+
+        let result = execute_anonymous_block(block, pool).await;
+        if let Err(error) = result {
+            results.push(format!("Failed running test in {:?}\n{}", path, error))
+        }
+    }
+}
+
 /// Read the list of tests that is contained within the `test_directory`. Returns the test names as
-/// a vector of [PathBuf]. 
+/// a vector of [PathBuf].
 async fn read_tests_list(
     test_directory: &PathBuf,
-) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
-    let mut result = Vec::new();
-    let tests_file = test_directory.join("tests.txt");
-    let file = File::open(&tests_file).await?;
-    let mut reader = BufReader::new(file).lines();
-    while let Some(line) = reader.next_line().await? {
-        result.push(test_directory.join(&line));
-    }
-    return Ok(result);
+) -> Result<Vec<TestListEntry>, Box<dyn std::error::Error>> {
+    let tests_file = test_directory.join("tests.json");
+    let mut file = File::open(&tests_file).await?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).await?;
+    let test_list: Vec<TestListEntry> = serde_json::from_str(&contents)?;
+    Ok(test_list)
 }
 
 /// Run the tests found within the `tests_path` directory. Parses the provided 'tests.txt' file
@@ -35,12 +68,8 @@ async fn run_test_directory(
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let mut results = Vec::new();
     let tests = read_tests_list(tests_path).await?;
-    for file in tests {
-        let block = read_file(&file).await?;
-        let result = execute_anonymous_block(block, pool).await;
-        if let Err(error) = result {
-            results.push(format!("Failed running test in {:?}\n{}", file, error))
-        }
+    for entry in tests {
+        entry.run_test(pool, &mut results).await
     }
     Ok(results)
 }
@@ -48,7 +77,7 @@ async fn run_test_directory(
 /// Runs the tests found within the main `tests_path` directory provided. Reads every entry in the
 /// directory, handling files as standalone tests that are executed and directories as test
 /// directories that contain a 'tests.txt' file with the required tests within the directory.
-/// 
+///
 /// Every test is run unless an error outside the tests is raised. All test results are packed into
 /// a result vector and the vector is checked for contents at the end to show all failing tests.
 async fn run_tests(tests_path: PathBuf, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
@@ -163,14 +192,14 @@ async fn check_for_composite(block: &str, pool: &PgPool) -> Result<(), Box<dyn s
 }
 
 /// Run all database tests for the current package against the provided connection `pool`.
-/// 
+///
 /// The database is automatically updated where possible using the [build_database] command and if
 /// the database directory of the package contains a 'test_data.pgsql' file, that is also run to
 /// refresh the test database.
-/// 
+///
 /// For common database dependencies that exist within the database's 'build.json' file, all tests
 /// are run as well to ensure behaviour works as intended.
-/// 
+///
 /// Outside of the tests provided within the `tests` sub directory of `database`, all enum and
 /// composite creation units that match the expected format are also checked since a change in
 /// either type definition might not make it to the database and since Postgresql does not support

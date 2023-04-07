@@ -1,0 +1,18 @@
+[
+    {
+        "name": "next_executor.pgsql",
+        "rollback": true
+    },
+    {
+        "name": "cancel_executor.pgsql",
+        "rollback": true
+    },
+    {
+        "name": "shutdown_executor.pgsql",
+        "rollback": true
+    },
+    {
+        "name": "clean_executors.pgsql",
+        "rollback": true
+    }
+]
