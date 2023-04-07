@@ -73,3 +73,31 @@ async fn execute_anonymous_block(block: String, pool: &PgPool) -> Result<(), sql
     sqlx::query(&block).execute(pool).await?;
     Ok(())
 }
+
+/// Execute the provided `block` of Postgresql code against the `pool`. If the block does not match
+/// the required formatting to be an anonymous block, the code is wrapped in the required code to
+/// ensure the execution can be completed. The entire block is executed within a rolled back
+/// transaction, returning the errors of the block and transaction rollback, if any, respectively
+/// within a tuple.
+async fn execute_anonymous_block_transaction(block: String, pool: &PgPool) -> (Option<sqlx::Error>, Option<sqlx::Error>) {
+    let block = match block.split_whitespace().next() {
+        Some("do") => block,
+        Some("begin" | "declare") => format!("do $body$\n{}\n$body$;", block),
+        Some(_) if TYPE_REGEX.is_match(&block) => process_type_definition(block),
+        Some(_) => format!("do $body$\nbegin\n{}\nend;\n$body$;", block),
+        None => block,
+    };
+
+    let mut transaction = match pool.begin().await {
+        Ok(inner) => inner,
+        Err(error) => return (Some(error), None),
+    };
+    let result = match sqlx::query(&block).execute(&mut transaction).await {
+        Ok(_) => None,
+        Err(error) => Some(error),
+    };
+    match transaction.rollback().await {
+        Ok(_) => (result, None),
+        Err(error) => (result, Some(error)),
+    }
+}
