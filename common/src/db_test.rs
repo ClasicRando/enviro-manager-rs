@@ -24,6 +24,8 @@ struct TestListEntry {
 }
 
 impl TestListEntry {
+    /// Run the test entry represented by the [TestListEntry] instance. All errors that may arise
+    /// within the function call get stored in the `results` buffer.
     async fn run_test(&self, pool: &PgPool, results: &mut Vec<String>) {
         let path = PathBuf::from(&self.name);
         let block = match read_file(&path).await {
