@@ -59,6 +59,7 @@ fn process_type_definition(block: &str) -> String {
     format!("do $body$\nbegin\n{}\nend;\n$body$;", block)
 }
 
+/// Format the provided `block` so that is can be executed as an anonymous block of Postgresql code
 fn format_anonymous_block(block: &str) -> String {
     match block.split_whitespace().next() {
         Some("do") | None => block.to_string(),
