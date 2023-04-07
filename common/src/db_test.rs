@@ -37,12 +37,12 @@ impl TestListEntry {
         };
 
         if self.rollback {
-            let result = execute_anonymous_block_transaction(block, pool).await;
+            let result = execute_anonymous_block_transaction(&block, pool).await;
             result.add_to_error_list(&path, results);
             return;
         }
 
-        let result = execute_anonymous_block(block, pool).await;
+        let result = execute_anonymous_block(&block, pool).await;
         if let Err(error) = result {
             results.push(format!("Failed running test in {:?}\n{}", path, error))
         }
@@ -97,7 +97,7 @@ async fn run_tests(tests_path: PathBuf, pool: &PgPool) -> Result<(), Box<dyn std
             continue;
         }
         let block = read_file(&file_path).await?;
-        let result = execute_anonymous_block(block, pool).await;
+        let result = execute_anonymous_block(&block, pool).await;
         if let Err(error) = result {
             results.push(format!("Failed running test in {:?}\n{}", file_path, error))
         }
@@ -214,7 +214,7 @@ pub async fn run_db_tests(pool: PgPool) -> Result<(), Box<dyn std::error::Error>
     let test_refresh_script = package_dir.join("database").join("test_data.pgsql");
     if test_refresh_script.exists() {
         let block = read_file(&test_refresh_script).await?;
-        execute_anonymous_block(block, &pool).await?;
+        execute_anonymous_block(&block, &pool).await?;
     }
 
     let schema_directory = package_dir.join("database");

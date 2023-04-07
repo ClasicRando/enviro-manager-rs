@@ -78,7 +78,7 @@ impl DbBuildEntry {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let path = directory.join(&self.name);
         let block = read_file(&path).await?;
-        if let Err(error) = execute_anonymous_block(block, pool).await {
+        if let Err(error) = execute_anonymous_block(&block, pool).await {
             return Err(format!("Error running schema build {:?}. {}", self.name, error).into());
         };
         Ok(())
