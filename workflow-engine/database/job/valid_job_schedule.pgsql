@@ -17,6 +17,7 @@ begin
             return false;
         end if;
     end loop;
+    return true;
 end;
 $$;
 
