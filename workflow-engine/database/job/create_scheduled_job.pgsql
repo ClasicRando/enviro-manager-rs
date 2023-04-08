@@ -6,7 +6,7 @@ create or replace function job.create_scheduled_job(
 language sql
 as $$
 insert into job.jobs(workflow_id,job_type,maintainer,job_schedule,next_run)
-values($1,'Interval'::job.job_type,$2,$3,job.next_run_job_schedule($3))
+values($1,'Scheduled'::job.job_type,$2,$3,job.next_run_job_schedule($3))
 returning job_id;
 $$;
 
