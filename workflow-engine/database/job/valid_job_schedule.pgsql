@@ -6,8 +6,22 @@ language plpgsql
 as $$
 declare
     entry job.schedule_entry;
+    v_duplicate_entry_count integer;
 begin
     if job_schedule is null or job_schedule = '{}'::job.schedule_entry[] then
+        return false;
+    end if;
+
+    select count(0)
+    into v_duplicate_entry_count
+    from (
+        select 1
+        from unnest($1) s
+        group by s.day_of_week, s.time_of_day
+        having count(0) > 1
+    ) d;
+
+    if v_duplicate_entry_count > 0 then
         return false;
     end if;
 
