@@ -17,14 +17,14 @@ begin
     start transaction;
     begin
         select j.current_workflow_run_id
-        into v_workflow_run_id
+        into strict v_workflow_run_id
         from job.jobs j
         where j.job_id = $1
         for update;
     exception
         when no_data_found then
             rollback;
-            $2 := format('No job for job_id = %.', $1);
+            $2 := format('No job for job_id = %', $1);
             return;
     end;
 
