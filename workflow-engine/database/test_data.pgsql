@@ -7,7 +7,7 @@ declare
 begin
     begin
         select t.service_id
-        into v_task_service_id
+        into strict v_task_service_id
         from task.task_services t
         where t.name = 'test';
     exception
@@ -19,7 +19,7 @@ begin
 
     begin
         select t.task_id
-        into v_task_id
+        into strict v_task_id
         from task.tasks t
         where t.name = 'test';
     exception
@@ -31,7 +31,7 @@ begin
 
     begin
         select w.workflow_id
-        into v_workflow_id
+        into strict v_workflow_id
         from workflow.workflows w
         where w.name = 'test';
     exception
