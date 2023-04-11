@@ -207,29 +207,29 @@ async fn check_for_composite(block: &str, pool: &PgPool) -> Result<(), Box<dyn s
 /// either type definition might not make it to the database and since Postgresql does not support
 /// any replace or update DDL statements for either type definition. In those cases a full refresh
 /// of the database might be required or manual alter statements must be created.
-pub async fn run_db_tests(pool: PgPool) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn run_db_tests(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     let package_dir = package_dir();
-    build_database(&pool).await?;
+    build_database(pool).await?;
 
     let test_refresh_script = package_dir.join("database").join("test_data.pgsql");
     if test_refresh_script.exists() {
         let block = read_file(&test_refresh_script).await?;
-        execute_anonymous_block(&block, &pool).await?;
+        execute_anonymous_block(&block, pool).await?;
     }
 
     let schema_directory = package_dir.join("database");
     let db_build = db_build(&schema_directory).await?;
 
     for common_schema in &db_build.common_dependencies {
-        run_common_db_tests(&pool, common_schema).await?;
+        run_common_db_tests(pool, common_schema).await?;
     }
 
     for entry in db_build.entries {
         let block = read_file(&schema_directory.join(&entry.name)).await?;
-        check_for_enum(&block, &pool).await?;
-        check_for_composite(&block, &pool).await?;
+        check_for_enum(&block, pool).await?;
+        check_for_composite(&block, pool).await?;
     }
 
     let tests = schema_directory.join("tests");
-    run_tests(tests, &pool).await
+    run_tests(tests, pool).await
 }

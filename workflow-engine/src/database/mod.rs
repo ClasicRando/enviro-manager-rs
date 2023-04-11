@@ -1,16 +1,16 @@
 mod utilities;
 
-pub use utilities::{create_db_pool, we_db_pool, create_test_db_pool, we_test_db_pool};
+pub use utilities::{we_db_pool, we_test_db_pool};
 
 #[cfg(test)]
 mod test {
     use common::db_test::run_db_tests;
-    use crate::database::{create_db_pool, create_test_db_pool};
+    use super::{we_db_pool, we_test_db_pool};
 
     async fn refresh_test_database() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = create_db_pool().await?;
+        let pool = we_db_pool().await?;
         sqlx::query("drop database if exists workflow_engine_test")
-            .execute(&pool)
+            .execute(pool)
             .await?;
         sqlx::query(
             r#"
@@ -18,7 +18,7 @@ mod test {
                 owner = workflow_engine_admin
                 encoding = 'UTF8'"#,
         )
-        .execute(&pool)
+        .execute(pool)
         .await?;
         Ok(())
     }
@@ -32,7 +32,7 @@ mod test {
             refresh_test_database().await?;
         }
 
-        let pool = create_test_db_pool().await?;
+        let pool = we_test_db_pool().await?;
         run_db_tests(pool).await?;
         Ok(())
     }

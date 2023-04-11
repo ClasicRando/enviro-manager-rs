@@ -39,7 +39,7 @@ fn test_db_options() -> WEResult<PgConnectOptions> {
 }
 
 /// Return a new pool of postgres connections
-pub async fn create_db_pool() -> WEResult<PgPool> {
+async fn create_db_pool() -> WEResult<PgPool> {
     let options = db_options()?;
     let pool = PgPoolOptions::new()
         .min_connections(10)
@@ -50,7 +50,7 @@ pub async fn create_db_pool() -> WEResult<PgPool> {
 }
 
 /// Return a new pool of postgres connections for the test database
-pub async fn create_test_db_pool() -> WEResult<PgPool> {
+async fn create_test_db_pool() -> WEResult<PgPool> {
     let options = test_db_options()?;
     let pool = PgPoolOptions::new()
         .connect_with(options)
