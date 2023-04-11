@@ -25,8 +25,8 @@ struct TestListEntry {
 impl TestListEntry {
     /// Run the test entry represented by the [TestListEntry] instance. All errors that may arise
     /// within the function call get stored in the `results` buffer.
-    async fn run_test(&self, pool: &PgPool, results: &mut Vec<String>) {
-        let path = PathBuf::from(&self.name);
+    async fn run_test(&self, directory: &PathBuf, pool: &PgPool, results: &mut Vec<String>) {
+        let path = directory.join(&self.name);
         let block = match read_file(&path).await {
             Ok(inner) => inner,
             Err(error) => {
@@ -70,7 +70,7 @@ async fn run_test_directory(
     let mut results = Vec::new();
     let tests = read_tests_list(tests_path).await?;
     for entry in tests {
-        entry.run_test(pool, &mut results).await
+        entry.run_test(tests_path, pool, &mut results).await
     }
     Ok(results)
 }
