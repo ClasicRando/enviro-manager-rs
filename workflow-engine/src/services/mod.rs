@@ -5,7 +5,8 @@ pub mod tasks;
 pub mod workflow_runs;
 pub mod workflows;
 
-use async_once_cell::OnceCell;
+use once_cell::sync::OnceCell;
+use sqlx::PgPool;
 
 use crate::{database::we_db_pool, error::Result as WEResult};
 
@@ -21,64 +22,56 @@ static JOBS_SERVICE: OnceCell<JobsService> = OnceCell::new();
 static TASKS_SERVICE: OnceCell<TasksService> = OnceCell::new();
 static WORKFLOWS_SERVICE: OnceCell<WorkflowsService> = OnceCell::new();
 
-pub async fn create_executors_service() -> WEResult<ExecutorsService> {
-    let pool = we_db_pool().await?;
+pub fn create_executors_service(pool: &'static PgPool) -> WEResult<ExecutorsService> {
     Ok(ExecutorsService::new(pool))
 }
 
 pub async fn executors_service() -> WEResult<&'static ExecutorsService> {
-    EXECUTORS_SERVICE
-        .get_or_try_init(create_executors_service())
-        .await
+    let pool = we_db_pool().await?;
+    EXECUTORS_SERVICE.get_or_try_init(move || create_executors_service(pool))
 }
 
-pub async fn create_workflow_runs_service() -> WEResult<WorkflowRunsService> {
-    let pool = we_db_pool().await?;
+pub fn create_workflow_runs_service(pool: &'static PgPool) -> WEResult<WorkflowRunsService> {
     Ok(WorkflowRunsService::new(pool))
 }
 
 pub async fn workflow_runs_service() -> WEResult<&'static WorkflowRunsService> {
-    WORKFLOW_RUNS_SERVICE
-        .get_or_try_init(create_workflow_runs_service())
-        .await
+    let pool = we_db_pool().await?;
+    WORKFLOW_RUNS_SERVICE.get_or_try_init(move || create_workflow_runs_service(pool))
 }
 
-pub async fn create_task_queue_service() -> WEResult<TaskQueueService> {
-    let pool = we_db_pool().await?;
+pub fn create_task_queue_service(pool: &'static PgPool) -> WEResult<TaskQueueService> {
     Ok(TaskQueueService::new(pool))
 }
 
 pub async fn task_queue_service() -> WEResult<&'static TaskQueueService> {
-    TASK_QUEUE_SERVICE
-        .get_or_try_init(create_task_queue_service())
-        .await
+    let pool = we_db_pool().await?;
+    TASK_QUEUE_SERVICE.get_or_try_init(move || create_task_queue_service(pool))
 }
 
-pub async fn create_jobs_service() -> WEResult<JobsService> {
-    let pool = we_db_pool().await?;
+pub fn create_jobs_service(pool: &'static PgPool) -> WEResult<JobsService> {
     Ok(JobsService::new(pool))
 }
 
 pub async fn jobs_service() -> WEResult<&'static JobsService> {
-    JOBS_SERVICE.get_or_try_init(create_jobs_service()).await
+    let pool = we_db_pool().await?;
+    JOBS_SERVICE.get_or_try_init(move || create_jobs_service(pool))
 }
 
-pub async fn create_tasks_service() -> WEResult<TasksService> {
-    let pool = we_db_pool().await?;
+pub fn create_tasks_service(pool: &'static PgPool) -> WEResult<TasksService> {
     Ok(TasksService::new(pool))
 }
 
 pub async fn tasks_service() -> WEResult<&'static TasksService> {
-    TASKS_SERVICE.get_or_try_init(create_tasks_service()).await
+    let pool = we_db_pool().await?;
+    TASKS_SERVICE.get_or_try_init(move || create_tasks_service(pool))
 }
 
-pub async fn create_workflows_service() -> WEResult<WorkflowsService> {
-    let pool = we_db_pool().await?;
+pub fn create_workflows_service(pool: &'static PgPool) -> WEResult<WorkflowsService> {
     Ok(WorkflowsService::new(pool))
 }
 
 pub async fn workflows_service() -> WEResult<&'static WorkflowsService> {
-    WORKFLOWS_SERVICE
-        .get_or_try_init(create_workflows_service())
-        .await
+    let pool = we_db_pool().await?;
+    WORKFLOWS_SERVICE.get_or_try_init(move || create_workflows_service(pool))
 }
