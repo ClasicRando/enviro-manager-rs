@@ -9,9 +9,8 @@ use tokio::{
 };
 
 use crate::{
-    db_build::{build_database, db_build},
-    execute_anonymous_block, execute_anonymous_block_transaction, package_dir, read_file,
-    workspace_dir,
+    db_build::db_build, execute_anonymous_block, execute_anonymous_block_transaction, package_dir,
+    read_file, workspace_dir,
 };
 
 /// Represents a single entry in the list of test directory entries. Deserialized from a
@@ -209,7 +208,6 @@ async fn check_for_composite(block: &str, pool: &PgPool) -> Result<(), Box<dyn s
 /// of the database might be required or manual alter statements must be created.
 pub async fn run_db_tests(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     let package_dir = package_dir();
-    build_database(pool).await?;
 
     let test_refresh_script = package_dir.join("database").join("test_data.pgsql");
     if test_refresh_script.exists() {
