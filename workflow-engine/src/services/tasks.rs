@@ -67,16 +67,16 @@ impl TasksService {
         Self { pool }
     }
 
-    pub async fn create(&self, request: TaskRequest) -> WEResult<Task> {
+    pub async fn create(&self, request: &TaskRequest) -> WEResult<Task> {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
             from task.create_task($1,$2,$3,$4)"#,
         )
-        .bind(request.name)
-        .bind(request.description)
+        .bind(&request.name)
+        .bind(&request.description)
         .bind(request.task_service_id)
-        .bind(request.url)
+        .bind(&request.url)
         .fetch_one(self.pool)
         .await?;
         Ok(result)

@@ -43,7 +43,7 @@ async fn create_task(
     service: &TasksService,
     format: ApiFormatType,
 ) -> ApiResponse<Task> {
-    match service.create(request).await {
+    match service.create(&request).await {
         Ok(task) => ApiResponse::success(task, format),
         Err(error) => ApiResponse::error(error, format),
     }
