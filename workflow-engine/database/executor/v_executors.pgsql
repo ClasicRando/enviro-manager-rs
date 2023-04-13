@@ -12,11 +12,10 @@ select
         from workflow.workflow_runs wr
         where wr.executor_id = re.executor_id
     ) as wr_count
-from executor.executors re
-where re.status = 'Active'::executor.executor_status;
+from executor.executors re;
 
 comment on view executor.v_executors IS $$
-Utility view, showing active status executors. Includes all base details of an executor, as well as
-a flag indicating if the executor session is still active and the number of workflow runs the
-executor owns.
+Utility view, showing all executors. Includes all base details of an executor, as well as a flag
+indicating if the executor session is still active and the number of workflow runs the executor
+owns.
 $$;
