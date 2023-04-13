@@ -4,7 +4,7 @@ language sql
 stable
 as $$
 select executor_id
-from executor.v_executors
+from executor.v_active_executors
 where session_active
 order by wr_count
 limit 1;
