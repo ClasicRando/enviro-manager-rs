@@ -24,18 +24,20 @@ fn workspace_dir() -> PathBuf {
 /// Read the specified file using the `path` provided, returning the contents as a single [String]
 /// buffer.
 async fn read_file(path: &PathBuf) -> Result<String, Box<dyn std::error::Error>> {
-    let mut file = File::open(path)
-        .await
-        .unwrap_or_else(|_| panic!("Could not find file, {:?}", path));
+    let mut file = match File::open(path).await {
+        Ok(inner) => inner,
+        Err(error) => return Err(format!("Could not open file, {:?}. {}", path, error).into()),
+    };
     let mut block = String::new();
     file.read_to_string(&mut block).await?;
     Ok(block)
 }
 
 lazy_static! {
-    static ref TYPE_REGEX: Regex =
-        Regex::new(r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+)\s+as(?P<definition>[^;]+);")
-            .unwrap();
+    static ref TYPE_REGEX: Regex = Regex::new(
+        r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+)\s+as(?P<definition>[^;]+);"
+    )
+    .unwrap();
 }
 
 /// Process a Postgresql type definition `block`, updating the contents to not run the create
@@ -117,7 +119,10 @@ impl RolledBackTransactionResult {
 /// ensure the execution can be completed. The entire block is executed within a rolled back
 /// transaction, returning the errors of the block and transaction rollback, if any, respectively
 /// within a tuple.
-async fn execute_anonymous_block_transaction(block: &str, pool: &PgPool) -> RolledBackTransactionResult {
+async fn execute_anonymous_block_transaction(
+    block: &str,
+    pool: &PgPool,
+) -> RolledBackTransactionResult {
     let block = format_anonymous_block(block);
     let mut result = RolledBackTransactionResult::default();
     let mut transaction = match pool.begin().await {
