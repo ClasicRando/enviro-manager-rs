@@ -50,7 +50,7 @@ async fn create_db_pool() -> WEResult<PgPool> {
 }
 
 /// Return a new pool of postgres connections for the test database
-async fn create_test_db_pool() -> WEResult<PgPool> {
+pub(crate) async fn create_test_db_pool() -> WEResult<PgPool> {
     let options = test_db_options()?;
     let pool = PgPoolOptions::new()
         .connect_with(options)
