@@ -8,7 +8,7 @@ use crate::error::{Error as WEError, Result as WEResult};
 
 use super::workflow_runs::WorkflowRunId;
 
-#[derive(sqlx::Type, Serialize)]
+#[derive(sqlx::Type, Serialize, PartialEq, Debug)]
 #[sqlx(type_name = "executor_status")]
 pub enum ExecutorStatus {
     Active,
@@ -197,5 +197,75 @@ impl ExecutorsService {
             .listen(&format!("exec_status_{}", executor_id))
             .await?;
         Ok(listener)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::database::we_test_db_pool;
+
+    use super::{ExecutorsService, ExecutorStatus};
+
+    #[tokio::test]
+    async fn create_executor() -> Result<(), Box<dyn std::error::Error>> {
+        let pool = we_test_db_pool().await?;
+        let executor_service = ExecutorsService { pool };
+
+        let executor_id = match executor_service.register_executor().await {
+            Ok(inner) => inner,
+            Err(error) => panic!("Failed to register a new executor, {}", error),
+        };
+
+        if executor_service.read_one(&executor_id).await?.is_none() {
+            panic!("Failed to `read_one`");
+        };
+
+        let Some(executor_status) = executor_service.read_status(&executor_id).await? else {
+            panic!("Failed to `read_status`");
+        };
+        assert_eq!(executor_status, ExecutorStatus::Active);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn cancel_executor() -> Result<(), Box<dyn std::error::Error>> {
+        let pool = we_test_db_pool().await?;
+        let executor_service = ExecutorsService { pool };
+
+        let executor_id = match executor_service.register_executor().await {
+            Ok(inner) => inner,
+            Err(error) => panic!("Failed to register a new executor, {}", error),
+        };
+
+        if executor_service.cancel(&executor_id).await?.is_none() {
+            panic!("Failed to `cancel`");
+        };
+        let Some(executor_status) = executor_service.read_status(&executor_id).await? else {
+            panic!("Failed to `read_status`");
+        };
+        assert_eq!(executor_status, ExecutorStatus::Canceled);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn shutdown_executor() -> Result<(), Box<dyn std::error::Error>> {
+        let pool = we_test_db_pool().await?;
+        let executor_service = ExecutorsService { pool };
+
+        let executor_id = match executor_service.register_executor().await {
+            Ok(inner) => inner,
+            Err(error) => panic!("Failed to register a new executor, {}", error),
+        };
+
+        if executor_service.shutdown(&executor_id).await?.is_none() {
+            panic!("Failed to `shutdown`");
+        };
+        let Some(executor_status) = executor_service.read_status(&executor_id).await? else {
+            panic!("Failed to `read_status`");
+        };
+        assert_eq!(executor_status, ExecutorStatus::Shutdown);
+
+        Ok(())
     }
 }
