@@ -15,12 +15,12 @@ use crate::{
 
 pub async fn build_api() -> WEResult<Rocket<Build>> {
     let pool = we_db_pool().await?;
-    let executors_service = create_executors_service(pool)?;
-    let jobs_service = create_jobs_service(pool)?;
-    let task_queue_service = create_task_queue_service(pool)?;
-    let tasks_service = create_tasks_service(pool)?;
-    let workflow_runs_service = create_workflow_runs_service(pool)?;
-    let workflows_service = create_workflows_service(pool)?;
+    let executors_service = create_executors_service(&pool)?;
+    let jobs_service = create_jobs_service(&pool)?;
+    let task_queue_service = create_task_queue_service(&pool)?;
+    let tasks_service = create_tasks_service(&pool)?;
+    let workflow_runs_service = create_workflow_runs_service(&pool)?;
+    let workflows_service = create_workflows_service(&pool)?;
     let config = Config {
         port: 8000,
         ..Default::default()

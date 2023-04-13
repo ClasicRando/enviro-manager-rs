@@ -95,12 +95,12 @@ pub enum TaskResponse {
 }
 
 pub struct TaskQueueService {
-    pool: &'static PgPool,
+    pool: PgPool,
 }
 
 impl TaskQueueService {
-    pub fn new(pool: &'static PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
     }
 
     pub async fn read_one(&self, request: TaskQueueRequest) -> WEResult<Option<TaskQueueRecord>> {
@@ -114,7 +114,7 @@ impl TaskQueueService {
         )
         .bind(request.workflow_run_id)
         .bind(request.task_order)
-        .fetch_optional(self.pool)
+        .fetch_optional(&self.pool)
         .await?;
         Ok(result)
     }
@@ -129,7 +129,7 @@ impl TaskQueueService {
             .bind(workflow_run_id)
             .bind(task_order)
             .bind(rule)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         Ok(())
     }
@@ -144,7 +144,7 @@ impl TaskQueueService {
             .bind(workflow_run_id)
             .bind(task_order)
             .bind(progress)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         Ok(())
     }
@@ -153,7 +153,7 @@ impl TaskQueueService {
         sqlx::query("call retry_task($1,$2)")
             .bind(request.workflow_run_id)
             .bind(request.task_order)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         Ok(())
     }
@@ -162,7 +162,7 @@ impl TaskQueueService {
         sqlx::query("call complete_task($1,$2)")
             .bind(request.workflow_run_id)
             .bind(request.task_order)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         Ok(())
     }
@@ -173,7 +173,7 @@ impl TaskQueueService {
     ) -> WEResult<Option<TaskQueueRecord>> {
         let task_queue_record = sqlx::query_as("call workflow.acquire_next_task($1)")
             .bind(workflow_run_id)
-            .fetch_optional(self.pool)
+            .fetch_optional(&self.pool)
             .await?;
         Ok(task_queue_record)
     }
@@ -237,7 +237,7 @@ impl TaskQueueService {
             .bind(record.workflow_run_id)
             .bind(record.task_order)
             .bind(error.to_string())
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         Ok(())
     }
@@ -253,7 +253,7 @@ impl TaskQueueService {
             .bind(record.task_order)
             .bind(is_paused)
             .bind(message)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         Ok(())
     }

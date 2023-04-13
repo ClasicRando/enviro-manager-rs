@@ -60,17 +60,17 @@ impl std::fmt::Display for ExecutorId {
 }
 
 pub struct ExecutorsService {
-    pool: &'static PgPool,
+    pool: PgPool,
 }
 
 impl ExecutorsService {
-    pub fn new(pool: &'static PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
     }
 
     pub async fn register_executor(&self) -> WEResult<ExecutorId> {
         let executor_id = sqlx::query_scalar("select executor.register_executor()")
-            .fetch_one(self.pool)
+            .fetch_one(&self.pool)
             .await?;
         Ok(executor_id)
     }
@@ -85,7 +85,7 @@ impl ExecutorsService {
             where e.executor_id = $1"#,
         )
         .bind(executor_id)
-        .fetch_optional(self.pool)
+        .fetch_optional(&self.pool)
         .await?;
         Ok(result)
     }
@@ -98,7 +98,7 @@ impl ExecutorsService {
             where e.executor_id = $1"#,
         )
         .bind(executor_id)
-        .fetch_optional(self.pool)
+        .fetch_optional(&self.pool)
         .await?;
         Ok(result)
     }
@@ -111,7 +111,7 @@ impl ExecutorsService {
                 e.exec_start, e.session_active, e.wr_count
             from executor.v_executors e"#,
         )
-        .fetch_all(self.pool)
+        .fetch_all(&self.pool)
         .await?;
         Ok(result)
     }
@@ -124,7 +124,7 @@ impl ExecutorsService {
                 e.exec_start, e.session_active, e.wr_count
             from executor.v_active_executors e"#,
         )
-        .fetch_all(self.pool)
+        .fetch_all(&self.pool)
         .await?;
         Ok(result)
     }
@@ -137,7 +137,7 @@ impl ExecutorsService {
             sqlx::query_scalar("call workflow.process_next_workflow($1,$2)")
                 .bind(executor_id)
                 .bind(None::<i64>)
-                .fetch_optional(self.pool)
+                .fetch_optional(&self.pool)
                 .await?;
         Ok(workflow_run_id)
     }
@@ -145,7 +145,7 @@ impl ExecutorsService {
     pub async fn shutdown(&self, executor_id: &ExecutorId) -> WEResult<Option<Executor>> {
         sqlx::query("call executor.shutdown_executor($1)")
             .bind(executor_id)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         self.read_one(executor_id).await
     }
@@ -153,7 +153,7 @@ impl ExecutorsService {
     pub async fn cancel(&self, executor_id: &ExecutorId) -> WEResult<Option<Executor>> {
         sqlx::query("call executor.cancel_executor($1)")
             .bind(executor_id)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         self.read_one(executor_id).await
     }
@@ -162,7 +162,7 @@ impl ExecutorsService {
         sqlx::query("call executor.close_executor($1,$2)")
             .bind(executor_id)
             .bind(is_cancelled)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         Ok(())
     }
@@ -172,7 +172,7 @@ impl ExecutorsService {
         let sql_result = sqlx::query("call executor.post_executor_error_message($1,$2)")
             .bind(executor_id)
             .bind(&message)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await;
         if let Err(error) = sql_result {
             error!(
@@ -186,13 +186,13 @@ impl ExecutorsService {
 
     pub async fn clean_executors(&self) -> WEResult<()> {
         sqlx::query("call executor.clean_executors()")
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         Ok(())
     }
 
     pub async fn status_listener(&self, executor_id: &ExecutorId) -> WEResult<PgListener> {
-        let mut listener = PgListener::connect_with(self.pool).await?;
+        let mut listener = PgListener::connect_with(&self.pool).await?;
         listener
             .listen(&format!("exec_status_{}", executor_id))
             .await?;

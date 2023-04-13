@@ -222,12 +222,12 @@ impl std::fmt::Display for JobId {
 }
 
 pub struct JobsService {
-    pool: &'static PgPool,
+    pool: PgPool,
 }
 
 impl JobsService {
-    pub fn new(pool: &'static PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
     }
 
     pub async fn create(&self, request: JobRequest) -> WEResult<Job> {
@@ -265,7 +265,7 @@ impl JobsService {
             .bind(maintainer)
             .bind(interval)
             .bind(next_run)
-            .fetch_one(self.pool)
+            .fetch_one(&self.pool)
             .await?;
         Ok(job_id)
     }
@@ -280,7 +280,7 @@ impl JobsService {
             .bind(workflow_id)
             .bind(maintainer)
             .bind(schedule)
-            .fetch_one(self.pool)
+            .fetch_one(&self.pool)
             .await?;
         Ok(job_id)
     }
@@ -294,7 +294,7 @@ impl JobsService {
             where  job_id = $1"#,
         )
         .bind(job_id)
-        .fetch_optional(self.pool)
+        .fetch_optional(&self.pool)
         .await?;
         Ok(result)
     }
@@ -306,7 +306,7 @@ impl JobsService {
                    next_run, current_workflow_run_id, workflow_run_status, progress, executor_id
             from   job.v_jobs"#,
         )
-        .fetch_all(self.pool)
+        .fetch_all(&self.pool)
         .await?;
         Ok(result)
     }
@@ -317,7 +317,7 @@ impl JobsService {
             select job_id, next_run
             from   job.v_queued_jobs"#,
         )
-        .fetch_all(self.pool)
+        .fetch_all(&self.pool)
         .await?;
         Ok(result)
     }
@@ -325,7 +325,7 @@ impl JobsService {
     pub async fn run_job(&self, job_id: &JobId) -> WEResult<Option<Job>> {
         sqlx::query("call job.run_job($1)")
             .bind(job_id)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         self.read_one(job_id).await
     }
@@ -352,7 +352,7 @@ impl JobsService {
     }
 
     pub async fn listener(&self) -> WEResult<PgListener> {
-        let mut listener = PgListener::connect_with(self.pool).await?;
+        let mut listener = PgListener::connect_with(&self.pool).await?;
         listener.listen("jobs").await?;
         Ok(listener)
     }

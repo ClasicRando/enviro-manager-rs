@@ -52,18 +52,22 @@ async fn create_db_pool() -> WEResult<PgPool> {
 /// Return a new pool of postgres connections for the test database
 pub(crate) async fn create_test_db_pool() -> WEResult<PgPool> {
     let options = test_db_options()?;
-    let pool = PgPoolOptions::new()
-        .connect_with(options)
-        .await?;
+    let pool = PgPoolOptions::new().connect_with(options).await?;
     Ok(pool)
 }
 
 /// Get a static reference to a postgres connection pool
-pub async fn we_db_pool() -> WEResult<&'static PgPool> {
-    WE_POSTGRES_DB.get_or_try_init(create_db_pool()).await
+pub async fn we_db_pool() -> WEResult<PgPool> {
+    WE_POSTGRES_DB
+        .get_or_try_init(create_db_pool())
+        .await
+        .map(|p| p.clone())
 }
 
 /// Get a static reference to the test database postgres connection pool
-pub async fn we_test_db_pool() -> WEResult<&'static PgPool> {
-    WE_POSTGRES_TEST_DB.get_or_try_init(create_test_db_pool()).await
+pub async fn we_test_db_pool() -> WEResult<PgPool> {
+    WE_POSTGRES_TEST_DB
+        .get_or_try_init(create_test_db_pool())
+        .await
+        .map(|p| p.clone())
 }

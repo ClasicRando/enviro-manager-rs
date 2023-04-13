@@ -59,12 +59,12 @@ impl std::fmt::Display for TaskId {
 }
 
 pub struct TasksService {
-    pool: &'static PgPool,
+    pool: PgPool,
 }
 
 impl TasksService {
-    pub fn new(pool: &'static PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
     }
 
     pub async fn create(&self, request: &TaskRequest) -> WEResult<Task> {
@@ -77,7 +77,7 @@ impl TasksService {
         .bind(&request.description)
         .bind(request.task_service_id)
         .bind(&request.url)
-        .fetch_one(self.pool)
+        .fetch_one(&self.pool)
         .await?;
         Ok(result)
     }
@@ -90,7 +90,7 @@ impl TasksService {
             where task_id = $1"#,
         )
         .bind(task_id)
-        .fetch_optional(self.pool)
+        .fetch_optional(&self.pool)
         .await?;
         Ok(result)
     }
@@ -101,7 +101,7 @@ impl TasksService {
             select task_id, name, description, url, task_service_name
             from task.v_tasks"#,
         )
-        .fetch_all(self.pool)
+        .fetch_all(&self.pool)
         .await?;
         Ok(result)
     }
@@ -113,7 +113,7 @@ impl TasksService {
             .bind(request.description)
             .bind(request.task_service_id)
             .bind(request.url)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         self.read_one(task_id).await
     }
@@ -135,22 +135,22 @@ mod test {
             name: task_name.to_string(),
             description: task_description.to_string(),
             task_service_id,
-            url: task_url.to_string()
+            url: task_url.to_string(),
         };
 
         let pool = we_test_db_pool().await?;
         let (task_service_name, service_url): (String, String) =
             sqlx::query_as("select name, base_url from task.task_services where service_id = $1")
                 .bind(task_service_id)
-                .fetch_one(pool)
+                .fetch_one(&pool)
                 .await?;
         let task_url_full = format!("{}\\{}", service_url, task_url);
         sqlx::query("delete from task.tasks where name = $1")
             .bind(task_name)
-            .execute(pool)
+            .execute(&pool)
             .await?;
 
-        let tasks_service = TasksService { pool };
+        let tasks_service = TasksService::new(&pool);
 
         let task = tasks_service.create(&request).await?;
         let task_id = TaskId::from(task.task_id);
@@ -169,7 +169,9 @@ mod test {
         assert_eq!(task.task_service_name, task_service_name);
         assert_eq!(task.url, task_url_full);
 
-        let count: i64 = sqlx::query_scalar("select count(0) from task.tasks").fetch_one(pool).await?;
+        let count: i64 = sqlx::query_scalar("select count(0) from task.tasks")
+            .fetch_one(&pool)
+            .await?;
         let tasks = tasks_service.read_many().await?;
 
         assert_eq!(count as usize, tasks.len());

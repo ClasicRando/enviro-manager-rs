@@ -83,12 +83,12 @@ impl std::fmt::Display for WorkflowId {
 }
 
 pub struct WorkflowsService {
-    pool: &'static PgPool,
+    pool: PgPool,
 }
 
 impl WorkflowsService {
-    pub fn new(pool: &'static PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
     }
 
     // TODO: Alter create_workflow to return Workflow data
@@ -96,7 +96,7 @@ impl WorkflowsService {
         let workflow_id = sqlx::query_scalar("select workflow.create_workflow($1,$2)")
             .bind(request.name)
             .bind(request.tasks)
-            .fetch_one(self.pool)
+            .fetch_one(&self.pool)
             .await?;
         match self.read_one(&workflow_id).await {
             Ok(Some(workflow)) => Ok(workflow),
@@ -113,7 +113,7 @@ impl WorkflowsService {
             where w.workflow_id = $1"#,
         )
         .bind(workflow_id)
-        .fetch_optional(self.pool)
+        .fetch_optional(&self.pool)
         .await?;
         Ok(result)
     }
@@ -124,7 +124,7 @@ impl WorkflowsService {
             select w.workflow_id, w.name, w.tasks
             from workflow.v_workflows w"#,
         )
-        .fetch_all(self.pool)
+        .fetch_all(&self.pool)
         .await?;
         Ok(result)
     }
@@ -133,7 +133,7 @@ impl WorkflowsService {
         sqlx::query("call workflow.deprecate_workflow($1,$2)")
             .bind(request.workflow_id)
             .bind(request.new_workflow_id)
-            .execute(self.pool)
+            .execute(&self.pool)
             .await?;
         Ok(request.workflow_id)
     }
