@@ -80,7 +80,7 @@ impl ExecutorsService {
             r#"
             select
                 e.executor_id, e.pid, e.username, e.application_name, e.client_addr, e.client_port,
-                e.exec_start, e.session_active, e.workflow_run_count
+                e.exec_start, e.session_active, e.wr_count
             from executor.v_executors e
             where e.executor_id = $1"#,
         )
@@ -108,7 +108,7 @@ impl ExecutorsService {
             r#"
             select
                 e.executor_id, e.pid, e.username, e.application_name, e.client_addr, e.client_port,
-                e.exec_start, e.session_active, e.workflow_run_count
+                e.exec_start, e.session_active, e.wr_count
             from executor.v_executors e"#,
         )
         .fetch_all(self.pool)
@@ -121,9 +121,8 @@ impl ExecutorsService {
             r#"
             select
                 e.executor_id, e.pid, e.username, e.application_name, e.client_addr, e.client_port,
-                e.exec_start, e.session_active, e.workflow_run_count
-            from executor.v_executors e
-            where e.status = 'Active'::executor.executor_status"#,
+                e.exec_start, e.session_active, e.wr_count
+            from executor.v_active_executors e"#,
         )
         .fetch_all(self.pool)
         .await?;
