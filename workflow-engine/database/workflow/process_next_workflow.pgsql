@@ -10,7 +10,7 @@ begin
     start transaction;
     begin
         select w.workflow_run_id, w.is_valid
-        into $2, v_is_valid
+        into strict $2, v_is_valid
         from workflow.next_workflow($1) w
         limit 1;
 
