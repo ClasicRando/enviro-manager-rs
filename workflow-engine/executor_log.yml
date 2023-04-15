@@ -2,7 +2,7 @@ appenders:
   stdout:
     kind: console
     encoder:
-      pattern: "{h({d(%Y-%m-%d %H:%M:%S)(utc)} | {({l}):5.5} | - {m}{n})}"
+      pattern: "{h({d(%Y-%m-%d %H:%M:%S)(utc)} | {({l}):5.5} | {f}:{L} - {m}{n})}"
 
   all:
     kind: rolling_file
