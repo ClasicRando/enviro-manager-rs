@@ -33,4 +33,5 @@ reqwest = { workspace = true }
 lettre = { version = "0.10.1", features = ["tokio1", "tokio1-native-tls"] }
 rocket = { workspace = true }
 thiserror = { workspace = true }
+indoc = { workspace = true }
 common = { path = "../common" }
