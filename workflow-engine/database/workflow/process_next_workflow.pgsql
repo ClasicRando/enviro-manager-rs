@@ -9,15 +9,15 @@ declare
 begin
     start transaction;
     begin
-        select workflow_run_id, is_valid
+        select w.workflow_run_id, w.is_valid
         into $2, v_is_valid
-        from next_workflow($1)
+        from workflow.next_workflow($1) w
         limit 1;
 
         if v_is_valid then
-            call start_workflow_run($2, $1);
+            call workflow.start_workflow_run($2, $1);
         else
-            call complete_workflow_run($2);
+            call workflow.complete_workflow_run($2);
         end if;
         commit;
     exception
