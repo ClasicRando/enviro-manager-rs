@@ -137,7 +137,7 @@ impl ExecutorsService {
             sqlx::query_scalar("call workflow.process_next_workflow($1,$2)")
                 .bind(executor_id)
                 .bind(None::<i64>)
-                .fetch_optional(&self.pool)
+                .fetch_one(&self.pool)
                 .await?;
         Ok(workflow_run_id)
     }
