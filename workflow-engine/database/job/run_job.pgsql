@@ -6,7 +6,6 @@ declare
     v_is_paused boolean;
     v_workflow_run_id bigint;
 begin
-    start transaction;
     begin
         select j.workflow_id, j.is_paused
         into v_workflow_id, v_is_paused

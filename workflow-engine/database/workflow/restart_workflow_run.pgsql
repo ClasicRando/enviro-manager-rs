@@ -4,7 +4,6 @@ create or replace procedure workflow.restart_workflow_run(
 language plpgsql
 as $$
 begin
-    start transaction;
     if exists(
         select 1
         from workflow.workflow_runs t1

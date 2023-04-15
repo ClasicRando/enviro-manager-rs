@@ -5,7 +5,6 @@ create or replace procedure workflow.retry_task(
 language plpgsql
 as $$
 begin
-    start transaction;
     if exists(
         select 1
         from task.task_queue tq

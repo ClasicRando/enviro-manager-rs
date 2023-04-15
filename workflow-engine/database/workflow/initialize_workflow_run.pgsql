@@ -12,7 +12,6 @@ declare
     v_hint text;
     v_context text;
 begin
-    start transaction;
     begin
         select w.workflow_id, w.tasks
         into v_workflow

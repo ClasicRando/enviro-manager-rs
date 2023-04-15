@@ -14,7 +14,6 @@ declare
     v_hint text;
     v_context text;
 begin
-    start transaction;
     begin
         select j.current_workflow_run_id
         into strict v_workflow_run_id

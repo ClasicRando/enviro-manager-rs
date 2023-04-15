@@ -9,7 +9,6 @@ create or replace procedure workflow.acquire_next_task(
 language plpgsql
 as $$
 begin
-	start transaction;
 	begin
 		select nt.workflow_run_id, nt.task_order, nt.task_id, nt.parameters, nt.url
 		into $2, $3, $4, $5, $6

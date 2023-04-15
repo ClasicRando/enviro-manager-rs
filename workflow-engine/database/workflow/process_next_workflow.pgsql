@@ -7,7 +7,6 @@ as $$
 declare
     v_is_valid boolean;
 begin
-    start transaction;
     begin
         select w.workflow_run_id, w.is_valid
         into strict $2, v_is_valid
