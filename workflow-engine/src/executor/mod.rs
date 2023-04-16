@@ -32,11 +32,11 @@ use crate::{
 /// of the [Executor]. [Break][ExecutorNextOperation::Break] contains the notification signal type
 /// that was sent to cause a break to happen to dictate the kind of shutdown to occur (forced or
 /// graceful).
-/// 
+///
 /// [NextWorkflowRun][ExecutorNextOperation::NextWorkflowRun] occurs when a workflow run is
 /// available for the [Executor] to run. This variant is provided once the workflow run has
 /// started and the [WorkflowRunId] and [JoinHandle] are returned within the variant.
-/// 
+///
 /// [Listen][ExecutorNextOperation::Listen] occurs when no new workflows are available to process
 /// and the executor should move into standby mode. This means the executor is only listening for
 /// wake-up notifications are a SIGINT signal.
