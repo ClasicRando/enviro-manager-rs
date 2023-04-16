@@ -122,9 +122,9 @@ impl TasksService {
 #[cfg(test)]
 mod test {
     use super::{TaskId, TaskRequest, TasksService};
-    use crate::database::we_test_db_pool;
+    use crate::database::utilities::create_test_db_pool;
 
-    #[tokio::test]
+    #[sqlx::test]
     async fn task() -> Result<(), Box<dyn std::error::Error>> {
         let task_name = "Create Task Test";
         let task_description = "Test task created as integration testing.";
@@ -138,7 +138,7 @@ mod test {
             url: task_url.to_string(),
         };
 
-        let pool = we_test_db_pool().await?;
+        let pool = create_test_db_pool().await?;
         let (task_service_name, service_url): (String, String) =
             sqlx::query_as("select name, base_url from task.task_services where service_id = $1")
                 .bind(task_service_id)
