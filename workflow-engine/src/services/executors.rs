@@ -202,13 +202,15 @@ impl ExecutorsService {
 
 #[cfg(test)]
 mod test {
-    use crate::database::we_test_db_pool;
+    use indoc::indoc;
 
-    use super::{ExecutorsService, ExecutorStatus};
+    use crate::{database::utilities::create_test_db_pool, error::Error as WEError};
 
-    #[tokio::test]
+    use super::{ExecutorStatus, ExecutorsService};
+
+    #[sqlx::test]
     async fn create_executor() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = we_test_db_pool().await?;
+        let pool = create_test_db_pool().await?;
         let executor_service = ExecutorsService { pool };
 
         let executor_id = match executor_service.register_executor().await {
@@ -227,9 +229,9 @@ mod test {
         Ok(())
     }
 
-    #[tokio::test]
+    #[sqlx::test]
     async fn cancel_executor() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = we_test_db_pool().await?;
+        let pool = create_test_db_pool().await?;
         let executor_service = ExecutorsService { pool };
 
         let executor_id = match executor_service.register_executor().await {
@@ -248,9 +250,9 @@ mod test {
         Ok(())
     }
 
-    #[tokio::test]
+    #[sqlx::test]
     async fn shutdown_executor() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = we_test_db_pool().await?;
+        let pool = create_test_db_pool().await?;
         let executor_service = ExecutorsService { pool };
 
         let executor_id = match executor_service.register_executor().await {
@@ -265,6 +267,93 @@ mod test {
             panic!("Failed to `read_status`");
         };
         assert_eq!(executor_status, ExecutorStatus::Shutdown);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn post_error() -> Result<(), Box<dyn std::error::Error>> {
+        let pool = create_test_db_pool().await?;
+        let executor_service = ExecutorsService::new(&pool);
+
+        let executor_id = match executor_service.register_executor().await {
+            Ok(inner) => inner,
+            Err(error) => panic!("Failed to register a new executor, {}", error),
+        };
+
+        let error = WEError::Generic(String::from("Executor 'post_error' test"));
+        let error_message = error.to_string();
+        executor_service.post_error(&executor_id, error).await?;
+
+        let query = indoc! {
+            r#"
+            select e.error_message
+            from executor.executors e
+            where e.executor_id = $1"#
+        };
+        let message: String = sqlx::query_scalar(query)
+            .bind(&executor_id)
+            .fetch_one(&pool)
+            .await?;
+        assert_eq!(message, error_message);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn status_listener() -> Result<(), Box<dyn std::error::Error>> {
+        let pool = create_test_db_pool().await?;
+        let executor_service = ExecutorsService::new(&pool);
+
+        let executor_id = match executor_service.register_executor().await {
+            Ok(inner) => inner,
+            Err(error) => panic!("Failed to register a new executor, {}", error),
+        };
+
+        let mut listener = executor_service.status_listener(&executor_id).await?;
+
+        let message = "Test";
+        sqlx::query(&format!(
+            "NOTIFY exec_status_{}, '{}'",
+            executor_id, message
+        ))
+        .execute(&pool)
+        .await?;
+        let notification = listener.recv().await?;
+
+        assert_eq!(message, notification.payload());
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn clean_executors() -> Result<(), Box<dyn std::error::Error>> {
+        let pool = create_test_db_pool().await?;
+        let executor_service = ExecutorsService::new(&pool);
+
+        let inactive_executor_id = match executor_service.register_executor().await {
+            Ok(inner) => inner,
+            Err(error) => panic!("Failed to register a new executor, {}", error),
+        };
+
+        drop(executor_service);
+        pool.close().await;
+        drop(pool);
+
+        let pool = create_test_db_pool().await?;
+        let executor_service = ExecutorsService::new(&pool);
+        executor_service.clean_executors().await?;
+
+        let Some(status) = executor_service.read_status(&inactive_executor_id).await? else {
+            panic!("Could not `read_status`");
+        };
+
+        assert_eq!(
+            status,
+            ExecutorStatus::Canceled,
+            "Status was not Canceled for executor_id = {}",
+            inactive_executor_id
+        );
 
         Ok(())
     }
