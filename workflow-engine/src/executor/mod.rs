@@ -47,6 +47,7 @@ enum ExecutorNextOperation {
     Listen,
 }
 
+///
 pub struct Executor {
     executor_id: ExecutorId,
     executor_service: &'static ExecutorsService,
@@ -56,6 +57,9 @@ pub struct Executor {
 }
 
 impl Executor {
+    /// Create a new [Executor] using the provided services. Cleans output unused or stale
+    /// executors in the database before registering the current [Executor] and returning the new
+    /// [Executor].
     pub async fn new(
         executor_service: &'static ExecutorsService,
         wr_service: &'static WorkflowRunsService,
@@ -72,10 +76,13 @@ impl Executor {
         })
     }
 
+    /// Return a reference to the [ExecutorId] of the [Executor].
     pub fn executor_id(&self) -> &ExecutorId {
         &self.executor_id
     }
 
+    /// Add a new workflow run handle for the executor. Stored for checking if the spawned tokio
+    /// task is complete during cleanup scans.
     fn add_workflow_run_handle(
         &mut self,
         workflow_run_id: WorkflowRunId,
@@ -88,6 +95,7 @@ impl Executor {
         self.wr_handles.insert(workflow_run_id, handle);
     }
 
+    /// Read the current status of the executor as stored by the database
     async fn status(&self) -> WEResult<ExecutorStatus> {
         self.executor_service
             .read_status(&self.executor_id)
@@ -95,11 +103,23 @@ impl Executor {
             .map(|status| status.unwrap_or(ExecutorStatus::Canceled))
     }
 
-    fn handle_sigint(&self) -> ExecutorNextOperation {
+    /// Handle a manual shutdown by the user (performed by a ctrl+c) by logging the even and
+    /// returning a [ExecutorNextOperation::Break] entry containing a
+    /// [ExecutorNotificationSignal::Shutdown] variant.
+    fn handle_manual_shutdown(&self) -> ExecutorNextOperation {
         info!("Received shutdown signal. Starting graceful shutdown");
         ExecutorNextOperation::Break(ExecutorNotificationSignal::Shutdown)
     }
 
+    /// Select the next operation when in the active state of an executor. 1 of 4 operations are
+    /// awaited for first completion (priority given respective to order):
+    /// - ctrl+c
+    /// - executor status notification
+    /// - workflow run cancel notification
+    /// - next workflow run available polled
+    ///
+    /// Whichever operation completes first will handle the completed future and return an
+    /// [ExecutorNextOperation] variant to tell the executor what to do as the next step.
     async fn next_operation_active(
         &mut self,
         executor_status_listener: &mut PgListener,
@@ -107,12 +127,12 @@ impl Executor {
     ) -> WEResult<ExecutorNextOperation> {
         Ok(tokio::select! {
             biased;
-            _ = ctrl_c() => self.handle_sigint(),
+            _ = ctrl_c() => self.handle_manual_shutdown(),
             notification = executor_status_listener.recv() => self
                 .handle_executor_status_notification(notification)?,
             notification = workflow_run_cancel_listener.recv() => self
                 .handle_workflow_run_cancel_notification(notification).await?,
-            workflow_run_id = self.next_workflow() => {
+            workflow_run_id = self.next_workflow_run() => {
                 let Some((workflow_run_id, run_result)) = workflow_run_id? else {
                     return Ok(ExecutorNextOperation::Listen)
                 };
@@ -121,6 +141,15 @@ impl Executor {
         })
     }
 
+    /// Select the next operation when in the listen state of an executor. 1 of 4 operations are
+    /// awaited for first completion (priority given respective to order):
+    /// - ctrl+c
+    /// - executor status notification
+    /// - workflow run cancel notification
+    /// - workflow run scheduled notification
+    ///
+    /// Whichever operation completes first will handle the completed future and return an
+    /// [ExecutorNextOperation] variant to tell the executor what to do as the next step.
     async fn next_operation_listen(
         &mut self,
         executor_status_listener: &mut PgListener,
@@ -129,7 +158,7 @@ impl Executor {
     ) -> WEResult<ExecutorNextOperation> {
         Ok(tokio::select! {
             biased;
-            _ = ctrl_c() => self.handle_sigint(),
+            _ = ctrl_c() => self.handle_manual_shutdown(),
             notification = executor_status_listener.recv() => self
                 .handle_executor_status_notification(notification)?,
             notification = workflow_run_cancel_listener.recv() => self
@@ -139,6 +168,7 @@ impl Executor {
         })
     }
 
+    ///
     #[allow(unused_assignments)]
     pub async fn run(mut self) -> WEResult<()> {
         let mut is_listen_mode = false;
@@ -207,7 +237,14 @@ impl Executor {
         Ok(())
     }
 
-    async fn next_workflow(&self) -> WEResult<Option<(WorkflowRunId, WorkflowRunWorkerResult)>> {
+    /// Fetch the next available workflow run for the current executor.
+    ///
+    /// If there is an available workflow run, a workflow run worker is spawned and returned with
+    /// the workflow run id. If no workflow run is available, the function immediately returns with
+    /// a wrapped [None] value.
+    async fn next_workflow_run(
+        &self,
+    ) -> WEResult<Option<(WorkflowRunId, WorkflowRunWorkerResult)>> {
         let Some(workflow_run_id) = self.executor_service.next_workflow_run(&self.executor_id).await? else {
             return Ok(None)
         };
@@ -215,6 +252,8 @@ impl Executor {
         Ok(Some((workflow_run_id, wr_handle)))
     }
 
+    /// Spawn a new tokio task to execute the workflow run of the `workflow_run_id` provided.
+    /// Returns the [JoinHandle][tokio::task::JoinHandle] to the spawned task.
     fn spawn_workflow_run_worker(
         &self,
         workflow_run_id: &WorkflowRunId,
@@ -235,6 +274,8 @@ impl Executor {
         })
     }
 
+    /// Handle [JoinError] returned when a tokio task does not complete successfully when joined.
+    /// Simply logs and discards the error.
     fn handle_join_error(&self, workflow_run_id: &WorkflowRunId, error: JoinError) {
         if error.is_cancelled() {
             warn!("Workflow run = {} canceled\n{}", workflow_run_id, error);
@@ -247,6 +288,10 @@ impl Executor {
         info!("Workflow run = {} completed\n{}", workflow_run_id, error)
     }
 
+    /// Handle a notification through the workflow run cancel channel. Attempts to parse the
+    /// notification body into a workflow run id, pulling the respective workflow run handle (if
+    /// any), aborting is not finished, finally joining the task and cancelling the workflow run
+    /// through the database service.
     async fn handle_workflow_run_cancel_notification(
         &mut self,
         result: Result<PgNotification, SqlError>,
@@ -280,6 +325,9 @@ impl Executor {
         Ok(ExecutorNextOperation::Continue)
     }
 
+    /// Handle a notification through the workflow run scheduled channel. If the notification is
+    /// received successfully, the executor is told to start the loop over again, exiting listen
+    /// mode to handle new workflow runs. 
     fn handle_workflow_run_scheduled_notification(
         &self,
         result: Result<PgNotification, SqlError>,
@@ -296,6 +344,10 @@ impl Executor {
         }
     }
 
+    /// Handle a notification through the executor status channel. Parse the notification body into
+    /// an [ExecutorNotificationSignal], returning a [ExecutorNextOperation::Break] signal if the
+    /// notification payload matches a [ExecutorNotificationSignal::Cancel] or
+    /// [ExecutorNotificationSignal::Shutdown] signal.
     fn handle_executor_status_notification(
         &self,
         result: Result<PgNotification, SqlError>,
@@ -320,6 +372,11 @@ impl Executor {
         })
     }
 
+    /// Process a workflow run that is owned by the current executor, but missing a workflow run
+    /// handle. Handles 3 cases:
+    /// - workflow run if valid - cancel workflow run and exit
+    /// - workflow run has status of 'Running' - spawn workflow, add handle and exit
+    /// - else - restart the workflow run and schedule for the current executor
     async fn process_unknown_run(&mut self, workflow_run: ExecutorWorkflowRun) -> WEResult<()> {
         if !workflow_run.is_valid {
             info!(
@@ -352,6 +409,10 @@ impl Executor {
         Ok(())
     }
 
+    /// Clean the workflows of the current executor. Checks completed handles to remove from map
+    /// to free resources. Also checks for owned workflows that have no handle. For each unknown
+    /// workflow run, [process_unknown_run][Executor::process_unknown_run] is called to fix the
+    /// run.
     async fn cleanup_workflows(&mut self) -> WEResult<()> {
         info!("Checking handles");
         let completed_handle_keys = self
@@ -383,6 +444,10 @@ impl Executor {
         Ok(())
     }
 
+    /// Complete a workflow run handle when attempting to shutdown workers. Checks the handle to
+    /// see if it is already completed (while returning false). If the handle is not complete, and 
+    /// the executor is in the process of being cancelled, the handle is aborted before starting
+    /// the move of the workflow run to the next available executor.
     async fn finish_handle(
         &self,
         workflow_run_id: &WorkflowRunId,
@@ -402,6 +467,11 @@ impl Executor {
         Ok(true)
     }
 
+    /// Shutdown all workflow run workers by iterating over all workflow run handles, completing
+    /// the handles based upon the completion status of the executor. If the executor is in the
+    /// process of being cancelled and a handle is no finished, the executor will attempt to move
+    /// the workflow run to the next available executor, falling back to a scheduled state when no
+    /// other executor is operating.
     async fn shutdown_workers(&mut self, is_cancelled: bool) -> WEResult<()> {
         let handle_keys: Vec<WorkflowRunId> =
             self.wr_handles.keys().map(|key| key.to_owned()).collect();
@@ -431,6 +501,9 @@ impl Executor {
         Ok(())
     }
 
+    /// Close the executor by first shutting down workflow run workers then closing the executor
+    /// from the database's perspective. The executor instance is dropped at the end of this
+    /// function.
     async fn close_executor(mut self, signal: ExecutorNotificationSignal) -> WEResult<()> {
         info!("Shutting down workers");
         let is_cancelled = signal.is_cancelled();
