@@ -140,7 +140,7 @@ impl Executor {
     }
 
     #[allow(unused_assignments)]
-    pub async fn run(&mut self) -> WEResult<()> {
+    pub async fn run(mut self) -> WEResult<()> {
         let mut is_listen_mode = false;
         let mut executor_signal: ExecutorNotificationSignal;
         let mut executor_status_listener = self
@@ -431,7 +431,7 @@ impl Executor {
         Ok(())
     }
 
-    async fn close_executor(&mut self, signal: ExecutorNotificationSignal) -> WEResult<()> {
+    async fn close_executor(mut self, signal: ExecutorNotificationSignal) -> WEResult<()> {
         info!("Shutting down workers");
         let is_cancelled = signal.is_cancelled();
         self.shutdown_workers(is_cancelled).await?;

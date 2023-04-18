@@ -11,20 +11,21 @@ async fn main() -> WEResult<()> {
     let executor_service = executors_service().await?;
     let wr_service = workflow_runs_service().await?;
     let tq_service = task_queue_service().await?;
-    let mut executor = match Executor::new(executor_service, wr_service, tq_service).await {
+    let executor = match Executor::new(executor_service, wr_service, tq_service).await {
         Ok(executor) => executor,
         Err(error) => {
             error!("{}", error);
             return Ok(());
         }
     };
+    let executor_id = executor.executor_id().clone();
 
-    info!("Running Executor, id = {}", executor.executor_id());
+    info!("Running Executor, id = {}", executor_id);
     if let Err(error) = executor.run().await {
         executor_service
-            .post_error(executor.executor_id(), error)
+            .post_error(&executor_id, error)
             .await?;
     }
-    info!("Exiting executor, id = {}", executor.executor_id());
+    info!("Exiting executor, id = {}", executor_id);
     Ok(())
 }
