@@ -5,7 +5,7 @@ use lettre::{
     transport::smtp::authentication::Credentials, AsyncSmtpTransport, AsyncTransport, Message,
     Tokio1Executor,
 };
-use log::{info, warn};
+use log::{error, info, warn};
 use sqlx::postgres::PgNotification;
 use tokio::{
     signal::ctrl_c,
@@ -132,10 +132,15 @@ impl JobWorker {
             warn!("Attempted to run a job that is not in the job queue. Job_id = {}", self.next_job);
             return Ok(())
         };
-        info!("Starting new job run for job_id = {}", self.next_job);
-        if next_run > &Utc::now().naive_utc() {
-            return Err(WEError::JobNotReady);
+        let now = Utc::now().naive_utc();
+        if next_run > &now {
+            error!(
+                "Job was not ready. job_id = {}. Time to run = {}, current time = {}",
+                self.next_job, next_run, now
+            );
+            return Ok(());
         }
+        info!("Starting new job run for job_id = {}", self.next_job);
         self.service.run_job(&self.next_job).await?;
         Ok(())
     }
@@ -149,7 +154,8 @@ impl JobWorker {
             return Ok(());
         };
         let Some(Job { maintainer, .. }) = self.service.read_one(job_id).await? else {
-            return Err(WEError::Generic(format!("Could not find a job in the database for job_id = {}", job_id)))
+            warn!("Could not find a job in the database for job_id = {}", job_id);
+            return Ok(())
         };
         info!("Completing run for job_id = {}", job_id);
         let Err(WEError::Generic(error)) = self.service.complete_job(job_id).await else {
