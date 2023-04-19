@@ -22,6 +22,22 @@ enum NotificationAction {
     CompleteJob(JobId),
 }
 
+impl TryFrom<PgNotification> for NotificationAction {
+    type Error = WEError;
+
+    fn try_from(value: PgNotification) -> Result<Self, Self::Error> {
+        let payload = value.payload();
+        if payload.is_empty() {
+            return Ok(NotificationAction::LoadJobs);
+        }
+        let Ok(job_id) = payload.parse::<i64>() else {
+            return Err(WEError::PayloadParseError(payload.to_owned()))
+        };
+        info!("Received notification of \"{}\"", payload);
+        Ok(NotificationAction::CompleteJob(job_id.into()))
+    }
+}
+
 pub struct JobWorker {
     service: &'static JobsService,
     jobs: HashMap<JobId, NaiveDateTime>,
@@ -67,7 +83,7 @@ impl JobWorker {
                     break;
                 }
                 notification = job_channel.recv() => {
-                    self.handle_notification(notification).await?
+                    self.handle_notification(notification?).await?
                 }
                 _ = tokio_sleep(next_run) => {
                     self.run_next_job().await?;
@@ -96,27 +112,8 @@ impl JobWorker {
         Ok(())
     }
 
-    fn parse_notification(
-        &mut self,
-        result: Result<PgNotification, sqlx::Error>,
-    ) -> WEResult<NotificationAction> {
-        let notifcation = result?;
-        let payload = notifcation.payload();
-        if payload.is_empty() {
-            return Ok(NotificationAction::LoadJobs);
-        }
-        let Ok(job_id) = payload.parse::<i64>() else {
-            return Err(WEError::PayloadParseError(payload.to_owned()))
-        };
-        info!("Received notifcation of \"{}\"", payload);
-        Ok(NotificationAction::CompleteJob(job_id.into()))
-    }
-
-    async fn handle_notification(
-        &mut self,
-        notification: Result<PgNotification, sqlx::Error>,
-    ) -> WEResult<()> {
-        let action = match self.parse_notification(notification) {
+    async fn handle_notification(&mut self, notification: PgNotification) -> WEResult<()> {
+        let action = match NotificationAction::try_from(notification) {
             Ok(action) => action,
             Err(error) => return Err(error),
         };
