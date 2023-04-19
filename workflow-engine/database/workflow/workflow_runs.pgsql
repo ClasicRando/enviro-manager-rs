@@ -4,6 +4,7 @@ language plpgsql
 as $$
 declare
     v_next_executor bigint;
+    v_job_id bigint;
 begin
     if new.status = 'Scheduled'::workflow.workflow_run_status and new.executor_id is null then
         v_next_executor := executor.next_executor();
@@ -15,22 +16,16 @@ begin
         perform pg_notify('wr_canceled_'||old.executor_id, new.workflow_run_id::text);
     end if;
 
-    if exists(
-        select 1
-        from job.jobs j
-        where j.current_workflow_run_id = new.workflow_run_id
-    ) and new.status not in (
+    select j.job_id
+    into v_job_id
+    from job.jobs j
+    where j.current_workflow_run_id = new.workflow_run_id;
+
+    if v_job_id is not null and new.status not in (
         'Scheduled'::workflow.workflow_run_status,
         'Running'::workflow.workflow_run_status
     ) then
-        perform pg_notify(
-            'jobs',
-            (
-                select j.job_id::text
-                from job.jobs j
-                where j.current_workflow_run_id = new.workflow_run_id
-            )
-        );
+        perform pg_notify('jobs', v_job_id::text);
     end if;
     return new;
 end;
