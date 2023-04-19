@@ -17,6 +17,9 @@ use crate::{
     Error as WEError, Result as WEResult,
 };
 
+/// Action to perform after receiving a job worker notification. Notification payload should be a
+/// workflow run id (as an i64/bigint) to tell the job worker a job has been completed or an empty
+/// payload to tell the worker to refresh the job list.
 enum NotificationAction {
     LoadJobs,
     CompleteJob(JobId),
@@ -38,6 +41,8 @@ impl TryFrom<PgNotification> for NotificationAction {
     }
 }
 
+/// Main unit of the recurring job run process. An instance of the worker is meant to be created
+/// and run as the lifecycle of the instance (dropped at the end of the  method).
 pub struct JobWorker {
     service: &'static JobsService,
     jobs: HashMap<JobId, NaiveDateTime>,
@@ -46,6 +51,8 @@ pub struct JobWorker {
 }
 
 impl JobWorker {
+    /// Create a new job worker, initializing with a reference to a [JobsService] and creating a
+    /// mailer to send job related emails to maintainers.
     pub async fn new(service: &'static JobsService) -> WEResult<Self> {
         let credentials = Credentials::from((env!("CLIPPY_USERNAME"), env!("CLIPPY_PASSWORD")));
         let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(env!("CLIPPY_RELAY"))?
@@ -59,6 +66,9 @@ impl JobWorker {
         })
     }
 
+    /// Run the main action of the worker. Continuously listens for notification and executes the
+    /// next job when ready. If there are no jobs available for the worker, it will wait for a
+    /// shutdown signal (ctrl+c) or a new notification to load jobs.
     pub async fn run(mut self) -> WEResult<()> {
         let mut job_channel = self.service.listener().await?;
         self.load_jobs().await?;
@@ -94,6 +104,10 @@ impl JobWorker {
         Ok(())
     }
 
+    /// Load all available jobs from the job queue in `job.jobs`. If the job queue becomes polluted
+    /// with a duplicate job id, an error will be returned (although this should never happen
+    /// unless the database is corrupt/altered). Once jobs are fetched, if any jobs exist, the
+    /// first available job will be queued as the next job.
     async fn load_jobs(&mut self) -> WEResult<()> {
         info!("Requesting new job queue");
         let jobs = self.service.read_queued().await?;
@@ -112,6 +126,10 @@ impl JobWorker {
         Ok(())
     }
 
+    /// Handle a notification, parsing to a [NotificationAction] and handling each action. If the
+    /// notification is [NotificationAction::LoadJobs] then the jobs cache will be refreshed. If
+    /// the notification is [NotificationAction::CompleteJob] the the inner `job_id` will be used
+    /// to mark a job as complete and jobs list will be refreshed.
     async fn handle_notification(&mut self, notification: PgNotification) -> WEResult<()> {
         let action = match NotificationAction::try_from(notification) {
             Ok(action) => action,
@@ -127,6 +145,10 @@ impl JobWorker {
         Ok(())
     }
 
+    /// Run the next job in the queue. In a usual run, the job is executed as a standalone workflow
+    /// run, where the job is marked with that new workflow run id. If the run is too early an
+    /// error message is printed but the worker does not fail. Instead an early exit happens and a
+    /// queue refresh should follow.
     async fn run_next_job(&self) -> WEResult<()> {
         let Some(next_run) = self.jobs.get(&self.next_job) else {
             warn!("Attempted to run a job that is not in the job queue. Job_id = {}", self.next_job);
@@ -145,6 +167,9 @@ impl JobWorker {
         Ok(())
     }
 
+    /// Complete the specified job after the workflow run is complete. If something went wrong or
+    /// the job failed, the maintainer of the job will be notified with an email. If the `job_id`
+    /// is not valid then warning messages will be printed but the worker will continue.
     async fn complete_job(&self, job_id: &JobId) -> WEResult<()> {
         if !self.jobs.contains_key(job_id) {
             warn!(
@@ -165,6 +190,7 @@ impl JobWorker {
         Ok(())
     }
 
+    /// Send an email to the specified `maintainer` with the error message as the email body
     async fn send_error_email(&self, maintainer: String, message: String) -> WEResult<()> {
         warn!(
             "Sending error email to {} with message\n{}",
