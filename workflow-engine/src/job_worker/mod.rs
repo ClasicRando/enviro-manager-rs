@@ -43,7 +43,7 @@ impl JobWorker {
         })
     }
 
-    pub async fn run(&mut self) -> WEResult<()> {
+    pub async fn run(mut self) -> WEResult<()> {
         let mut job_channel = self.service.listener().await?;
         self.load_jobs().await?;
         loop {

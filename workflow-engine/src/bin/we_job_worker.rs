@@ -7,7 +7,7 @@ async fn main() -> WEResult<()> {
 
     info!("Initializing Worker");
     let jobs_service = jobs_service().await?;
-    let mut worker = match JobWorker::new(jobs_service).await {
+    let worker = match JobWorker::new(jobs_service).await {
         Ok(worker) => worker,
         Err(error) => {
             error!("{}", error);
