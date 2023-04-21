@@ -1,6 +1,6 @@
-pub(crate) mod utilities;
+pub mod utilities;
 
-pub use utilities::{we_db_pool, we_test_db_pool};
+pub use utilities::{we_db_pool, create_test_db_pool};
 
 #[cfg(test)]
 mod test {

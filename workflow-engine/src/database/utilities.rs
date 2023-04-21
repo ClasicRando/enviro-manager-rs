@@ -8,7 +8,6 @@ use sqlx::{
 };
 
 static WE_POSTGRES_DB: OnceCell<PgPool> = OnceCell::new();
-static WE_POSTGRES_TEST_DB: OnceCell<PgPool> = OnceCell::new();
 
 /// Return database connect options
 fn db_options() -> WEResult<PgConnectOptions> {
@@ -50,7 +49,7 @@ async fn create_db_pool() -> WEResult<PgPool> {
 }
 
 /// Return a new pool of postgres connections for the test database
-pub(crate) async fn create_test_db_pool() -> WEResult<PgPool> {
+pub async fn create_test_db_pool() -> WEResult<PgPool> {
     let options = test_db_options()?;
     let pool = PgPoolOptions::new().connect_with(options).await?;
     Ok(pool)
@@ -60,14 +59,6 @@ pub(crate) async fn create_test_db_pool() -> WEResult<PgPool> {
 pub async fn we_db_pool() -> WEResult<PgPool> {
     WE_POSTGRES_DB
         .get_or_try_init(create_db_pool())
-        .await
-        .map(|p| p.clone())
-}
-
-/// Get a static reference to the test database postgres connection pool
-pub async fn we_test_db_pool() -> WEResult<PgPool> {
-    WE_POSTGRES_TEST_DB
-        .get_or_try_init(create_test_db_pool())
         .await
         .map(|p| p.clone())
 }
