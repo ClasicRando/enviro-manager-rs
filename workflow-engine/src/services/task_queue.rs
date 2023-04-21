@@ -94,6 +94,7 @@ pub enum TaskResponse {
     },
 }
 
+#[derive(Clone)]
 pub struct TaskQueueService {
     pool: PgPool,
 }

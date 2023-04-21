@@ -50,9 +50,9 @@ enum ExecutorNextOperation {
 ///
 pub struct Executor {
     executor_id: ExecutorId,
-    executor_service: &'static ExecutorsService,
-    wr_service: &'static WorkflowRunsService,
-    tq_service: &'static TaskQueueService,
+    executor_service: ExecutorsService,
+    wr_service: WorkflowRunsService,
+    tq_service: TaskQueueService,
     wr_handles: HashMap<WorkflowRunId, WorkflowRunWorkerResult>,
 }
 
@@ -61,17 +61,17 @@ impl Executor {
     /// executors in the database before registering the current [Executor] and returning the new
     /// [Executor].
     pub async fn new(
-        executor_service: &'static ExecutorsService,
-        wr_service: &'static WorkflowRunsService,
-        tq_service: &'static TaskQueueService,
+        executor_service: &ExecutorsService,
+        wr_service: &WorkflowRunsService,
+        tq_service: &TaskQueueService,
     ) -> WEResult<Self> {
         executor_service.clean_executors().await?;
         let executor_id = executor_service.register_executor().await?;
         Ok(Self {
             executor_id,
-            executor_service,
-            wr_service,
-            tq_service,
+            executor_service: executor_service.clone(),
+            wr_service: wr_service.clone(),
+            tq_service: tq_service.clone(),
             wr_handles: HashMap::new(),
         })
     }
@@ -258,8 +258,8 @@ impl Executor {
         &self,
         workflow_run_id: &WorkflowRunId,
     ) -> WorkflowRunWorkerResult {
-        let wr_service = self.wr_service;
-        let tq_service = self.tq_service;
+        let wr_service = self.wr_service.clone();
+        let tq_service = self.tq_service.clone();
         let workflow_run_id = workflow_run_id.to_owned();
         tokio::spawn(async move {
             let worker = WorkflowRunWorker::new(&workflow_run_id, wr_service, tq_service);

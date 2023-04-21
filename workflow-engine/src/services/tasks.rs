@@ -58,6 +58,7 @@ impl std::fmt::Display for TaskId {
     }
 }
 
+#[derive(Clone)]
 pub struct TasksService {
     pool: PgPool,
 }

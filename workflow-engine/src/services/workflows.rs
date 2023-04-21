@@ -82,6 +82,7 @@ impl std::fmt::Display for WorkflowId {
     }
 }
 
+#[derive(Clone)]
 pub struct WorkflowsService {
     pool: PgPool,
 }

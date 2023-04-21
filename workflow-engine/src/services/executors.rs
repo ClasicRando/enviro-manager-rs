@@ -59,6 +59,7 @@ impl std::fmt::Display for ExecutorId {
     }
 }
 
+#[derive(Clone)]
 pub struct ExecutorsService {
     pool: PgPool,
 }

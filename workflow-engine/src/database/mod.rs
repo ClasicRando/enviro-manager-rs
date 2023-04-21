@@ -1,6 +1,6 @@
 pub mod utilities;
 
-pub use utilities::{we_db_pool, create_test_db_pool};
+pub use utilities::{create_db_pool, create_test_db_pool};
 
 #[cfg(test)]
 mod test {

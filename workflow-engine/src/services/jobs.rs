@@ -221,6 +221,7 @@ impl std::fmt::Display for JobId {
     }
 }
 
+#[derive(Clone)]
 pub struct JobsService {
     pool: PgPool,
 }

@@ -172,6 +172,7 @@ impl std::fmt::Display for WorkflowRunId {
     }
 }
 
+#[derive(Clone)]
 pub struct WorkflowRunsService {
     pool: PgPool,
 }

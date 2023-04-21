@@ -12,8 +12,8 @@ use crate::{
 /// complete workflow run operations
 pub struct WorkflowRunWorker<'w> {
     workflow_run_id: &'w WorkflowRunId,
-    wr_service: &'static WorkflowRunsService,
-    tq_service: &'static TaskQueueService,
+    wr_service: WorkflowRunsService,
+    tq_service: TaskQueueService,
 }
 
 impl<'w> WorkflowRunWorker<'w> {
@@ -26,8 +26,8 @@ impl<'w> WorkflowRunWorker<'w> {
     /// * `tq_service` - task queue service to interact with the database
     pub fn new(
         workflow_run_id: &'w WorkflowRunId,
-        wr_service: &'static WorkflowRunsService,
-        tq_service: &'static TaskQueueService,
+        wr_service: WorkflowRunsService,
+        tq_service: TaskQueueService,
     ) -> Self {
         Self {
             workflow_run_id,

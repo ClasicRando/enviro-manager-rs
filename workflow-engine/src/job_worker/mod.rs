@@ -44,7 +44,7 @@ impl TryFrom<PgNotification> for NotificationAction {
 /// Main unit of the recurring job run process. An instance of the worker is meant to be created
 /// and run as the lifecycle of the instance (dropped at the end of the  method).
 pub struct JobWorker {
-    service: &'static JobsService,
+    service: JobsService,
     jobs: HashMap<JobId, NaiveDateTime>,
     next_job: JobId,
     mailer: AsyncSmtpTransport<Tokio1Executor>,
@@ -53,7 +53,7 @@ pub struct JobWorker {
 impl JobWorker {
     /// Create a new job worker, initializing with a reference to a [JobsService] and creating a
     /// mailer to send job related emails to maintainers.
-    pub async fn new(service: &'static JobsService) -> WEResult<Self> {
+    pub async fn new(service: JobsService) -> WEResult<Self> {
         let credentials = Credentials::from((env!("CLIPPY_USERNAME"), env!("CLIPPY_PASSWORD")));
         let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(env!("CLIPPY_RELAY"))?
             .credentials(credentials)
