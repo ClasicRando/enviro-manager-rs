@@ -82,7 +82,7 @@ impl JobWorker {
                 .get(&self.next_job)
                 .map(|next_run| {
                     let duration = next_run.timestamp_millis() - Utc::now().timestamp_millis();
-                    StdDuration::from_millis(duration.clamp(0, i64::MAX) as u64)
+                    StdDuration::from_millis(duration.clamp(0, i64::max_value()) as u64)
                 })
                 .unwrap_or(StdDuration::MAX);
             if next_run != StdDuration::MAX {
