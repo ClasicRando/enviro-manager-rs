@@ -4,6 +4,7 @@ use sqlx::PgPool;
 
 use crate::error::{Error as WEError, Result as WEResult};
 
+/// Status of a task as found in the database as a simple Postgresql enum type
 #[derive(sqlx::Type, Serialize)]
 #[sqlx(type_name = "task_status")]
 pub enum TaskStatus {
@@ -17,6 +18,7 @@ pub enum TaskStatus {
     Canceled,
 }
 
+/// Task data type representing a row from `task.v_tasks`
 #[derive(sqlx::FromRow, Serialize)]
 pub struct Task {
     task_id: i64,
@@ -26,6 +28,7 @@ pub struct Task {
     task_service_name: String,
 }
 
+/// Data required to create or update the contents of task entry (the id cannot be updated)
 #[derive(Deserialize)]
 pub struct TaskRequest {
     name: String,
@@ -34,6 +37,8 @@ pub struct TaskRequest {
     url: String,
 }
 
+/// Wrapper for a `task_id` value. Made to ensure data passed as the id of a task is correct and
+/// not just any i64 value.
 #[derive(sqlx::Type)]
 #[sqlx(transparent)]
 pub struct TaskId(i64);
@@ -58,16 +63,20 @@ impl std::fmt::Display for TaskId {
     }
 }
 
+/// Service for fetching and interacting with task data. Wraps a [PgPool] and provides
+/// interaction methods for the API.
 #[derive(Clone)]
 pub struct TasksService {
     pool: PgPool,
 }
 
 impl TasksService {
+    /// Create a new [TasksService] with the referenced pool as the data source
     pub fn new(pool: &PgPool) -> Self {
         Self { pool: pool.clone() }
     }
 
+    /// Create a new task with the data contained within `request`
     pub async fn create(&self, request: &TaskRequest) -> WEResult<Task> {
         let result = sqlx::query_as(
             r#"
@@ -83,6 +92,8 @@ impl TasksService {
         Ok(result)
     }
 
+    /// Read a single task record from `task.v_tasks` for the specified `task_id`. Will return
+    /// [None] when the id does not match a record.
     pub async fn read_one(&self, task_id: &TaskId) -> WEResult<Option<Task>> {
         let result = sqlx::query_as(
             r#"
@@ -96,6 +107,7 @@ impl TasksService {
         Ok(result)
     }
 
+    /// Read all task records found from `task.v_tasks`
     pub async fn read_many(&self) -> WEResult<Vec<Task>> {
         let result = sqlx::query_as(
             r#"
@@ -107,6 +119,8 @@ impl TasksService {
         Ok(result)
     }
 
+    /// Update a task specified by `task_id` with the new details contained within `request`
+    #[allow(unused)]
     pub async fn update(&self, task_id: &TaskId, request: TaskRequest) -> WEResult<Option<Task>> {
         sqlx::query("call task.update_task($1,$2,$3,$4,$5)")
             .bind(task_id)

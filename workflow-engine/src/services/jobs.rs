@@ -14,6 +14,8 @@ use crate::error::{Error as WEError, Result as WEResult};
 
 use super::workflow_runs::WorkflowRunStatus;
 
+/// Represents the `job_type` Postgresql enum value within the database. Should never be used by
+/// itself but rather used to parse into the [JobType] enum that hold the job running details.
 #[derive(sqlx::Type)]
 #[sqlx(type_name = "job_type")]
 pub enum JobTypeEnum {
@@ -21,6 +23,9 @@ pub enum JobTypeEnum {
     Interval,
 }
 
+/// Details of a [JobType::Scheduled] job. Specifies a single run of the job as a `day_of_the_week`
+/// (Monday = 1, Sunday = 7) and a time within the day (timestamp without a timezone). Links to a
+/// postgresql composite type.
 #[derive(sqlx::Type, Serialize, Deserialize)]
 #[sqlx(type_name = "schedule_entry")]
 pub struct ScheduleEntry {
@@ -34,6 +39,9 @@ impl sqlx::postgres::PgHasArrayType for ScheduleEntry {
     }
 }
 
+/// Minimum details about a job to execute. Details fetched from `job.v_queued_jobs` and later
+/// packed into a hashmap (key = `job_id`). The `next_run` value is the next time the job needs to
+/// be executed.
 #[derive(sqlx::FromRow)]
 pub struct JobMin {
     pub job_id: i64,
@@ -42,6 +50,9 @@ pub struct JobMin {
 
 const PG_INTERVAL_FIELDS: &[&str] = &["months", "days", "years"];
 
+/// Deserialization method for [PgInterval] to convert from a serialized object containing a
+/// months, days and microseconds value. This allows for [PgInterval] to be extracted from a
+/// [JobType::Interval] value serialized within a [JobRequest].
 fn deserialize_interval<'de, D>(deserializer: D) -> Result<PgInterval, D::Error>
 where
     D: Deserializer<'de>,
@@ -105,6 +116,9 @@ where
     deserializer.deserialize_struct("PgInterval", PG_INTERVAL_FIELDS, PgIntervalVisitor)
 }
 
+/// Serialization method for [PgInterval] to convert from a serialized object containing a months,
+/// days and microseconds value. This allows for [PgInterval] to be serialized into a
+/// [JobType::Scheduled] value within a [JobRequest].
 fn serialize_interval<S>(interval: &PgInterval, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -116,6 +130,8 @@ where
     pg_interval.end()
 }
 
+/// Describes the only difference between job entry types. Jobs are either scheduled with a 1 or
+/// more weekly schedule entries or follow an interval schedule of a defined period between runs.
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum JobType {
@@ -127,6 +143,8 @@ pub enum JobType {
     Interval(PgInterval),
 }
 
+/// Job details as fetched from `job.v_jobs`. Contains the job and underlining workflow details as
+/// well as the current workflow run (if any) for the job.
 #[derive(Serialize)]
 pub struct Job {
     job_id: i64,
@@ -189,6 +207,8 @@ where
     }
 }
 
+/// API request data for updating a job entry. Specifies all fields within the record except for
+/// the `job_id` which should be provided by a path parameter
 #[derive(Deserialize)]
 pub struct JobRequest {
     workflow_id: i64,
@@ -197,6 +217,8 @@ pub struct JobRequest {
     next_run: Option<NaiveDateTime>,
 }
 
+/// Wrapper for a `job_id` value. Made to ensure data passed as the id of a job is correct and not
+/// just any i64 value.
 #[derive(sqlx::Type, Eq, Hash, PartialEq)]
 #[sqlx(transparent)]
 pub struct JobId(i64);
@@ -221,16 +243,21 @@ impl std::fmt::Display for JobId {
     }
 }
 
+/// Service for fetching and interacting with task data. Wraps a [PgPool] and provides
+/// interaction methods for the API and [JobWorker][crate::job_worker::JobWorker].
 #[derive(Clone)]
 pub struct JobsService {
     pool: PgPool,
 }
 
 impl JobsService {
+    /// Create a new [JobsService] with the referenced pool as the data source
     pub fn new(pool: &PgPool) -> Self {
         Self { pool: pool.clone() }
     }
 
+    /// Create a new job with the data contained within `request`. Branches to specific calls for
+    /// [JobType::Scheduled] and [JobType::Interval].
     pub async fn create(&self, request: JobRequest) -> WEResult<Job> {
         let job_id = match &request.job_type {
             JobType::Scheduled(schedule) => {
@@ -254,6 +281,7 @@ impl JobsService {
         }
     }
 
+    /// Create a new interval job using the specified details from the parameters
     async fn create_interval_job(
         &self,
         workflow_id: &i64,
@@ -271,6 +299,7 @@ impl JobsService {
         Ok(job_id)
     }
 
+    /// Create a new scheduled job using the specified details from the parameters
     async fn create_scheduled_job(
         &self,
         workflow_id: &i64,
@@ -286,6 +315,8 @@ impl JobsService {
         Ok(job_id)
     }
 
+    /// Read a single job record from `job.v_jobs` for the specified `job_id`. Will return [None]
+    /// when the id does not match a record
     pub async fn read_one(&self, job_id: &JobId) -> WEResult<Option<Job>> {
         let result = sqlx::query_as(
             r#"
@@ -300,6 +331,7 @@ impl JobsService {
         Ok(result)
     }
 
+    /// Read all job records found from `job.v_jobs`
     pub async fn read_many(&self) -> WEResult<Vec<Job>> {
         let result = sqlx::query_as(
             r#"
@@ -312,6 +344,8 @@ impl JobsService {
         Ok(result)
     }
 
+    /// Read all job records from `job.v_queued_jobs`. This excludes all job entries that are
+    /// paused or currently have a workflow run that not complete. Ordered by the `next_run` field
     pub async fn read_queued(&self) -> WEResult<Vec<JobMin>> {
         let result = sqlx::query_as(
             r#"
@@ -323,6 +357,8 @@ impl JobsService {
         Ok(result)
     }
 
+    /// Run the job specified by the `job_id`. Returns the [Job] entry if the `job_id` matches a
+    /// record
     pub async fn run_job(&self, job_id: &JobId) -> WEResult<Option<Job>> {
         sqlx::query("call job.run_job($1)")
             .bind(job_id)
@@ -331,6 +367,7 @@ impl JobsService {
         self.read_one(job_id).await
     }
 
+    ///
     pub async fn complete_job(&self, job_id: &JobId) -> WEResult<Option<Job>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query_scalar("call job.complete_job($1)")
@@ -352,6 +389,7 @@ impl JobsService {
         Err(WEError::Generic(message))
     }
 
+    ///
     pub async fn listener(&self) -> WEResult<PgListener> {
         let mut listener = PgListener::connect_with(&self.pool).await?;
         listener.listen("jobs").await?;
