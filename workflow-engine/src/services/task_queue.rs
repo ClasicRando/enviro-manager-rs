@@ -126,7 +126,7 @@ impl TaskQueueService {
         task_order: i32,
         rule: TaskRule,
     ) -> WEResult<()> {
-        sqlx::query("call append_task_rule($1,$2,$3)")
+        sqlx::query("call workflow.append_task_rule($1,$2,$3)")
             .bind(workflow_run_id)
             .bind(task_order)
             .bind(rule)
@@ -141,7 +141,7 @@ impl TaskQueueService {
         task_order: i32,
         progress: i16,
     ) -> WEResult<()> {
-        sqlx::query("call set_task_progress($1,$2,$3)")
+        sqlx::query("call workflow.set_task_progress($1,$2,$3)")
             .bind(workflow_run_id)
             .bind(task_order)
             .bind(progress)
@@ -151,7 +151,7 @@ impl TaskQueueService {
     }
 
     pub async fn retry_task(&self, request: TaskQueueRequest) -> WEResult<()> {
-        sqlx::query("call retry_task($1,$2)")
+        sqlx::query("call workflow.retry_task($1,$2)")
             .bind(request.workflow_run_id)
             .bind(request.task_order)
             .execute(&self.pool)
@@ -160,7 +160,7 @@ impl TaskQueueService {
     }
 
     pub async fn complete_task(&self, request: TaskQueueRequest) -> WEResult<()> {
-        sqlx::query("call complete_task($1,$2)")
+        sqlx::query("call workflow.complete_task($1,$2)")
             .bind(request.workflow_run_id)
             .bind(request.task_order)
             .execute(&self.pool)
