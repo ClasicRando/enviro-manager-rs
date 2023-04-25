@@ -36,7 +36,7 @@ pub async fn shutdown_executor(
     }
 }
 
-/// API endpoint to the forceful shutdown of the exectuor specified by `executor_id`
+/// API endpoint to the forceful shutdown of the executor specified by `executor_id`
 #[patch("/executors/cancel/<executor_id>?<f>")]
 pub async fn cancel_executor(
     executor_id: ExecutorId,
