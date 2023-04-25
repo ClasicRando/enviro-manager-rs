@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env;
 
 use chrono::{NaiveDateTime, Utc};
 use lettre::{
@@ -54,8 +55,11 @@ impl JobWorker {
     /// Create a new job worker, initializing with a reference to a [JobsService] and creating a
     /// mailer to send job related emails to maintainers.
     pub async fn new(service: JobsService) -> WEResult<Self> {
-        let credentials = Credentials::from((env!("CLIPPY_USERNAME"), env!("CLIPPY_PASSWORD")));
-        let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(env!("CLIPPY_RELAY"))?
+        let username = env::var("CLIPPY_USERNAME")?;
+        let password = env::var("CLIPPY_PASSWORD")?;
+        let relay = env::var("CLIPPY_RELAY")?;
+        let credentials = Credentials::from((username, password));
+        let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(&relay)?
             .credentials(credentials)
             .build();
         Ok(Self {
