@@ -48,14 +48,7 @@ pub async fn cancel_workflow_run(
     service: &State<WorkflowRunsService>,
 ) -> ApiResponse<WorkflowRun> {
     match service.cancel(&workflow_run_id).await {
-        Ok(Some(workflow_run)) => ApiResponse::success(workflow_run, f),
-        Ok(None) => ApiResponse::failure(
-            format!(
-                "Error while trying to cancel a workflow run for workflow_run_id = {}",
-                workflow_run_id
-            ),
-            f,
-        ),
+        Ok(workflow_run) => ApiResponse::success(workflow_run, f),
         Err(error) => ApiResponse::error(error, f),
     }
 }
@@ -69,14 +62,7 @@ pub async fn schedule_workflow_run(
     service: &State<WorkflowRunsService>,
 ) -> ApiResponse<WorkflowRun> {
     match service.schedule(&workflow_run_id).await {
-        Ok(Some(workflow_run)) => ApiResponse::success(workflow_run, f),
-        Ok(None) => ApiResponse::failure(
-            format!(
-                "Error while trying to cancel workflow_run_id = {}",
-                workflow_run_id
-            ),
-            f,
-        ),
+        Ok(workflow_run) => ApiResponse::success(workflow_run, f),
         Err(error) => ApiResponse::error(error, f),
     }
 }
@@ -90,14 +76,7 @@ pub async fn restart_workflow_run(
     service: &State<WorkflowRunsService>,
 ) -> ApiResponse<WorkflowRun> {
     match service.restart(&workflow_run_id).await {
-        Ok(Some(workflow_run)) => ApiResponse::success(workflow_run, f),
-        Ok(None) => ApiResponse::failure(
-            format!(
-                "Error while trying to restart workflow_run_id = {}",
-                workflow_run_id
-            ),
-            f,
-        ),
+        Ok(workflow_run) => ApiResponse::success(workflow_run, f),
         Err(error) => ApiResponse::error(error, f),
     }
 }
