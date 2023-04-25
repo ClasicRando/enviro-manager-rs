@@ -222,41 +222,57 @@ impl WorkflowRunsService {
         Ok(result)
     }
 
-    pub async fn cancel(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
+    pub async fn cancel(&self, workflow_run_id: &WorkflowRunId) -> WEResult<WorkflowRun> {
         sqlx::query("call workflow.cancel_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        self.read_one(workflow_run_id).await
+        match self.read_one(workflow_run_id).await {
+            Ok(Some(workflow_run)) => Ok(workflow_run),
+            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
+            Err(error) => Err(error),
+        }
     }
 
-    pub async fn schedule(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
+    pub async fn schedule(&self, workflow_run_id: &WorkflowRunId) -> WEResult<WorkflowRun> {
         sqlx::query("call workflow.schedule_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        self.read_one(workflow_run_id).await
+        match self.read_one(&workflow_run_id).await {
+            Ok(Some(workflow_run)) => Ok(workflow_run),
+            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
+            Err(error) => Err(error),
+        }
     }
 
     pub async fn schedule_with_executor(
         &self,
         workflow_run_id: &WorkflowRunId,
         executor_id: &ExecutorId,
-    ) -> WEResult<Option<WorkflowRun>> {
+    ) -> WEResult<WorkflowRun> {
         sqlx::query("call workflow.schedule_workflow_run($1,$2)")
             .bind(workflow_run_id)
             .bind(executor_id)
             .execute(&self.pool)
             .await?;
-        self.read_one(workflow_run_id).await
+        match self.read_one(&workflow_run_id).await {
+            Ok(Some(workflow_run)) => Ok(workflow_run),
+            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
+            Err(error) => Err(error),
+        }
     }
 
-    pub async fn restart(&self, workflow_run_id: &WorkflowRunId) -> WEResult<Option<WorkflowRun>> {
+    pub async fn restart(&self, workflow_run_id: &WorkflowRunId) -> WEResult<WorkflowRun> {
         sqlx::query("call workflow.restart_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        self.read_one(workflow_run_id).await
+        match self.read_one(&workflow_run_id).await {
+            Ok(Some(workflow_run)) => Ok(workflow_run),
+            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
+            Err(error) => Err(error),
+        }
     }
 
     pub async fn complete(&self, workflow_run_id: &WorkflowRunId) -> WEResult<()> {
@@ -282,26 +298,28 @@ impl WorkflowRunsService {
         Ok(result)
     }
 
-    pub async fn start_move(
-        &self,
-        workflow_run_id: &WorkflowRunId,
-    ) -> WEResult<Option<WorkflowRun>> {
+    pub async fn start_move(&self, workflow_run_id: &WorkflowRunId) -> WEResult<WorkflowRun> {
         sqlx::query("call workflow.start_workflow_run_move($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        self.read_one(workflow_run_id).await
+        match self.read_one(&workflow_run_id).await {
+            Ok(Some(workflow_run)) => Ok(workflow_run),
+            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
+            Err(error) => Err(error),
+        }
     }
 
-    pub async fn complete_move(
-        &self,
-        workflow_run_id: &WorkflowRunId,
-    ) -> WEResult<Option<WorkflowRun>> {
+    pub async fn complete_move(&self, workflow_run_id: &WorkflowRunId) -> WEResult<WorkflowRun> {
         sqlx::query("call workflow.complete_workflow_run_move($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        self.read_one(workflow_run_id).await
+        match self.read_one(&workflow_run_id).await {
+            Ok(Some(workflow_run)) => Ok(workflow_run),
+            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
+            Err(error) => Err(error),
+        }
     }
 
     pub async fn scheduled_listener(&self, executor_id: &ExecutorId) -> WEResult<PgListener> {
