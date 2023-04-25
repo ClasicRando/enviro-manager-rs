@@ -35,7 +35,7 @@ pub enum Error {
     Lettre(#[from] EmailError),
     #[error("Email Address Error\n{0}")]
     AddressParseError(#[from] AddressError),
-    #[error("STMP Error\n{0}")]
+    #[error("SMTP Error\n{0}")]
     SmtpError(#[from] StmpError),
     #[error("{0}")]
     ParseInt(#[from] std::num::ParseIntError),
