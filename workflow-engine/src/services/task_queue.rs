@@ -225,12 +225,10 @@ impl TaskQueueService {
     }
 
     pub async fn run_task(&self, record: &TaskQueueRecord) -> WEResult<(bool, Option<String>)> {
-        let result = self
-            .pool
+        self.pool
             .close_event()
             .do_until(self.remote_task_run(record))
-            .await?;
-        result
+            .await?
     }
 
     pub async fn fail_task_run(&self, record: &TaskQueueRecord, error: WEError) -> WEResult<()> {
