@@ -1,5 +1,7 @@
 use log::{error, info};
-use workflow_engine::{create_jobs_service, JobWorker, Result as WEResult, database::create_db_pool};
+use workflow_engine::{
+    create_jobs_service, database::create_db_pool, JobWorker, Result as WEResult,
+};
 
 #[tokio::main]
 async fn main() -> WEResult<()> {

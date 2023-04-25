@@ -1,6 +1,7 @@
 use log::{error, info};
 use workflow_engine::{
-    create_executors_service, create_task_queue_service, create_workflow_runs_service, Executor, Result as WEResult, database::create_db_pool,
+    create_executors_service, create_task_queue_service, create_workflow_runs_service,
+    database::create_db_pool, Executor, Result as WEResult,
 };
 
 #[tokio::main]
@@ -23,9 +24,7 @@ async fn main() -> WEResult<()> {
 
     info!("Running Executor, id = {}", executor_id);
     if let Err(error) = executor.run().await {
-        executor_service
-            .post_error(&executor_id, error)
-            .await?;
+        executor_service.post_error(&executor_id, error).await?;
     }
     info!("Exiting executor, id = {}", executor_id);
     Ok(())

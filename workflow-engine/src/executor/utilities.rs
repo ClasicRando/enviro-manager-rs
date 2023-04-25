@@ -28,8 +28,7 @@ impl ExecutorNotificationSignal {
     pub fn is_cancelled(&self) -> bool {
         match self {
             ExecutorNotificationSignal::Cancel => true,
-            ExecutorNotificationSignal::Shutdown
-            | ExecutorNotificationSignal::NoOp => false,
+            ExecutorNotificationSignal::Shutdown | ExecutorNotificationSignal::NoOp => false,
         }
     }
 }

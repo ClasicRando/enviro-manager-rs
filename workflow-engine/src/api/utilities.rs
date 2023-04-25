@@ -17,10 +17,10 @@ pub enum Response<T: Serialize> {
 
 /// [Responder] object for the workflow engine API. The underlining [Response] object can be
 /// serialized as:
-/// 
+///
 /// - JSON
 /// - MessagePack
-/// 
+///
 /// Although there is no deep link between the [ApiResponse] enum and the [ApiFormatType] enum the
 /// two types should be kept with the same options to ensure expected behaviour.
 #[derive(Responder)]
@@ -74,10 +74,10 @@ impl<T: Serialize> ApiResponse<T> {
 }
 
 /// API response formatting types. The allowed serialization methods are:
-/// 
+///
 /// - JSON
 /// - MessagePack
-/// 
+///
 /// Although there is no deep link between the [ApiResponse] enum and the [ApiFormatType] enum the
 /// two types should be kept with the same options to ensure expected behaviour.
 pub enum ApiFormatType {

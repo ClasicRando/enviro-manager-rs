@@ -327,7 +327,7 @@ impl Executor {
 
     /// Handle a notification through the workflow run scheduled channel. If the notification is
     /// received successfully, the executor is told to start the loop over again, exiting listen
-    /// mode to handle new workflow runs. 
+    /// mode to handle new workflow runs.
     fn handle_workflow_run_scheduled_notification(
         &self,
         result: Result<PgNotification, SqlError>,
@@ -445,7 +445,7 @@ impl Executor {
     }
 
     /// Complete a workflow run handle when attempting to shutdown workers. Checks the handle to
-    /// see if it is already completed (while returning false). If the handle is not complete, and 
+    /// see if it is already completed (while returning false). If the handle is not complete, and
     /// the executor is in the process of being cancelled, the handle is aborted before starting
     /// the move of the workflow run to the next available executor.
     async fn finish_handle(
