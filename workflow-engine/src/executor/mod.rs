@@ -47,7 +47,25 @@ enum ExecutorNextOperation {
     Listen,
 }
 
+/// Main unit of work for the workflow engine. Manages
+/// [WorkflowRunWorker][crate::executor::WorkflowRunWorker] instances that are delegated to the
+/// [Executor] instance. Operates through the creation of an [Executor] using [Executor::new],
+/// followed by a call to [Executor::run] to allow the [Executor] to operate and pick up new
+/// workflow runs. Under the hood, the [Executor] spawns tokio [tasks][tokio::spawn] to handle each
+/// workflow run, calling the linked task service for the current task.
 ///
+/// Running of an [Executor] works in 2 stages, changing based upon notification or data available
+/// from the database. The first mode is the active mode. During this operation, the [Executor] is
+/// listening for changes in executor status, shutdown signals from the application runner (ctrl+c)
+/// and workflow run cancel notification. It is also checking for new workflow runs to claim and
+/// run. If no workflow runs are available, the [Executor] enters a listen mode where it still
+/// listens for the previous notifications/signals but also listens for new workflow runs scheduled
+/// for pick-up.
+///
+/// After the [Executor] has completed it's run (either through graceful shutdown, cancel or error)
+/// the [Executor] enters shutdown and cleaning mode to free workflow runs that are currently in
+/// progress (if any). After cleaning all relevant resources, the [Executor] instance is dropped to
+/// avoid any issues with held services or workflow run handles.
 pub struct Executor {
     executor_id: ExecutorId,
     executor_service: ExecutorsService,
@@ -374,7 +392,7 @@ impl Executor {
 
     /// Process a workflow run that is owned by the current executor, but missing a workflow run
     /// handle. Handles 3 cases:
-    /// - workflow run if valid - cancel workflow run and exit
+    /// - workflow run if invalid - cancel workflow run and exit
     /// - workflow run has status of 'Running' - spawn workflow, add handle and exit
     /// - else - restart the workflow run and schedule for the current executor
     async fn process_unknown_run(&mut self, workflow_run: ExecutorWorkflowRun) -> WEResult<()> {
