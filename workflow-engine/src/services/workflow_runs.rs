@@ -262,7 +262,7 @@ impl WorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        match self.read_one(&workflow_run_id).await {
+        match self.read_one(workflow_run_id).await {
             Ok(Some(workflow_run)) => Ok(workflow_run),
             Ok(None) => Err(sqlx::Error::RowNotFound.into()),
             Err(error) => Err(error),
@@ -282,7 +282,7 @@ impl WorkflowRunsService {
             .bind(executor_id)
             .execute(&self.pool)
             .await?;
-        match self.read_one(&workflow_run_id).await {
+        match self.read_one(workflow_run_id).await {
             Ok(Some(workflow_run)) => Ok(workflow_run),
             Ok(None) => Err(sqlx::Error::RowNotFound.into()),
             Err(error) => Err(error),
@@ -297,7 +297,7 @@ impl WorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        match self.read_one(&workflow_run_id).await {
+        match self.read_one(workflow_run_id).await {
             Ok(Some(workflow_run)) => Ok(workflow_run),
             Ok(None) => Err(sqlx::Error::RowNotFound.into()),
             Err(error) => Err(error),
@@ -338,7 +338,7 @@ impl WorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        match self.read_one(&workflow_run_id).await {
+        match self.read_one(workflow_run_id).await {
             Ok(Some(workflow_run)) => Ok(workflow_run),
             Ok(None) => Err(sqlx::Error::RowNotFound.into()),
             Err(error) => Err(error),
@@ -354,7 +354,7 @@ impl WorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        match self.read_one(&workflow_run_id).await {
+        match self.read_one(workflow_run_id).await {
             Ok(Some(workflow_run)) => Ok(workflow_run),
             Ok(None) => Err(sqlx::Error::RowNotFound.into()),
             Err(error) => Err(error),
