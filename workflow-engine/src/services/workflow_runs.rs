@@ -15,6 +15,7 @@ use sqlx::{
 };
 
 use crate::error::{Error as WEError, Result as WEResult};
+use crate::services::workflows::WorkflowId;
 
 use super::{executors::ExecutorId, task_queue::TaskRule, tasks::TaskStatus};
 
@@ -197,7 +198,7 @@ impl WorkflowRunsService {
 
     /// Initialize a new workflow run for the specified `workflow_id`. Returns the new [WorkflowRun]
     /// instance.
-    pub async fn initialize(&self, workflow_id: i64) -> WEResult<WorkflowRun> {
+    pub async fn initialize(&self, workflow_id: &WorkflowId) -> WEResult<WorkflowRun> {
         let workflow_run_id = sqlx::query_scalar("select workflow.initialize_workflow_run($1)")
             .bind(workflow_id)
             .fetch_one(&self.pool)

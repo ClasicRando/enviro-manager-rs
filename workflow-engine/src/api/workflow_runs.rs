@@ -3,6 +3,7 @@ use rocket::{get, patch, post, put, State};
 use super::utilities::{ApiFormatType, ApiResponse};
 
 use crate::services::workflow_runs::{WorkflowRun, WorkflowRunId, WorkflowRunsService};
+use crate::services::workflows::WorkflowId;
 
 /// API endpoint to fetch the specified workflow run by the `workflow_run_id`. Returns a single
 /// [WorkflowRun] if the run can be found
@@ -29,11 +30,11 @@ pub async fn workflow_runs(
 /// [WorkflowRun] if the `workflow_id` is valid and the init does not fail.
 #[post("/workflow_runs/init/<workflow_id>?<f>")]
 pub async fn init_workflow_run(
-    workflow_id: i64,
+    workflow_id: WorkflowId,
     f: ApiFormatType,
     service: &State<WorkflowRunsService>,
 ) -> ApiResponse<WorkflowRun> {
-    match service.initialize(workflow_id).await {
+    match service.initialize(&workflow_id).await {
         Ok(workflow_run) => ApiResponse::success(workflow_run, f),
         Err(error) => ApiResponse::error(error, f),
     }
