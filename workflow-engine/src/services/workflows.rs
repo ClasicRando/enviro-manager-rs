@@ -12,7 +12,7 @@ use crate::error::{Error as WEError, Result as WEResult};
 /// data you would find in `task.workflow_tasks` as well as task details from `task.tasks` and the
 /// task service information fetched from `task.task_services`. Backed by a composite type in the
 /// Postgresql database.
-#[derive(sqlx::Type, Serialize, Deserialize)]
+#[derive(sqlx::Type, Serialize, Deserialize, Debug)]
 #[sqlx(type_name = "workflow_task")]
 pub struct WorkflowTask {
     task_order: i32,
@@ -63,7 +63,7 @@ pub struct WorkflowDeprecationRequest {
 
 /// Query result from the `workflow.v_workflows` view. Represents a workflow entry with all the
 /// tasks packed into an array.
-#[derive(sqlx::FromRow, Serialize, Deserialize)]
+#[derive(sqlx::FromRow, Serialize, Deserialize, Debug)]
 pub struct Workflow {
     workflow_id: i64,
     name: String,
@@ -161,5 +161,230 @@ impl WorkflowsService {
             .execute(&self.pool)
             .await?;
         Ok(request.workflow_id)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use sqlx::PgPool;
+
+    use super::{
+        WorkflowDeprecationRequest, WorkflowId, WorkflowRequest, WorkflowTaskRequest,
+        WorkflowsService,
+    };
+    use crate::{database::create_test_db_pool, services::workflows::Workflow, Result as WEResult};
+
+    async fn clean_test_workflow(workflow_name: &str, pool: &PgPool) -> WEResult<()> {
+        sqlx::query(
+            r#"
+            with workflows as (
+                delete from task.workflow_tasks wt
+                using workflow.workflows w
+                where
+                    w.name = $1
+                    and wt.workflow_id = w.workflow_id
+                returning wt.workflow_id
+            )
+            delete from workflow.workflows w1
+            using (
+                select w1.workflow_id
+                from workflows w1
+                union
+                select w2.workflow_id
+                from workflow.workflows w2
+                where w2.name = $2
+            ) w2
+            where w1.workflow_id = w2.workflow_id"#,
+        )
+        .bind(workflow_name)
+        .bind(workflow_name)
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn reset_base_test_workflow(pool: &PgPool) -> WEResult<()> {
+        sqlx::query(
+            r#"
+            update workflow.workflows
+            set
+                is_deprecated = false,
+                new_workflow = null
+            where workflow_id = 1"#,
+        )
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn create() -> WEResult<()> {
+        let pool = create_test_db_pool().await?;
+        let service = WorkflowsService::new(&pool);
+        let workflow_name = "Create test";
+        let task_id = 1;
+        let parameters = None;
+
+        let request = WorkflowRequest {
+            name: String::from(workflow_name),
+            tasks: vec![WorkflowTaskRequest {
+                task_id,
+                parameters,
+            }],
+        };
+
+        let workflow = service.create(request).await?;
+
+        assert_eq!(workflow.name, workflow_name);
+        assert_eq!(workflow.tasks.len(), 1);
+        assert_eq!(workflow.tasks[0].task_id, task_id);
+
+        clean_test_workflow(workflow_name, &pool).await?;
+        let workflow = service.read_one(&WorkflowId(workflow.workflow_id)).await?;
+        assert!(workflow.is_none());
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn read_one_should_return_some_when_record_exists() -> WEResult<()> {
+        let pool = create_test_db_pool().await?;
+        let service = WorkflowsService::new(&pool);
+        let workflow_id = 1;
+        let workflow_name = "test";
+        let task_id = 1;
+
+        let Some(workflow) = service.read_one(&WorkflowId(workflow_id)).await? else {
+            panic!("Record not found")
+        };
+
+        assert_eq!(workflow.name, workflow_name);
+        assert_eq!(workflow.tasks.len(), 1);
+        assert_eq!(workflow.tasks[0].task_id, task_id);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn read_one_should_return_none_when_record_exists() -> WEResult<()> {
+        let pool = create_test_db_pool().await?;
+        let service = WorkflowsService::new(&pool);
+        let workflow_id = -1;
+
+        let result = service.read_one(&WorkflowId(workflow_id)).await?;
+
+        assert!(result.is_none());
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn read_many() -> WEResult<()> {
+        let pool = create_test_db_pool().await?;
+        let service = WorkflowsService::new(&pool);
+
+        let workflows = service.read_many().await?;
+
+        assert!(workflows.len() > 0);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn deprecate_workflow_with_no_new_workflow() -> WEResult<()> {
+        let pool = create_test_db_pool().await?;
+        let service = WorkflowsService::new(&pool);
+
+        let workflow_name = "deprecate no new workflow test";
+        let task_id = 1;
+        let parameters = None;
+
+        let request = WorkflowRequest {
+            name: String::from(workflow_name),
+            tasks: vec![WorkflowTaskRequest {
+                task_id,
+                parameters,
+            }],
+        };
+
+        let Workflow {
+            workflow_id: created_workflow_id,
+            ..
+        } = service.create(request).await?;
+
+        let request = WorkflowDeprecationRequest {
+            workflow_id: created_workflow_id,
+            new_workflow_id: None,
+        };
+
+        let return_workflow_id = service.deprecate(request).await?;
+        let (is_deprecated, new_workflow_id): (bool, Option<i64>) = sqlx::query_as(
+            r#"
+            select w.is_deprecated, w.new_workflow
+            from workflow.workflows w
+            where w.workflow_id = $1"#,
+        )
+        .bind(created_workflow_id)
+        .fetch_one(&pool)
+        .await?;
+
+        assert_eq!(created_workflow_id, return_workflow_id);
+        assert_eq!(new_workflow_id, None);
+        assert!(is_deprecated);
+
+        reset_base_test_workflow(&pool).await?;
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn deprecate_workflow_with_new_workflow() -> WEResult<()> {
+        let pool = create_test_db_pool().await?;
+        let service = WorkflowsService::new(&pool);
+        let workflow_id = 1;
+        let new_workflow_name = "deprecate workflow new workflow test";
+        let task_id = 1;
+        let parameters = None;
+
+        let request = WorkflowRequest {
+            name: String::from(new_workflow_name),
+            tasks: vec![WorkflowTaskRequest {
+                task_id,
+                parameters,
+            }],
+        };
+
+        let Workflow {
+            workflow_id: created_workflow_id,
+            ..
+        } = service.create(request).await?;
+
+        let request = WorkflowDeprecationRequest {
+            workflow_id,
+            new_workflow_id: Some(created_workflow_id),
+        };
+
+        let return_workflow_id = service.deprecate(request).await?;
+        let (is_deprecated, new_workflow_id): (bool, Option<i64>) = sqlx::query_as(
+            r#"
+            select w.is_deprecated, w.new_workflow
+            from workflow.workflows w
+            where w.workflow_id = $1"#,
+        )
+        .bind(workflow_id)
+        .fetch_one(&pool)
+        .await?;
+
+        assert_eq!(workflow_id, return_workflow_id);
+        assert_eq!(new_workflow_id, Some(created_workflow_id));
+        assert!(is_deprecated);
+
+        clean_test_workflow(new_workflow_name, &pool).await?;
+        let workflow = service.read_one(&WorkflowId(created_workflow_id)).await?;
+        assert!(workflow.is_none());
+
+        reset_base_test_workflow(&pool).await?;
+
+        Ok(())
     }
 }
