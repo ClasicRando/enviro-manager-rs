@@ -29,17 +29,21 @@ begin
             returning t.task_id into v_task_id;
     end;
 
-    begin
-        select w.workflow_id
-        into strict v_workflow_id
-        from workflow.workflows w
-        where w.name = 'test';
-    exception
-        when no_data_found then
-            insert into workflow.workflows as w (name)
-            values('test')
-            returning w.workflow_id into v_workflow_id;
-    end;
+    merge into workflow.workflows w
+    using (values('test')) v(name)
+    on (w.name = v.name)
+    when matched then
+    update set
+        is_deprecated = false,
+        new_workflow = null
+    when not matched then
+    insert(name)
+    values(v.name);
+
+    select w.workflow_id
+    into strict v_workflow_id
+    from workflow.workflows w
+    where w.name = 'test';
 
     if not exists (
         select 1
