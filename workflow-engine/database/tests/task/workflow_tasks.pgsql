@@ -12,14 +12,6 @@ declare
     v_hint text;
     v_context text;
 begin
-    delete from task.workflow_tasks wt
-    using workflow.workflows w
-    where
-        wt.workflow_id = w.workflow_id
-        and w.name = v_workflow_name;
-    
-    delete from workflow.workflows w
-    where w.name = v_workflow_name;
     
     v_workflow_id := workflow.create_workflow(v_workflow_name, v_tasks);
     v_unexpected_exit := true;
@@ -107,4 +99,14 @@ begin
     if v_unexpected_exit then
         raise exception 'Unexpected exit of block without capturing an exception';
     end if;
+
+    -- cleanup entries when exiting
+    delete from task.workflow_tasks wt
+    using workflow.workflows w
+    where
+        wt.workflow_id = w.workflow_id
+        and w.name = v_workflow_name;
+    
+    delete from workflow.workflows w
+    where w.name = v_workflow_name;
 end;
