@@ -5,17 +5,19 @@ declare
     v_executor_id bigint;
     v_workflow_run_id bigint;
 begin
-    begin
-        select t.service_id
-        into strict v_task_service_id
-        from task.task_services t
-        where t.name = 'test';
-    exception
-        when no_data_found then
-            insert into task.task_services as t (name, base_url)
-            values('test', 'http:\\test')
-            returning t.service_id into v_task_service_id;
-    end;
+    merge into task.task_services t
+    using (values('test','http://127.0.0.1')) v(name, base_url)
+    on (t.name = v.name)
+    when matched then
+    update set base_url = v.base_url
+    when not matched then
+    insert(name, base_url)
+    values(v.name, v.base_url);
+
+    select t.service_id
+    into strict v_task_service_id
+    from task.task_services t
+    where t.name = 'test';
 
     begin
         select t.task_id
