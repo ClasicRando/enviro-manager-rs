@@ -13,7 +13,6 @@ use sqlx::{
 };
 
 use super::workflow_runs::WorkflowRunId;
-
 use crate::error::{Error as WEError, Result as WEResult};
 
 /// Check performed during a task run to validate the current state of a task or the system that the
@@ -38,6 +37,7 @@ impl Encode<'_, Postgres> for TaskRule {
         encoder.finish();
         IsNull::No
     }
+
     fn size_hint(&self) -> usize {
         3usize * (4 + 4)
             + <String as Encode<Postgres>>::size_hint(&self.name)
