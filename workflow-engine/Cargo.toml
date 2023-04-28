@@ -5,4 +5,33 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "we_db_build"
+
+[[bin]]
+name = "we_executor"
+
+[[bin]]
+name = "we_job_worker"
+
+[[bin]]
+name = "we_api_server"
+
 [dependencies]
+sqlx = { workspace = true }
+tokio = { workspace = true }
+async-once-cell = { workspace = true }
+once_cell = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+log4rs = { workspace = true }
+chrono = { workspace = true }
+rmp-serde = { workspace = true }
+futures = { workspace = true }
+reqwest = { workspace = true }
+lettre = { version = "0.10.1", features = ["tokio1", "tokio1-native-tls"] }
+rocket = { workspace = true }
+thiserror = { workspace = true }
+indoc = { workspace = true }
+common = { path = "../common" }

@@ -1,0 +1,48 @@
+appenders:
+  stdout:
+    kind: console
+    encoder:
+      pattern: "{h({d(%Y-%m-%d %H:%M:%S)(utc)} | {({l}):5.5} | {f}:{L} - {m}{n})}"
+
+  all:
+    kind: rolling_file
+    path: "log/we_executor_all.log"
+    append: true
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)(utc)} | {({l}):5.5} | {f}:{L} - {m}{n}"
+    policy:
+      trigger:
+        kind: size
+        limit: 50mb
+      roller:
+        kind: fixed_window
+        base: 1
+        count: 10
+        pattern: "log/we_executor_all{}.log"
+
+  errors:
+    kind: rolling_file
+    path: "log/we_executor_errors.log"
+    append: true
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)(utc)} | {({l}):5.5} | {f}:{L} - {m}{n}"
+    filters:
+      - kind: threshold
+        level: error
+    policy:
+      trigger:
+        kind: size
+        limit: 50kb
+      roller:
+        kind: fixed_window
+        base: 1
+        count: 10
+        pattern: "log/we_executor_errors{}.log"
+
+root:
+  level: info
+  appenders:
+    - stdout
+    - all
+    - errors
+    - warnings

@@ -1,0 +1,42 @@
+{
+    "common_dependencies": ["data_check"],
+    "entries": [
+        {
+            "name": "schema.pgsql",
+            "dependencies": []
+        },
+        {
+            "name": "audit_action.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "logged_actions.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "audit_action.pgsql"
+            ]
+        },
+        {
+            "name": "if_modified_func.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "logged_actions.pgsql"
+            ]
+        },
+        {
+            "name": "audit_table.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "if_modified_func.pgsql"
+            ]
+        },
+        {
+            "name": "tables_list.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        }
+    ]
+}

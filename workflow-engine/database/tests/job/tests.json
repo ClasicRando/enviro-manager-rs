@@ -1,0 +1,10 @@
+[
+    {
+        "name": "next_run_job_schedule.pgsql",
+        "rollback": false
+    },
+    {
+        "name": "valid_job_schedule.pgsql",
+        "rollback": false
+    }
+]

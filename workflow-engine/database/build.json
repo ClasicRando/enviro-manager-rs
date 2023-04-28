@@ -1,0 +1,547 @@
+{
+    "common_dependencies": [
+        "data_check",
+        "audit"
+    ],
+    "entries": [
+        {
+            "name": "schema.pgsql",
+            "dependencies": []
+        },
+        {
+            "name": "task/are_valid_task_rules.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_rule.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/workflows.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "task/task_rule.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/workflow_run_status.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "task/task_status.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "executor/executor_status.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "task/workflow_run_task.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_status.pgsql",
+                "task/task_rule.pgsql"
+            ]
+        },
+        {
+            "name": "task/tasks.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_services.pgsql"
+            ]
+        },
+        {
+            "name": "task/task_services.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "task/workflow_tasks.pgsql",
+            "dependencies": [
+                "workflow/workflows.pgsql",
+                "task/tasks.pgsql",
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "executor/executors.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "executor/executor_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/workflow_runs.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflow_run_status.pgsql",
+                "workflow/workflows.pgsql",
+                "executor/executors.pgsql"
+            ],
+            "soft-dependencies": [
+                "job/jobs.pgsql"
+            ]
+        },
+        {
+            "name": "executor/v_executors.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "executor/executor_status.pgsql",
+                "executor/executors.pgsql"
+            ]
+        },
+        {
+            "name": "executor/v_active_executors.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "executor/executor_status.pgsql",
+                "executor/executors.pgsql",
+                "executor/v_executors.pgsql"
+            ]
+        },
+        {
+            "name": "executor/next_executor.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "executor/v_active_executors.pgsql"
+            ]
+        },
+        {
+            "name": "task/task_queue.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "task/tasks.pgsql",
+                "task/task_status.pgsql",
+                "task/task_rule.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/v_workflow_runs.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/workflow_run_task.pgsql",
+                "task/task_queue.pgsql",
+                "task/tasks.pgsql",
+                "workflow/workflow_runs.pgsql"
+            ]
+        },
+        {
+            "name": "task/task_queue_archive.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_status.pgsql",
+                "task/task_rule.pgsql"
+            ]
+        },
+        {
+            "name": "executor/register_executor.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "executor/executors.pgsql"
+            ]
+        },
+        {
+            "name": "executor/close_executor.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "executor/executors.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "task/task_queue.pgsql",
+                "workflow/workflow_run_status.pgsql",
+                "executor/executor_status.pgsql",
+                "task/task_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/next_workflow.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_status.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "workflow/workflow_run_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/start_workflow_run.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "workflow/workflow_run_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/next_task.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_queue.pgsql",
+                "task/v_tasks.pgsql",
+                "task/task_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/start_task_run.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/complete_task_run.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/fail_task_run.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/complete_workflow_run.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_status.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "workflow/workflow_run_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/cancel_workflow_run.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "task/task_queue.pgsql",
+                "workflow/workflow_run_status.pgsql",
+                "task/task_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/schedule_workflow_run.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "workflow/workflow_run_status.pgsql"
+            ]
+        },
+        {
+            "name": "executor/cancel_executor.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "executor/executors.pgsql",
+                "executor/executor_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/initialize_workflow_run.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflows.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "task/task_queue.pgsql",
+                "task/workflow_tasks.pgsql",
+                "task/tasks.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/append_task_rule.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_rule.pgsql",
+                "task/task_status.pgsql"
+            ]
+        },
+        {
+            "name": "executor/all_executor_workflows.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_status.pgsql"
+            ]
+        },
+        {
+            "name": "executor/clean_executors.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "executor/executors.pgsql",
+                "executor/executor_status.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_status.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "workflow/workflow_run_status.pgsql"
+            ]
+        },
+        {
+            "name": "executor/post_executor_error_message.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "executor/executors.pgsql"
+            ]
+        },
+        {
+            "name": "executor/shutdown_executor.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "executor/executors.pgsql",
+                "executor/executor_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/start_workflow_run_move.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/complete_workflow_run_move.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_status.pgsql"
+            ]
+        },
+        {
+            "name": "task/workflow_task.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/v_workflows.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/workflow_task.pgsql",
+                "task/workflow_tasks.pgsql",
+                "task/v_tasks.pgsql",
+                "workflow/workflows.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/deprecate_workflow.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflows.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/v_workflow_runs.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/workflow_run_task.pgsql",
+                "task/task_queue.pgsql",
+                "task/tasks.pgsql",
+                "workflow/workflow_runs.pgsql"
+            ]
+        },
+        {
+            "name": "task/workflow_task_request.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/create_workflow.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflows.pgsql",
+                "task/workflow_tasks.pgsql",
+                "task/workflow_task_request.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/restart_workflow_run.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "workflow/workflow_run_status.pgsql",
+                "task/task_queue_archive.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/retry_task.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_status.pgsql",
+                "task/task_queue_archive.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "workflow/workflow_run_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/complete_task.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_status.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "workflow/workflow_run_status.pgsql"
+            ]
+        },
+        {
+            "name": "job/job_type.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "job/schedule_entry.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "job/valid_job_schedule.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "job/schedule_entry.pgsql"
+            ]
+        },
+        {
+            "name": "job/next_run_job_schedule.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "job/schedule_entry.pgsql"
+            ]
+        },
+        {
+            "name": "job/jobs.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflows.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "job/job_type.pgsql"
+            ]
+        },
+        {
+            "name": "job/create_interval_job.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "job/job_type.pgsql",
+                "job/jobs.pgsql"
+            ]
+        },
+        {
+            "name": "job/create_scheduled_job.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "job/job_type.pgsql",
+                "job/jobs.pgsql",
+                "job/schedule_entry.pgsql",
+                "job/next_run_job_schedule.pgsql"
+            ]
+        },
+        {
+            "name": "job/v_jobs.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "job/jobs.pgsql",
+                "workflow/workflows.pgsql",
+                "workflow/workflow_runs.pgsql"
+            ]
+        },
+        {
+            "name": "job/v_queued_jobs.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "job/jobs.pgsql",
+                "workflow/workflow_runs.pgsql",
+                "workflow/workflow_run_status.pgsql"
+            ]
+        },
+        {
+            "name": "job/run_job.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "job/jobs.pgsql",
+                "workflow/initialize_workflow_run.pgsql",
+                "workflow/schedule_workflow_run.pgsql",
+                "job/job_type.pgsql"
+            ]
+        },
+        {
+            "name": "job/complete_job.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "job/jobs.pgsql",
+                "workflow/workflow_run_status.pgsql",
+                "workflow/workflow_runs.pgsql"
+            ]
+        },
+        {
+            "name": "task/v_tasks.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/tasks.pgsql",
+                "task/task_services.pgsql"
+            ]
+        },
+        {
+            "name": "task/create_task.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/tasks.pgsql"
+            ]
+        },
+        {
+            "name": "task/update_task.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/tasks.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/set_task_progress.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "task/task_queue.pgsql",
+                "task/task_rule.pgsql",
+                "task/task_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/process_next_workflow.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/next_workflow.pgsql",
+                "workflow/start_workflow_run.pgsql",
+                "workflow/complete_workflow_run.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/acquire_next_task.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/next_task.pgsql",
+                "workflow/start_task_run.pgsql"
+            ]
+        }
+    ]
+}

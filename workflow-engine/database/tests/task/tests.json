@@ -1,0 +1,10 @@
+[
+    {
+        "name": "are_valid_task_rules.pgsql",
+        "rollback": true
+    },
+    {
+        "name": "workflow_tasks.pgsql",
+        "rollback": false
+    }
+]

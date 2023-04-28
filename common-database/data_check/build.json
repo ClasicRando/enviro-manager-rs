@@ -1,0 +1,39 @@
+{
+    "common_dependencies": [],
+    "entries": [
+        {
+            "name": "schema.pgsql",
+            "dependencies": []
+        },
+        {
+            "name": "check_not_blank_or_empty.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "check_array_not_blank_or_empty.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "check_function_definition.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "check_enum_definition.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "check_composite_definition.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        }
+    ]
+}
