@@ -20,8 +20,6 @@ name = "we_api_server"
 [dependencies]
 sqlx = { workspace = true }
 tokio = { workspace = true }
-async-once-cell = { workspace = true }
-once_cell = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
