@@ -1,13 +1,13 @@
 use std::env;
 
-use crate::Result as WEResult;
+use common::error::EmResult;
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
     PgPool,
 };
 
 /// Return database connect options
-fn db_options() -> WEResult<PgConnectOptions> {
+fn db_options() -> EmResult<PgConnectOptions> {
     let port = env::var("WE_PORT")?
         .parse()
         .expect("Port environment variable is not an integer");
@@ -21,7 +21,7 @@ fn db_options() -> WEResult<PgConnectOptions> {
 }
 
 /// Return test database connect options
-fn test_db_options() -> WEResult<PgConnectOptions> {
+fn test_db_options() -> EmResult<PgConnectOptions> {
     let port = env::var("WE_TEST_PORT")?
         .parse()
         .expect("Port environment variable is not an integer");
@@ -35,7 +35,7 @@ fn test_db_options() -> WEResult<PgConnectOptions> {
 }
 
 /// Return a new pool of postgres connections
-pub async fn create_db_pool() -> WEResult<PgPool> {
+pub async fn create_db_pool() -> EmResult<PgPool> {
     let options = db_options()?;
     let pool = PgPoolOptions::new()
         .min_connections(10)
@@ -46,7 +46,7 @@ pub async fn create_db_pool() -> WEResult<PgPool> {
 }
 
 /// Return a new pool of postgres connections for the test database
-pub async fn create_test_db_pool() -> WEResult<PgPool> {
+pub async fn create_test_db_pool() -> EmResult<PgPool> {
     let options = test_db_options()?;
     let pool = PgPoolOptions::new().connect_with(options).await?;
     Ok(pool)

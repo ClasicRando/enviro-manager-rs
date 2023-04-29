@@ -1,8 +1,9 @@
 use log::{error, warn};
-use rocket::form::{self, FromFormField, ValueField};
-use rocket::response::Responder;
-use rocket::serde::json::Json;
-use rocket::serde::msgpack::MsgPack;
+use rocket::{
+    form::{self, FromFormField, ValueField},
+    response::Responder,
+    serde::{json::Json, msgpack::MsgPack},
+};
 use serde::Serialize;
 
 /// Generic response object within an API response. A response is either a success containing data,

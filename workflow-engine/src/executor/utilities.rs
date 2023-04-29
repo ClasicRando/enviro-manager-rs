@@ -1,10 +1,11 @@
+use common::error::EmError;
 use tokio::task::JoinHandle;
 
-use crate::{error::Error, services::workflow_runs::WorkflowRunId};
+use crate::services::workflow_runs::WorkflowRunId;
 
 /// Type alias for a workflow run worker result. Represents a tokio task [JoinHandle] returning a
 /// tuple of [WorkflowRunId] and an optional error if the workflow run failed.
-pub type WorkflowRunWorkerResult = JoinHandle<(WorkflowRunId, Option<Error>)>;
+pub type WorkflowRunWorkerResult = JoinHandle<(WorkflowRunId, Option<EmError>)>;
 
 /// Executor status notification payload values
 pub enum ExecutorNotificationSignal {

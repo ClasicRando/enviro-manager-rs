@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use std::env;
+use std::{collections::HashMap, env};
 
 use chrono::{NaiveDateTime, Utc};
+use common::error::{EmError, EmResult};
 use lettre::{
     transport::smtp::authentication::Credentials, AsyncSmtpTransport, AsyncTransport, Message,
     Tokio1Executor,
@@ -13,10 +13,7 @@ use tokio::{
     time::{sleep as tokio_sleep, Duration as StdDuration},
 };
 
-use crate::{
-    services::jobs::{Job, JobId, JobsService},
-    Error as WEError, Result as WEResult,
-};
+use crate::services::jobs::{Job, JobId, JobsService};
 
 /// Action to perform after receiving a job worker notification. Notification payload should be a
 /// workflow run id (as an i64/bigint) to tell the job worker a job has been completed or an empty
@@ -27,7 +24,7 @@ enum NotificationAction {
 }
 
 impl TryFrom<PgNotification> for NotificationAction {
-    type Error = WEError;
+    type Error = EmError;
 
     fn try_from(value: PgNotification) -> Result<Self, Self::Error> {
         let payload = value.payload();
@@ -35,7 +32,7 @@ impl TryFrom<PgNotification> for NotificationAction {
             return Ok(NotificationAction::LoadJobs);
         }
         let Ok(job_id) = payload.parse::<i64>() else {
-            return Err(WEError::PayloadParseError(payload.to_owned()))
+            return Err(EmError::PayloadParseError(payload.to_owned()))
         };
         info!("Received notification of \"{}\"", payload);
         Ok(NotificationAction::CompleteJob(job_id.into()))
@@ -54,7 +51,7 @@ pub struct JobWorker {
 impl JobWorker {
     /// Create a new job worker, initializing with a reference to a [JobsService] and creating a
     /// mailer to send job related emails to maintainers.
-    pub async fn new(service: JobsService) -> WEResult<Self> {
+    pub async fn new(service: JobsService) -> EmResult<Self> {
         let username = env::var("CLIPPY_USERNAME")?;
         let password = env::var("CLIPPY_PASSWORD")?;
         let relay = env::var("CLIPPY_RELAY")?;
@@ -73,7 +70,7 @@ impl JobWorker {
     /// Run the main action of the worker. Continuously listens for notification and executes the
     /// next job when ready. If there are no jobs available for the worker, it will wait for a
     /// shutdown signal (ctrl+c) or a new notification to load jobs.
-    pub async fn run(mut self) -> WEResult<()> {
+    pub async fn run(mut self) -> EmResult<()> {
         let mut job_channel = self.service.listener().await?;
         self.load_jobs().await?;
         loop {
@@ -112,7 +109,7 @@ impl JobWorker {
     /// with a duplicate job id, an error will be returned (although this should never happen
     /// unless the database is corrupt/altered). Once jobs are fetched, if any jobs exist, the
     /// first available job will be queued as the next job.
-    async fn load_jobs(&mut self) -> WEResult<()> {
+    async fn load_jobs(&mut self) -> EmResult<()> {
         info!("Requesting new job queue");
         let jobs = self.service.read_queued().await?;
         self.jobs.clear();
@@ -120,7 +117,7 @@ impl JobWorker {
         for job in jobs {
             let job_id = job.job_id.into();
             if let Some(duplicate) = self.jobs.get(&job_id) {
-                return Err(WEError::DuplicateJobId(
+                return Err(EmError::DuplicateJobId(
                     job.job_id,
                     [job.next_run, duplicate.to_owned()],
                 ));
@@ -134,7 +131,7 @@ impl JobWorker {
     /// notification is [NotificationAction::LoadJobs] then the jobs cache will be refreshed. If
     /// the notification is [NotificationAction::CompleteJob] the the inner `job_id` will be used
     /// to mark a job as complete and jobs list will be refreshed.
-    async fn handle_notification(&mut self, notification: PgNotification) -> WEResult<()> {
+    async fn handle_notification(&mut self, notification: PgNotification) -> EmResult<()> {
         let action = match NotificationAction::try_from(notification) {
             Ok(action) => action,
             Err(error) => return Err(error),
@@ -153,7 +150,7 @@ impl JobWorker {
     /// run, where the job is marked with that new workflow run id. If the run is too early an
     /// error message is printed but the worker does not fail. Instead an early exit happens and a
     /// queue refresh should follow.
-    async fn run_next_job(&self) -> WEResult<()> {
+    async fn run_next_job(&self) -> EmResult<()> {
         let Some(next_run) = self.jobs.get(&self.next_job) else {
             warn!("Attempted to run a job that is not in the job queue. Job_id = {}", self.next_job);
             return Ok(())
@@ -174,7 +171,7 @@ impl JobWorker {
     /// Complete the specified job after the workflow run is complete. If something went wrong or
     /// the job failed, the maintainer of the job will be notified with an email. If the `job_id`
     /// is not valid then warning messages will be printed but the worker will continue.
-    async fn complete_job(&self, job_id: &JobId) -> WEResult<()> {
+    async fn complete_job(&self, job_id: &JobId) -> EmResult<()> {
         if !self.jobs.contains_key(job_id) {
             warn!(
                 "Received a message to complete a job that is not in the job queue. Job_id = {}",
@@ -187,7 +184,7 @@ impl JobWorker {
             return Ok(())
         };
         info!("Completing run for job_id = {}", job_id);
-        let Err(WEError::Generic(error)) = self.service.complete_job(job_id).await else {
+        let Err(EmError::Generic(error)) = self.service.complete_job(job_id).await else {
             return Ok(())
         };
         self.send_error_email(maintainer, error).await?;
@@ -195,7 +192,7 @@ impl JobWorker {
     }
 
     /// Send an email to the specified `maintainer` with the error message as the email body
-    async fn send_error_email(&self, maintainer: String, message: String) -> WEResult<()> {
+    async fn send_error_email(&self, maintainer: String, message: String) -> EmResult<()> {
         warn!(
             "Sending error email to {} with message\n{}",
             maintainer, message

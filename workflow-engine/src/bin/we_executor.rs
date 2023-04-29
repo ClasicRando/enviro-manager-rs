@@ -1,11 +1,12 @@
+use common::error::EmResult;
 use log::{error, info};
 use workflow_engine::{
     create_executors_service, create_task_queue_service, create_workflow_runs_service,
-    database::create_db_pool, Executor, Result as WEResult,
+    database::create_db_pool, Executor,
 };
 
 #[tokio::main]
-async fn main() -> WEResult<()> {
+async fn main() -> EmResult<()> {
     log4rs::init_file("workflow-engine/executor_log.yml", Default::default()).unwrap();
 
     info!("Initializing Executor");

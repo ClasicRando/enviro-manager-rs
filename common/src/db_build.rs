@@ -1,9 +1,8 @@
+use std::{collections::HashSet, path::PathBuf};
+
 use serde::Deserialize;
 use sqlx::PgPool;
-use std::collections::HashSet;
-use std::path::PathBuf;
-use tokio::fs::File;
-use tokio::io::AsyncReadExt;
+use tokio::{fs::File, io::AsyncReadExt};
 
 use crate::{execute_anonymous_block, package_dir, read_file, workspace_dir};
 
@@ -124,7 +123,10 @@ impl<'e> Iterator for OrderIter<'e> {
             }
         }
         if self.returned.len() != self.entries.len() {
-            panic!("Exited iterator with remaining objects to create but not all dependencies resolved")
+            panic!(
+                "Exited iterator with remaining objects to create but not all dependencies \
+                 resolved"
+            )
         }
         None
     }

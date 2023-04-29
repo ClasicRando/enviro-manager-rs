@@ -1,11 +1,9 @@
+use common::error::{EmError, EmResult};
 use log::{error, info};
 
-use crate::{
-    error::{Error as WEError, Result as WEResult},
-    services::{
-        task_queue::{TaskQueueRecord, TaskQueueService},
-        workflow_runs::{WorkflowRunId, WorkflowRunsService},
-    },
+use crate::services::{
+    task_queue::{TaskQueueRecord, TaskQueueService},
+    workflow_runs::{WorkflowRunId, WorkflowRunsService},
 };
 
 /// Container with the workflow run ID associated with the worker and the necessary services to
@@ -42,14 +40,14 @@ impl<'w> WorkflowRunWorker<'w> {
         record: &TaskQueueRecord,
         is_paused: bool,
         message: Option<String>,
-    ) -> WEResult<()> {
+    ) -> EmResult<()> {
         self.tq_service
             .complete_task_run(record, is_paused, message)
             .await
     }
 
     /// Fail the task run, updating the database record with error information
-    async fn fail_task(&self, record: &TaskQueueRecord, error: WEError) -> WEResult<()> {
+    async fn fail_task(&self, record: &TaskQueueRecord, error: EmError) -> EmResult<()> {
         error!("Task failed, {:?}", record);
         self.tq_service.fail_task_run(record, error).await?;
         self.wr_service.complete(self.workflow_run_id).await
@@ -57,7 +55,7 @@ impl<'w> WorkflowRunWorker<'w> {
 
     /// Entry point for running the worker. Continues to get the next task to run until no more
     /// tasks are available or a task fails. Once this is completed, the worker is dropped.
-    pub async fn run(self) -> WEResult<()> {
+    pub async fn run(self) -> EmResult<()> {
         loop {
             let Some(next_task) = self.tq_service.next_task(self.workflow_run_id).await? else {
                 self.wr_service.complete(self.workflow_run_id).await?;

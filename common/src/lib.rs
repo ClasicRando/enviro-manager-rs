@@ -1,13 +1,13 @@
+use std::path::{Path, PathBuf};
+
 use lazy_static::lazy_static;
 use regex::Regex;
 use sqlx::PgPool;
-
-use std::path::{Path, PathBuf};
-
 use tokio::{fs::File, io::AsyncReadExt};
 
 pub mod db_build;
 pub mod db_test;
+pub mod error;
 
 /// Returns a [PathBuf] pointing to the directory of the current package. Utilizes the
 /// 'CARGO_MANIFEST_DIR' cargo environment variable.

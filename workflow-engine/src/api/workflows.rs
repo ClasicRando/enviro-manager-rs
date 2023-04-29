@@ -5,7 +5,6 @@ use rocket::{
 };
 
 use super::utilities::{ApiFormatType, ApiResponse};
-
 use crate::services::workflows::{
     Workflow, WorkflowDeprecationRequest, WorkflowId, WorkflowRequest, WorkflowsService,
 };

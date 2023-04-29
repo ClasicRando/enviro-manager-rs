@@ -38,11 +38,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             create_db_pool().await?
         }
         Some(name) => {
-            println!("Target specified in 'WE_DB_BUILD_TARGET' environment variable ('{}') was not valid. Acceptable values are 'test' or 'prod'", name);
+            println!(
+                "Target specified in 'WE_DB_BUILD_TARGET' environment variable ('{}') was not \
+                 valid. Acceptable values are 'test' or 'prod'",
+                name
+            );
             return Ok(());
         }
         None => {
-            println!("Could not find a value for the database build target. Please specify with the 'WE_DB_BUILD_TARGET' environment variable");
+            println!(
+                "Could not find a value for the database build target. Please specify with the \
+                 'WE_DB_BUILD_TARGET' environment variable"
+            );
             return Ok(());
         }
     };
