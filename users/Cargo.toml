@@ -3,6 +3,9 @@ name = "users"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "emu_db_build"
+
 [dependencies]
 sqlx = { workspace = true }
 tokio = { workspace = true }
