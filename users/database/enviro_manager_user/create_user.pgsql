@@ -11,17 +11,19 @@ create or replace procedure enviro_manager_user.create_user(
 language plpgsql
 as $$
 declare
-    v_uid bigint;
+    v_uid bigint := enviro_manager_user.get_current_em_uid();
+    v_em_uid bigint;
 begin
+    call enviro_manager_user.check_user_role(v_uid, 'create user');
     call enviro_manager_user.validate_password($4);
 
     insert into enviro_manager_user.users(first_name,last_name,username,password)
     values($1,$2,$3,crypt($4, gen_salt('bf')))
-    returning em_uid into v_uid;
+    returning em_uid into v_em_uid;
 
     begin
         insert into enviro_manager_user.user_roles(em_uid,role)
-        select v_uid, d.name
+        select v_em_uid, d.name
         from unnest($5) d(name);
     exception
         when others then
@@ -32,7 +34,7 @@ begin
     select u.em_uid, u.full_name, u.roles
     into $6, $7, $8
     from enviro_manager_user.v_users u
-    where u.em_uid = v_uid;
+    where u.em_uid = v_em_uid;
 end;
 $$;
 

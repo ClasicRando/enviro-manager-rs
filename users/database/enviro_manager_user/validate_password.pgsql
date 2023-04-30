@@ -1,4 +1,4 @@
-create procedure enviro_manager_user.validate_password(password text)
+create or replace procedure enviro_manager_user.validate_password(password text)
 language plpgsql
 as $$
 begin

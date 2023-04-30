@@ -4,7 +4,8 @@ create table if not exists enviro_manager_user.user_roles (
         on delete cascade,
     role text not null references enviro_manager_user.roles(name)
         on update cascade
-        on delete cascade
+        on delete cascade,
+    constraint user_roles_pk primary key (em_uid, role)
 );
 
 call audit.audit_table('enviro_manager_user.user_roles');

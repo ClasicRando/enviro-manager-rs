@@ -1,4 +1,4 @@
-create or replace procedure enviro_manager_user.update_username(
+create or replace procedure enviro_manager_user.update_full_name(
     username text,
     password text,
     new_first_name text,
@@ -27,7 +27,7 @@ exception
 end;
 $$;
 
-comment on procedure enviro_manager_user.update_username IS $$
+comment on procedure enviro_manager_user.update_full_name IS $$
 Update an existing user with new username provided. Will raise exception if the username already
 exists.
 

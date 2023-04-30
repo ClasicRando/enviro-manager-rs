@@ -24,7 +24,7 @@ exception
 end;
 $$;
 
-comment on procedure enviro_manager_user.update_username IS $$
+comment on procedure enviro_manager_user.reset_password IS $$
 Update an existing user with new username provided. Will raise exception if the username already
 exists.
 
