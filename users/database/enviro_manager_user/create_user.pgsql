@@ -1,4 +1,4 @@
-create or replace function enviro_manager_user.create_user(
+create or replace procedure enviro_manager_user.create_user(
     first_name text,
     last_name text,
     username text,
@@ -7,10 +7,8 @@ create or replace function enviro_manager_user.create_user(
     out em_uid bigint,
     out full_name text,
     out roles2 enviro_manager_user.roles[]
-) returns record
-volatile
+)
 language plpgsql
-returns null on null input
 as $$
 declare
     v_uid bigint;
@@ -38,7 +36,7 @@ begin
 end;
 $$;
 
-comment on function enviro_manager_user.create_user IS $$
+comment on procedure enviro_manager_user.create_user IS $$
 Create a new user with the provided details, returning the new user data if successful. Will raise
 exceptions if the password is invalid or any role entry does not match an existing role type.
 
