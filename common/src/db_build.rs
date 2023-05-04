@@ -1,4 +1,4 @@
-use std::{collections::HashSet, path::PathBuf};
+use std::{collections::HashSet, path::Path};
 
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -33,7 +33,7 @@ impl DbBuild {
     /// proceeding to run each [DbBuildEntry] to completion.
     async fn run(
         &self,
-        directory: &PathBuf,
+        directory: &Path,
         pool: &PgPool,
     ) -> Result<(), Box<dyn std::error::Error>> {
         for dep in &self.common_dependencies {
@@ -72,7 +72,7 @@ impl DbBuildEntry {
     /// `pool`.
     async fn run(
         &self,
-        directory: &PathBuf,
+        directory: &Path,
         pool: &PgPool,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let path = directory.join(&self.name);
@@ -135,7 +135,7 @@ impl<'e> Iterator for OrderIter<'e> {
 /// Extract a [DbBuild] instance using the `directory` provided. The `directory` should point to a
 /// directory that contains a "build.json" file that can be deserializable into the [DbBuild]
 /// struct.
-pub(crate) async fn db_build(directory: &PathBuf) -> Result<DbBuild, Box<dyn std::error::Error>> {
+pub(crate) async fn db_build(directory: &Path) -> Result<DbBuild, Box<dyn std::error::Error>> {
     let path = directory.join("build.json");
     let mut file = File::open(&path).await?;
     let mut contents = String::new();

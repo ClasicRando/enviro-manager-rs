@@ -1,9 +1,10 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::Deserialize;
 use sqlx::PgPool;
+
 use tokio::{
     fs::{read_dir, File},
     io::AsyncReadExt,
@@ -26,7 +27,7 @@ struct TestListEntry {
 impl TestListEntry {
     /// Run the test entry represented by the [TestListEntry] instance. All errors that may arise
     /// within the function call get stored in the `results` buffer.
-    async fn run_test(&self, directory: &PathBuf, pool: &PgPool, results: &mut Vec<String>) {
+    async fn run_test(&self, directory: &Path, pool: &PgPool, results: &mut Vec<String>) {
         let path = directory.join(&self.name);
         let block = match read_file(&path).await {
             Ok(inner) => inner,
@@ -50,9 +51,9 @@ impl TestListEntry {
 }
 
 /// Read the list of tests that is contained within the `test_directory`. Returns the test names as
-/// a vector of [PathBuf].
+/// a vector of [Path].
 async fn read_tests_list(
-    test_directory: &PathBuf,
+    test_directory: &Path,
 ) -> Result<Vec<TestListEntry>, Box<dyn std::error::Error>> {
     let tests_file = test_directory.join("tests.json");
     let mut file = File::open(&tests_file).await?;
@@ -65,7 +66,7 @@ async fn read_tests_list(
 /// Run the tests found within the `tests_path` directory. Parses the provided 'tests.txt' file
 /// found within the directory and runs the prescribed tests.
 async fn run_test_directory(
-    tests_path: &PathBuf,
+    tests_path: &Path,
     pool: &PgPool,
 ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let mut results = Vec::new();
@@ -82,7 +83,7 @@ async fn run_test_directory(
 ///
 /// Every test is run unless an error outside the tests is raised. All test results are packed into
 /// a result vector and the vector is checked for contents at the end to show all failing tests.
-async fn run_tests(tests_path: PathBuf, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
+async fn run_tests(tests_path: &Path, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
     if !tests_path.exists() {
         return Ok(());
     }
@@ -119,7 +120,7 @@ async fn run_common_db_tests(
         .join("common-database")
         .join(common_db_name)
         .join("tests");
-    run_tests(tests, pool).await
+    run_tests(&tests, pool).await
 }
 
 lazy_static! {
@@ -230,5 +231,5 @@ pub async fn run_db_tests(pool: &PgPool) -> Result<(), Box<dyn std::error::Error
     }
 
     let tests = schema_directory.join("tests");
-    run_tests(tests, pool).await
+    run_tests(&tests, pool).await
 }
