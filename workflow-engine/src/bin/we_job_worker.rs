@@ -1,10 +1,9 @@
+use common::error::EmResult;
 use log::{error, info};
-use workflow_engine::{
-    create_jobs_service, database::create_db_pool, JobWorker, Result as WEResult,
-};
+use workflow_engine::{create_jobs_service, database::create_db_pool, JobWorker};
 
 #[tokio::main]
-async fn main() -> WEResult<()> {
+async fn main() -> EmResult<()> {
     log4rs::init_file("workflow-engine/job_worker_log.yml", Default::default()).unwrap();
 
     info!("Initializing Worker");

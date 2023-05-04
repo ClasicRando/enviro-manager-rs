@@ -1,3 +1,4 @@
+use common::error::{EmError, EmResult};
 use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -5,8 +6,6 @@ use sqlx::{
     postgres::{PgHasArrayType, PgTypeInfo},
     PgPool,
 };
-
-use crate::error::{Error as WEError, Result as WEResult};
 
 /// Task data as it can be seen from it's parent, a [Workflow] instance. Contains the underlining
 /// data you would find in `task.workflow_tasks` as well as task details from `task.tasks` and the
@@ -83,7 +82,7 @@ impl From<i64> for WorkflowId {
 }
 
 impl<'a> FromParam<'a> for WorkflowId {
-    type Error = WEError;
+    type Error = EmError;
 
     fn from_param(param: &'a str) -> Result<Self, Self::Error> {
         Ok(Self(param.parse::<i64>()?))
@@ -111,7 +110,7 @@ impl WorkflowsService {
 
     /// Create a new workflow using the `request` data to call the `workflow.create_workflow`
     /// procedure. Returns the new [Workflow] created.
-    pub async fn create(&self, request: WorkflowRequest) -> WEResult<Workflow> {
+    pub async fn create(&self, request: WorkflowRequest) -> EmResult<Workflow> {
         let workflow_id = sqlx::query_scalar("select workflow.create_workflow($1,$2)")
             .bind(request.name)
             .bind(request.tasks)
@@ -126,7 +125,7 @@ impl WorkflowsService {
 
     /// Read a single [Workflow] record for the specified `workflow_id`. Returns [None] if the id
     /// does not match any record in the database.
-    pub async fn read_one(&self, workflow_id: &WorkflowId) -> WEResult<Option<Workflow>> {
+    pub async fn read_one(&self, workflow_id: &WorkflowId) -> EmResult<Option<Workflow>> {
         let result = sqlx::query_as(
             r#"
             select w.workflow_id, w.name, w.tasks
@@ -140,7 +139,7 @@ impl WorkflowsService {
     }
 
     /// Read all [Workflow] records in the database
-    pub async fn read_many(&self) -> WEResult<Vec<Workflow>> {
+    pub async fn read_many(&self) -> EmResult<Vec<Workflow>> {
         let result = sqlx::query_as(
             r#"
             select w.workflow_id, w.name, w.tasks
@@ -154,7 +153,7 @@ impl WorkflowsService {
     /// Deprecate the workflow specified within the `request` data, pointing to a new workflow
     /// if the `request` contains a `new_workflow_id` value. Returns the `workflow_id` that was
     /// updated as a response.
-    pub async fn deprecate(&self, request: WorkflowDeprecationRequest) -> WEResult<i64> {
+    pub async fn deprecate(&self, request: WorkflowDeprecationRequest) -> EmResult<i64> {
         sqlx::query("call workflow.deprecate_workflow($1,$2)")
             .bind(request.workflow_id)
             .bind(request.new_workflow_id)
@@ -166,15 +165,16 @@ impl WorkflowsService {
 
 #[cfg(test)]
 mod test {
+    use common::error::EmResult;
     use sqlx::PgPool;
 
     use super::{
         WorkflowDeprecationRequest, WorkflowId, WorkflowRequest, WorkflowTaskRequest,
         WorkflowsService,
     };
-    use crate::{database::create_test_db_pool, services::workflows::Workflow, Result as WEResult};
+    use crate::{database::create_test_db_pool, services::workflows::Workflow};
 
-    async fn clean_test_workflow(workflow_name: &str, pool: &PgPool) -> WEResult<()> {
+    async fn clean_test_workflow(workflow_name: &str, pool: &PgPool) -> EmResult<()> {
         sqlx::query(
             r#"
             with workflows as (
@@ -203,7 +203,7 @@ mod test {
         Ok(())
     }
 
-    async fn reset_base_test_workflow(pool: &PgPool) -> WEResult<()> {
+    async fn reset_base_test_workflow(pool: &PgPool) -> EmResult<()> {
         sqlx::query(
             r#"
             update workflow.workflows
@@ -218,7 +218,7 @@ mod test {
     }
 
     #[sqlx::test]
-    async fn create() -> WEResult<()> {
+    async fn create() -> EmResult<()> {
         let pool = create_test_db_pool().await?;
         let service = WorkflowsService::new(&pool);
         let workflow_name = "Create test";
@@ -247,7 +247,7 @@ mod test {
     }
 
     #[sqlx::test]
-    async fn read_one_should_return_some_when_record_exists() -> WEResult<()> {
+    async fn read_one_should_return_some_when_record_exists() -> EmResult<()> {
         let pool = create_test_db_pool().await?;
         let service = WorkflowsService::new(&pool);
         let workflow_id = 1;
@@ -266,7 +266,7 @@ mod test {
     }
 
     #[sqlx::test]
-    async fn read_one_should_return_none_when_record_exists() -> WEResult<()> {
+    async fn read_one_should_return_none_when_record_exists() -> EmResult<()> {
         let pool = create_test_db_pool().await?;
         let service = WorkflowsService::new(&pool);
         let workflow_id = -1;
@@ -279,7 +279,7 @@ mod test {
     }
 
     #[sqlx::test]
-    async fn read_many() -> WEResult<()> {
+    async fn read_many() -> EmResult<()> {
         let pool = create_test_db_pool().await?;
         let service = WorkflowsService::new(&pool);
 
@@ -291,7 +291,7 @@ mod test {
     }
 
     #[sqlx::test]
-    async fn deprecate_workflow_with_no_new_workflow() -> WEResult<()> {
+    async fn deprecate_workflow_with_no_new_workflow() -> EmResult<()> {
         let pool = create_test_db_pool().await?;
         let service = WorkflowsService::new(&pool);
 
@@ -338,7 +338,7 @@ mod test {
     }
 
     #[sqlx::test]
-    async fn deprecate_workflow_with_new_workflow() -> WEResult<()> {
+    async fn deprecate_workflow_with_new_workflow() -> EmResult<()> {
         let pool = create_test_db_pool().await?;
         let service = WorkflowsService::new(&pool);
         let workflow_id = 1;

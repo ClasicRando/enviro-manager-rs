@@ -10,5 +10,10 @@ sqlx = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true }
 serde_json = { workspace = true }
+chrono = { workspace = true }
+lettre = { workspace = true }
+thiserror = { workspace = true }
+rmp-serde = { workspace = true }
+reqwest = { workspace = true }
 regex = { version = "1.7.1" }
 lazy_static = "1.4.0"

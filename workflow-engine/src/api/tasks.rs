@@ -5,7 +5,6 @@ use rocket::{
 };
 
 use super::utilities::{ApiFormatType, ApiResponse};
-
 use crate::services::tasks::{Task, TaskId, TaskRequest, TasksService};
 
 /// API endpoint to fetch all tasks. Return an array of [Task] entries

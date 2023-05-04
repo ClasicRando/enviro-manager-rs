@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use common::error::{EmError, EmResult};
 use rocket::request::FromParam;
 use serde::{
     de::{MapAccess, Visitor},
@@ -9,8 +10,6 @@ use sqlx::{
     postgres::{types::PgInterval, PgListener},
     PgPool,
 };
-
-use crate::error::{Error as WEError, Result as WEResult};
 
 use super::workflow_runs::WorkflowRunStatus;
 
@@ -230,7 +229,7 @@ impl From<i64> for JobId {
 }
 
 impl<'a> FromParam<'a> for JobId {
-    type Error = WEError;
+    type Error = EmError;
 
     fn from_param(param: &'a str) -> Result<Self, Self::Error> {
         Ok(Self(param.parse::<i64>()?))
@@ -258,7 +257,7 @@ impl JobsService {
 
     /// Create a new job with the data contained within `request`. Branches to specific calls for
     /// [JobType::Scheduled] and [JobType::Interval].
-    pub async fn create(&self, request: JobRequest) -> WEResult<Job> {
+    pub async fn create(&self, request: JobRequest) -> EmResult<Job> {
         let job_id = match &request.job_type {
             JobType::Scheduled(schedule) => {
                 self.create_scheduled_job(&request.workflow_id, &request.maintainer, schedule)
@@ -288,7 +287,7 @@ impl JobsService {
         maintainer: &str,
         interval: &PgInterval,
         next_run: &Option<NaiveDateTime>,
-    ) -> WEResult<JobId> {
+    ) -> EmResult<JobId> {
         let job_id = sqlx::query_scalar("select job.create_interval_job($1,$2,$3)")
             .bind(workflow_id)
             .bind(maintainer)
@@ -305,7 +304,7 @@ impl JobsService {
         workflow_id: &i64,
         maintainer: &str,
         schedule: &[ScheduleEntry],
-    ) -> WEResult<JobId> {
+    ) -> EmResult<JobId> {
         let job_id = sqlx::query_scalar("select job.create_scheduled_job($1,$2,$3)")
             .bind(workflow_id)
             .bind(maintainer)
@@ -317,7 +316,7 @@ impl JobsService {
 
     /// Read a single job record from `job.v_jobs` for the specified `job_id`. Will return [None]
     /// when the id does not match a record
-    pub async fn read_one(&self, job_id: &JobId) -> WEResult<Option<Job>> {
+    pub async fn read_one(&self, job_id: &JobId) -> EmResult<Option<Job>> {
         let result = sqlx::query_as(
             r#"
             select job_id, workflow_id, workflow_name, job_type, maintainer, job_schedule, job_interval, is_paused,
@@ -332,7 +331,7 @@ impl JobsService {
     }
 
     /// Read all job records found from `job.v_jobs`
-    pub async fn read_many(&self) -> WEResult<Vec<Job>> {
+    pub async fn read_many(&self) -> EmResult<Vec<Job>> {
         let result = sqlx::query_as(
             r#"
             select job_id, workflow_id, workflow_name, job_type, maintainer, job_schedule, job_interval, is_paused,
@@ -346,7 +345,7 @@ impl JobsService {
 
     /// Read all job records from `job.v_queued_jobs`. This excludes all job entries that are
     /// paused or currently have a workflow run that not complete. Ordered by the `next_run` field
-    pub async fn read_queued(&self) -> WEResult<Vec<JobMin>> {
+    pub async fn read_queued(&self) -> EmResult<Vec<JobMin>> {
         let result = sqlx::query_as(
             r#"
             select job_id, next_run
@@ -359,7 +358,7 @@ impl JobsService {
 
     /// Run the job specified by the `job_id`. Returns the [Job] entry if the `job_id` matches a
     /// record
-    pub async fn run_job(&self, job_id: &JobId) -> WEResult<Option<Job>> {
+    pub async fn run_job(&self, job_id: &JobId) -> EmResult<Option<Job>> {
         sqlx::query("call job.run_job($1)")
             .bind(job_id)
             .execute(&self.pool)
@@ -368,7 +367,7 @@ impl JobsService {
     }
 
     ///
-    pub async fn complete_job(&self, job_id: &JobId) -> WEResult<Option<Job>> {
+    pub async fn complete_job(&self, job_id: &JobId) -> EmResult<Option<Job>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query_scalar("call job.complete_job($1)")
             .bind(job_id)
@@ -386,11 +385,11 @@ impl JobsService {
             return self.read_one(job_id).await;
         }
         transaction.rollback().await?;
-        Err(WEError::Generic(message))
+        Err(EmError::Generic(message))
     }
 
     ///
-    pub async fn listener(&self) -> WEResult<PgListener> {
+    pub async fn listener(&self) -> EmResult<PgListener> {
         let mut listener = PgListener::connect_with(&self.pool).await?;
         listener.listen("jobs").await?;
         Ok(listener)

@@ -1,10 +1,9 @@
 use chrono::NaiveDateTime;
+use common::error::{EmError, EmResult};
 use log::error;
 use rocket::request::FromParam;
 use serde::Serialize;
 use sqlx::{postgres::PgListener, types::ipnetwork::IpNetwork, PgPool};
-
-use crate::error::{Error as WEError, Result as WEResult};
 
 use super::workflow_runs::WorkflowRunId;
 
@@ -52,7 +51,7 @@ pub struct Executor {
 pub struct ExecutorId(i64);
 
 impl<'a> FromParam<'a> for ExecutorId {
-    type Error = WEError;
+    type Error = EmError;
 
     fn from_param(param: &'a str) -> Result<Self, Self::Error> {
         Ok(Self(param.parse::<i64>()?))
@@ -80,7 +79,7 @@ impl ExecutorsService {
 
     /// Register a new executor with the database. Creates a record for future processes to
     /// attribute workflow runs to the new executor.
-    pub async fn register_executor(&self) -> WEResult<ExecutorId> {
+    pub async fn register_executor(&self) -> EmResult<ExecutorId> {
         let executor_id = sqlx::query_scalar("select executor.register_executor()")
             .fetch_one(&self.pool)
             .await?;
@@ -89,7 +88,7 @@ impl ExecutorsService {
 
     /// Read the [Executor] record to gain information about the specified `executor_id`. If no
     /// executor matches the id provided, [None] will be returned.
-    pub async fn read_one(&self, executor_id: &ExecutorId) -> WEResult<Option<Executor>> {
+    pub async fn read_one(&self, executor_id: &ExecutorId) -> EmResult<Option<Executor>> {
         let result = sqlx::query_as(
             r#"
             select
@@ -106,7 +105,7 @@ impl ExecutorsService {
 
     /// Read the [ExecutorStatus] for the specified `executor_id`. If no executor matches the id
     /// provided, [None] will be returned.
-    pub async fn read_status(&self, executor_id: &ExecutorId) -> WEResult<Option<ExecutorStatus>> {
+    pub async fn read_status(&self, executor_id: &ExecutorId) -> EmResult<Option<ExecutorStatus>> {
         let result = sqlx::query_scalar(
             r#"
             select e.status
@@ -121,7 +120,7 @@ impl ExecutorsService {
 
     /// Read all [Executor] records, including instances that are inactive or marked as active but
     /// the underling session/pool is no longer active.
-    pub async fn read_many(&self) -> WEResult<Vec<Executor>> {
+    pub async fn read_many(&self) -> EmResult<Vec<Executor>> {
         let result = sqlx::query_as(
             r#"
             select
@@ -136,7 +135,7 @@ impl ExecutorsService {
 
     /// Read all [Executor] records, excluding those that are labeled as inactive. The output does
     /// include records with an underlining session/pool that is no longer active.
-    pub async fn read_active(&self) -> WEResult<Vec<Executor>> {
+    pub async fn read_active(&self) -> EmResult<Vec<Executor>> {
         let result = sqlx::query_as(
             r#"
             select
@@ -154,7 +153,7 @@ impl ExecutorsService {
     pub async fn next_workflow_run(
         &self,
         executor_id: &ExecutorId,
-    ) -> WEResult<Option<WorkflowRunId>> {
+    ) -> EmResult<Option<WorkflowRunId>> {
         let workflow_run_id: Option<WorkflowRunId> =
             sqlx::query_scalar("call workflow.process_next_workflow($1,$2)")
                 .bind(executor_id)
@@ -167,7 +166,7 @@ impl ExecutorsService {
     /// Update the status of the executor specified by `executor_id` to [ExecutorStatus::Shutdown].
     /// This internally sends a signal to the [Executor][crate::executor::Executor] instance to
     /// gracefully shutdown all operation and close.
-    pub async fn shutdown(&self, executor_id: &ExecutorId) -> WEResult<Option<Executor>> {
+    pub async fn shutdown(&self, executor_id: &ExecutorId) -> EmResult<Option<Executor>> {
         sqlx::query("call executor.shutdown_executor($1)")
             .bind(executor_id)
             .execute(&self.pool)
@@ -178,7 +177,7 @@ impl ExecutorsService {
     /// Update the status of the executor specified by `executor_id` to [ExecutorStatus::Canceled].
     /// This internally sends a signal to the [Executor][crate::executor::Executor] instance to
     /// forcefully shutdown all operation and close.
-    pub async fn cancel(&self, executor_id: &ExecutorId) -> WEResult<Option<Executor>> {
+    pub async fn cancel(&self, executor_id: &ExecutorId) -> EmResult<Option<Executor>> {
         sqlx::query("call executor.cancel_executor($1)")
             .bind(executor_id)
             .execute(&self.pool)
@@ -189,7 +188,7 @@ impl ExecutorsService {
     /// Clean up database entries linked to the `executor_id` specified. Acts as the final step to
     /// ending an [Executor][crate::executor::Executor] instance and should only be called from
     /// the [Executor][crate::executor::Executor] itself.
-    pub async fn close(&self, executor_id: &ExecutorId, is_cancelled: bool) -> WEResult<()> {
+    pub async fn close(&self, executor_id: &ExecutorId, is_cancelled: bool) -> EmResult<()> {
         sqlx::query("call executor.close_executor($1,$2)")
             .bind(executor_id)
             .bind(is_cancelled)
@@ -200,7 +199,7 @@ impl ExecutorsService {
 
     /// Post the specified `error` message to the `executor_id` record. If the SQL call happens to
     /// fail that error will be logged alongside the original `error`.
-    pub async fn post_error(&self, executor_id: &ExecutorId, error: WEError) -> WEResult<()> {
+    pub async fn post_error(&self, executor_id: &ExecutorId, error: EmError) -> EmResult<()> {
         let message = format!("{}", error);
         let sql_result = sqlx::query("call executor.post_executor_error_message($1,$2)")
             .bind(executor_id)
@@ -219,7 +218,7 @@ impl ExecutorsService {
 
     /// Clean executor database records, setting correct statuses for executors that are no longer
     /// alive but marked as active.
-    pub async fn clean_executors(&self) -> WEResult<()> {
+    pub async fn clean_executors(&self) -> EmResult<()> {
         sqlx::query("call executor.clean_executors()")
             .execute(&self.pool)
             .await?;
@@ -228,7 +227,7 @@ impl ExecutorsService {
 
     /// Get a new [PgListener] for the executor status update channel. Channel name is specific to
     /// the executor's id.
-    pub async fn status_listener(&self, executor_id: &ExecutorId) -> WEResult<PgListener> {
+    pub async fn status_listener(&self, executor_id: &ExecutorId) -> EmResult<PgListener> {
         let mut listener = PgListener::connect_with(&self.pool).await?;
         listener
             .listen(&format!("exec_status_{}", executor_id))
@@ -239,11 +238,11 @@ impl ExecutorsService {
 
 #[cfg(test)]
 mod test {
+    use common::error::EmError;
     use indoc::indoc;
 
-    use crate::{database::utilities::create_test_db_pool, error::Error as WEError};
-
     use super::{ExecutorStatus, ExecutorsService};
+    use crate::database::utilities::create_test_db_pool;
 
     #[sqlx::test]
     async fn create_executor() -> Result<(), Box<dyn std::error::Error>> {
@@ -318,7 +317,7 @@ mod test {
             Err(error) => panic!("Failed to register a new executor, {}", error),
         };
 
-        let error = WEError::Generic(String::from("Executor 'post_error' test"));
+        let error = EmError::Generic(String::from("Executor 'post_error' test"));
         let error_message = error.to_string();
         executor_service.post_error(&executor_id, error).await?;
 

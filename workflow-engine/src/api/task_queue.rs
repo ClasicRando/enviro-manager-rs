@@ -5,7 +5,6 @@ use rocket::{
 };
 
 use super::utilities::{ApiFormatType, ApiResponse};
-
 use crate::services::task_queue::{TaskQueueRequest, TaskQueueService};
 
 /// Retry the task queue entry specified  by `request` regardless of the serialized format

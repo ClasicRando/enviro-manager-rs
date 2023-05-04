@@ -6,15 +6,15 @@ mod utilities;
 mod workflow_runs;
 mod workflows;
 
+use common::error::EmResult;
 use rocket::{routes, Build, Config, Rocket};
 
 use crate::{
     create_executors_service, create_jobs_service, create_task_queue_service, create_tasks_service,
     create_workflow_runs_service, create_workflows_service, database::create_db_pool,
-    Result as WEResult,
 };
 
-pub async fn build_api() -> WEResult<Rocket<Build>> {
+pub async fn build_api() -> EmResult<Rocket<Build>> {
     let pool = create_db_pool().await?;
     let executors_service = create_executors_service(&pool)?;
     let jobs_service = create_jobs_service(&pool)?;

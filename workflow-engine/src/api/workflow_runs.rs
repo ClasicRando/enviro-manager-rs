@@ -1,9 +1,10 @@
 use rocket::{get, patch, post, put, State};
 
 use super::utilities::{ApiFormatType, ApiResponse};
-
-use crate::services::workflow_runs::{WorkflowRun, WorkflowRunId, WorkflowRunsService};
-use crate::services::workflows::WorkflowId;
+use crate::services::{
+    workflow_runs::{WorkflowRun, WorkflowRunId, WorkflowRunsService},
+    workflows::WorkflowId,
+};
 
 /// API endpoint to fetch the specified workflow run by the `workflow_run_id`. Returns a single
 /// [WorkflowRun] if the run can be found

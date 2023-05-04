@@ -1,8 +1,10 @@
+use std::path::Path;
+
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::Deserialize;
 use sqlx::PgPool;
-use std::path::Path;
+
 use tokio::{
     fs::{read_dir, File},
     io::AsyncReadExt,

@@ -3,6 +3,7 @@ mod worker;
 
 use std::collections::HashMap;
 
+use common::error::EmResult;
 use log::{error, info, warn};
 use sqlx::{
     postgres::{PgListener, PgNotification},
@@ -12,15 +13,10 @@ use tokio::{signal::ctrl_c, task::JoinError};
 use utilities::{ExecutorNotificationSignal, WorkflowRunWorkerResult};
 use worker::WorkflowRunWorker;
 
-use crate::{
-    error::Result as WEResult,
-    services::{
-        executors::{ExecutorId, ExecutorStatus, ExecutorsService},
-        task_queue::TaskQueueService,
-        workflow_runs::{
-            ExecutorWorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunsService,
-        },
-    },
+use crate::services::{
+    executors::{ExecutorId, ExecutorStatus, ExecutorsService},
+    task_queue::TaskQueueService,
+    workflow_runs::{ExecutorWorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunsService},
 };
 
 /// Next operations available to an [Executor] after performing various checks on the status of
@@ -82,7 +78,7 @@ impl Executor {
         executor_service: &ExecutorsService,
         wr_service: &WorkflowRunsService,
         tq_service: &TaskQueueService,
-    ) -> WEResult<Self> {
+    ) -> EmResult<Self> {
         executor_service.clean_executors().await?;
         let executor_id = executor_service.register_executor().await?;
         Ok(Self {
@@ -114,7 +110,7 @@ impl Executor {
     }
 
     /// Read the current status of the executor as stored by the database
-    async fn status(&self) -> WEResult<ExecutorStatus> {
+    async fn status(&self) -> EmResult<ExecutorStatus> {
         self.executor_service
             .read_status(&self.executor_id)
             .await
@@ -142,7 +138,7 @@ impl Executor {
         &mut self,
         executor_status_listener: &mut PgListener,
         workflow_run_cancel_listener: &mut PgListener,
-    ) -> WEResult<ExecutorNextOperation> {
+    ) -> EmResult<ExecutorNextOperation> {
         Ok(tokio::select! {
             biased;
             _ = ctrl_c() => self.handle_manual_shutdown(),
@@ -173,7 +169,7 @@ impl Executor {
         executor_status_listener: &mut PgListener,
         workflow_run_cancel_listener: &mut PgListener,
         workflow_run_scheduled_listener: &mut PgListener,
-    ) -> WEResult<ExecutorNextOperation> {
+    ) -> EmResult<ExecutorNextOperation> {
         Ok(tokio::select! {
             biased;
             _ = ctrl_c() => self.handle_manual_shutdown(),
@@ -188,7 +184,7 @@ impl Executor {
 
     ///
     #[allow(unused_assignments)]
-    pub async fn run(mut self) -> WEResult<()> {
+    pub async fn run(mut self) -> EmResult<()> {
         let mut is_listen_mode = false;
         let mut executor_signal: ExecutorNotificationSignal;
         let mut executor_status_listener = self
@@ -262,7 +258,7 @@ impl Executor {
     /// a wrapped [None] value.
     async fn next_workflow_run(
         &self,
-    ) -> WEResult<Option<(WorkflowRunId, WorkflowRunWorkerResult)>> {
+    ) -> EmResult<Option<(WorkflowRunId, WorkflowRunWorkerResult)>> {
         let Some(workflow_run_id) = self.executor_service.next_workflow_run(&self.executor_id).await? else {
             return Ok(None)
         };
@@ -313,7 +309,7 @@ impl Executor {
     async fn handle_workflow_run_cancel_notification(
         &mut self,
         result: Result<PgNotification, SqlError>,
-    ) -> WEResult<ExecutorNextOperation> {
+    ) -> EmResult<ExecutorNextOperation> {
         let notification = match result {
             Ok(notification) => notification,
             Err(error) => {
@@ -349,7 +345,7 @@ impl Executor {
     fn handle_workflow_run_scheduled_notification(
         &self,
         result: Result<PgNotification, SqlError>,
-    ) -> WEResult<ExecutorNextOperation> {
+    ) -> EmResult<ExecutorNextOperation> {
         match result {
             Ok(_) => {
                 info!("Notification of workflow run scheduled. Starting loop again.");
@@ -369,7 +365,7 @@ impl Executor {
     fn handle_executor_status_notification(
         &self,
         result: Result<PgNotification, SqlError>,
-    ) -> WEResult<ExecutorNextOperation> {
+    ) -> EmResult<ExecutorNextOperation> {
         let notification = match result {
             Ok(notification) => notification,
             Err(error) => {
@@ -395,7 +391,7 @@ impl Executor {
     /// - workflow run if invalid - cancel workflow run and exit
     /// - workflow run has status of 'Running' - spawn workflow, add handle and exit
     /// - else - restart the workflow run and schedule for the current executor
-    async fn process_unknown_run(&mut self, workflow_run: ExecutorWorkflowRun) -> WEResult<()> {
+    async fn process_unknown_run(&mut self, workflow_run: ExecutorWorkflowRun) -> EmResult<()> {
         if !workflow_run.is_valid {
             info!(
                 "Canceling workflow_run_id = {}",
@@ -431,7 +427,7 @@ impl Executor {
     /// to free resources. Also checks for owned workflows that have no handle. For each unknown
     /// workflow run, [process_unknown_run][Executor::process_unknown_run] is called to fix the
     /// run.
-    async fn cleanup_workflows(&mut self) -> WEResult<()> {
+    async fn cleanup_workflows(&mut self) -> EmResult<()> {
         info!("Checking handles");
         let completed_handle_keys = self
             .wr_handles
@@ -471,7 +467,7 @@ impl Executor {
         workflow_run_id: &WorkflowRunId,
         handle: &WorkflowRunWorkerResult,
         is_cancelled: bool,
-    ) -> WEResult<bool> {
+    ) -> EmResult<bool> {
         if handle.is_finished() {
             return Ok(false);
         }
@@ -490,7 +486,7 @@ impl Executor {
     /// process of being cancelled and a handle is no finished, the executor will attempt to move
     /// the workflow run to the next available executor, falling back to a scheduled state when no
     /// other executor is operating.
-    async fn shutdown_workers(&mut self, is_cancelled: bool) -> WEResult<()> {
+    async fn shutdown_workers(&mut self, is_cancelled: bool) -> EmResult<()> {
         let handle_keys: Vec<WorkflowRunId> =
             self.wr_handles.keys().map(|key| key.to_owned()).collect();
         for workflow_run_id in handle_keys {
@@ -522,7 +518,7 @@ impl Executor {
     /// Close the executor by first shutting down workflow run workers then closing the executor
     /// from the database's perspective. The executor instance is dropped at the end of this
     /// function.
-    async fn close_executor(mut self, signal: ExecutorNotificationSignal) -> WEResult<()> {
+    async fn close_executor(mut self, signal: ExecutorNotificationSignal) -> EmResult<()> {
         info!("Shutting down workers");
         let is_cancelled = signal.is_cancelled();
         self.shutdown_workers(is_cancelled).await?;

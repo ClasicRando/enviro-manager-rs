@@ -1,8 +1,7 @@
+use common::error::{EmError, EmResult};
 use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-
-use crate::error::{Error as WEError, Result as WEResult};
 
 /// Status of a task as found in the database as a simple Postgresql enum type
 #[derive(sqlx::Type, Serialize)]
@@ -50,7 +49,7 @@ impl From<i64> for TaskId {
 }
 
 impl<'a> FromParam<'a> for TaskId {
-    type Error = WEError;
+    type Error = EmError;
 
     fn from_param(param: &'a str) -> Result<Self, Self::Error> {
         Ok(Self(param.parse::<i64>()?))
@@ -77,7 +76,7 @@ impl TasksService {
     }
 
     /// Create a new task with the data contained within `request`
-    pub async fn create(&self, request: &TaskRequest) -> WEResult<Task> {
+    pub async fn create(&self, request: &TaskRequest) -> EmResult<Task> {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
@@ -94,7 +93,7 @@ impl TasksService {
 
     /// Read a single task record from `task.v_tasks` for the specified `task_id`. Will return
     /// [None] when the id does not match a record.
-    pub async fn read_one(&self, task_id: &TaskId) -> WEResult<Option<Task>> {
+    pub async fn read_one(&self, task_id: &TaskId) -> EmResult<Option<Task>> {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
@@ -108,7 +107,7 @@ impl TasksService {
     }
 
     /// Read all task records found from `task.v_tasks`
-    pub async fn read_many(&self) -> WEResult<Vec<Task>> {
+    pub async fn read_many(&self) -> EmResult<Vec<Task>> {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
@@ -121,7 +120,7 @@ impl TasksService {
 
     /// Update a task specified by `task_id` with the new details contained within `request`
     #[allow(unused)]
-    pub async fn update(&self, task_id: &TaskId, request: TaskRequest) -> WEResult<Option<Task>> {
+    pub async fn update(&self, task_id: &TaskId, request: TaskRequest) -> EmResult<Option<Task>> {
         sqlx::query("call task.update_task($1,$2,$3,$4,$5)")
             .bind(task_id)
             .bind(request.name)

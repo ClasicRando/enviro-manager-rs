@@ -1,7 +1,6 @@
 use rocket::{get, patch, State};
 
 use super::utilities::{ApiFormatType, ApiResponse};
-
 use crate::services::executors::{Executor, ExecutorId, ExecutorsService};
 
 /// API endpoint to fetch all active executors
