@@ -2,7 +2,7 @@ use common::error::EmResult;
 use log::{error, info};
 use workflow_engine::{
     create_executors_service, create_task_queue_service, create_workflow_runs_service,
-    database::create_db_pool, Executor,
+    database::create_db_pool, Executor, ExecutorsService, PgExecutorsService
 };
 
 #[tokio::main]
@@ -11,7 +11,7 @@ async fn main() -> EmResult<()> {
 
     info!("Initializing Executor");
     let pool = create_db_pool().await?;
-    let executor_service = create_executors_service(&pool)?;
+    let executor_service: PgExecutorsService = create_executors_service(&pool)?;
     let wr_service = create_workflow_runs_service(&pool)?;
     let tq_service = create_task_queue_service(&pool)?;
     let executor = match Executor::new(&executor_service, &wr_service, &tq_service).await {

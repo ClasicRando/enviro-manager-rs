@@ -1,4 +1,4 @@
-mod utilities;
+pub mod utilities;
 mod worker;
 
 use std::collections::HashMap;
@@ -10,13 +10,18 @@ use sqlx::{
     Error as SqlError,
 };
 use tokio::{signal::ctrl_c, task::JoinError};
-use utilities::{ExecutorNotificationSignal, WorkflowRunWorkerResult};
+use utilities::{ExecutorStatusUpdate, WorkflowRunWorkerResult};
 use worker::WorkflowRunWorker;
 
-use crate::services::{
-    executors::{ExecutorId, ExecutorStatus, ExecutorsService},
-    task_queue::TaskQueueService,
-    workflow_runs::{ExecutorWorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunsService},
+use crate::{
+    database::listener::{ChangeListener, PgChangeListener},
+    services::{
+        executors::{ExecutorId, ExecutorStatus, ExecutorsService},
+        task_queue::TaskQueueService,
+        workflow_runs::{
+            ExecutorWorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunsService,
+        },
+    },
 };
 
 /// Next operations available to an [Executor] after performing various checks on the status of
@@ -38,7 +43,7 @@ use crate::services::{
 /// wake-up notifications are a SIGINT signal.
 enum ExecutorNextOperation {
     Continue,
-    Break(ExecutorNotificationSignal),
+    Break(ExecutorStatusUpdate),
     NextWorkflowRun(WorkflowRunId, WorkflowRunWorkerResult),
     Listen,
 }
@@ -62,20 +67,23 @@ enum ExecutorNextOperation {
 /// the [Executor] enters shutdown and cleaning mode to free workflow runs that are currently in
 /// progress (if any). After cleaning all relevant resources, the [Executor] instance is dropped to
 /// avoid any issues with held services or workflow run handles.
-pub struct Executor {
+pub struct Executor<E> {
     executor_id: ExecutorId,
-    executor_service: ExecutorsService,
+    executor_service: E,
     wr_service: WorkflowRunsService,
     tq_service: TaskQueueService,
     wr_handles: HashMap<WorkflowRunId, WorkflowRunWorkerResult>,
 }
 
-impl Executor {
+impl<E> Executor<E>
+where
+    E: ExecutorsService<Listener = PgChangeListener<ExecutorStatusUpdate>> + Clone,
+{
     /// Create a new [Executor] using the provided services. Cleans output unused or stale
     /// executors in the database before registering the current [Executor] and returning the new
     /// [Executor].
     pub async fn new(
-        executor_service: &ExecutorsService,
+        executor_service: &E,
         wr_service: &WorkflowRunsService,
         tq_service: &TaskQueueService,
     ) -> EmResult<Self> {
@@ -122,7 +130,7 @@ impl Executor {
     /// [ExecutorNotificationSignal::Shutdown] variant.
     fn handle_manual_shutdown(&self) -> ExecutorNextOperation {
         info!("Received shutdown signal. Starting graceful shutdown");
-        ExecutorNextOperation::Break(ExecutorNotificationSignal::Shutdown)
+        ExecutorNextOperation::Break(ExecutorStatusUpdate::Shutdown)
     }
 
     /// Select the next operation when in the active state of an executor. 1 of 4 operations are
@@ -136,14 +144,14 @@ impl Executor {
     /// [ExecutorNextOperation] variant to tell the executor what to do as the next step.
     async fn next_operation_active(
         &mut self,
-        executor_status_listener: &mut PgListener,
+        executor_status_listener: &mut PgChangeListener<ExecutorStatusUpdate>,
         workflow_run_cancel_listener: &mut PgListener,
     ) -> EmResult<ExecutorNextOperation> {
         Ok(tokio::select! {
             biased;
             _ = ctrl_c() => self.handle_manual_shutdown(),
             notification = executor_status_listener.recv() => self
-                .handle_executor_status_notification(notification)?,
+                .handle_executor_status_notification(notification?),
             notification = workflow_run_cancel_listener.recv() => self
                 .handle_workflow_run_cancel_notification(notification).await?,
             workflow_run_id = self.next_workflow_run() => {
@@ -166,7 +174,7 @@ impl Executor {
     /// [ExecutorNextOperation] variant to tell the executor what to do as the next step.
     async fn next_operation_listen(
         &mut self,
-        executor_status_listener: &mut PgListener,
+        executor_status_listener: &mut PgChangeListener<ExecutorStatusUpdate>,
         workflow_run_cancel_listener: &mut PgListener,
         workflow_run_scheduled_listener: &mut PgListener,
     ) -> EmResult<ExecutorNextOperation> {
@@ -174,7 +182,7 @@ impl Executor {
             biased;
             _ = ctrl_c() => self.handle_manual_shutdown(),
             notification = executor_status_listener.recv() => self
-                .handle_executor_status_notification(notification)?,
+                .handle_executor_status_notification(notification?),
             notification = workflow_run_cancel_listener.recv() => self
                 .handle_workflow_run_cancel_notification(notification).await?,
             notification = workflow_run_scheduled_listener.recv() => self
@@ -186,7 +194,7 @@ impl Executor {
     #[allow(unused_assignments)]
     pub async fn run(mut self) -> EmResult<()> {
         let mut is_listen_mode = false;
-        let mut executor_signal: ExecutorNotificationSignal;
+        let mut executor_signal: ExecutorStatusUpdate;
         let mut executor_status_listener = self
             .executor_service
             .status_listener(&self.executor_id)
@@ -201,11 +209,11 @@ impl Executor {
             match self.status().await? {
                 ExecutorStatus::Active => {}
                 ExecutorStatus::Canceled => {
-                    executor_signal = ExecutorNotificationSignal::Cancel;
+                    executor_signal = ExecutorStatusUpdate::Cancel;
                     break;
                 }
                 ExecutorStatus::Shutdown => {
-                    executor_signal = ExecutorNotificationSignal::Shutdown;
+                    executor_signal = ExecutorStatusUpdate::Shutdown;
                     break;
                 }
             }
@@ -229,7 +237,7 @@ impl Executor {
             match next_operation {
                 ExecutorNextOperation::Continue => {
                     is_listen_mode = false;
-                    executor_signal = ExecutorNotificationSignal::NoOp;
+                    executor_signal = ExecutorStatusUpdate::NoOp;
                     continue;
                 }
                 ExecutorNextOperation::Break(signal) => {
@@ -364,26 +372,14 @@ impl Executor {
     /// [ExecutorNotificationSignal::Shutdown] signal.
     fn handle_executor_status_notification(
         &self,
-        result: Result<PgNotification, SqlError>,
-    ) -> EmResult<ExecutorNextOperation> {
-        let notification = match result {
-            Ok(notification) => notification,
-            Err(error) => {
-                error!("Error receiving executor notification.\n{:?}", error);
-                return Err(error.into());
+        status_update: ExecutorStatusUpdate,
+    ) -> ExecutorNextOperation {
+        match &status_update {
+            ExecutorStatusUpdate::Cancel | ExecutorStatusUpdate::Shutdown => {
+                ExecutorNextOperation::Break(status_update)
             }
-        };
-        info!(
-            "Received executor status notification, `{}`",
-            notification.payload()
-        );
-        let executor_signal = notification.payload().into();
-        Ok(match &executor_signal {
-            ExecutorNotificationSignal::Cancel | ExecutorNotificationSignal::Shutdown => {
-                ExecutorNextOperation::Break(executor_signal)
-            }
-            ExecutorNotificationSignal::NoOp => ExecutorNextOperation::Continue,
-        })
+            ExecutorStatusUpdate::NoOp => ExecutorNextOperation::Continue,
+        }
     }
 
     /// Process a workflow run that is owned by the current executor, but missing a workflow run
@@ -518,7 +514,7 @@ impl Executor {
     /// Close the executor by first shutting down workflow run workers then closing the executor
     /// from the database's perspective. The executor instance is dropped at the end of this
     /// function.
-    async fn close_executor(mut self, signal: ExecutorNotificationSignal) -> EmResult<()> {
+    async fn close_executor(mut self, signal: ExecutorStatusUpdate) -> EmResult<()> {
         info!("Shutting down workers");
         let is_cancelled = signal.is_cancelled();
         self.shutdown_workers(is_cancelled).await?;

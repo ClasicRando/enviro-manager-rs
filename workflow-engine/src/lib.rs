@@ -16,4 +16,5 @@ pub use services::{
     create_executors_service, create_jobs_service, create_task_queue_service, create_tasks_service,
     create_workflow_runs_service, create_workflows_service,
     task_queue::{TaskQueueRecord, TaskResponse},
+    executors::{ExecutorsService, PgExecutorsService},
 };

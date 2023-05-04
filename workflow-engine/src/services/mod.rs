@@ -6,15 +6,18 @@ pub mod workflow_runs;
 pub mod workflows;
 
 use common::error::EmResult;
-use sqlx::PgPool;
+use sqlx::{Database, PgPool, Pool};
 
 use self::{
-    executors::ExecutorsService, jobs::JobsService, task_queue::TaskQueueService,
-    tasks::TasksService, workflow_runs::WorkflowRunsService, workflows::WorkflowsService,
+    jobs::JobsService, task_queue::TaskQueueService, tasks::TasksService,
+    workflow_runs::WorkflowRunsService, workflows::WorkflowsService,
 };
+use crate::ExecutorsService;
 
-pub fn create_executors_service(pool: &PgPool) -> EmResult<ExecutorsService> {
-    Ok(ExecutorsService::new(pool))
+pub fn create_executors_service<E: ExecutorsService<Database = D>, D: Database>(
+    pool: &Pool<D>,
+) -> EmResult<E> {
+    Ok(E::new(pool))
 }
 
 pub fn create_workflow_runs_service(pool: &PgPool) -> EmResult<WorkflowRunsService> {
