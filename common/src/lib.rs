@@ -44,7 +44,7 @@ lazy_static! {
 /// statement if the type already exists and wrapping the entire block as an anonymous block.
 fn process_type_definition(block: &str) -> String {
     let block = TYPE_REGEX.replace(
-        &block,
+        block,
         r#"
         if not exists(
             select 1
@@ -66,7 +66,7 @@ fn format_anonymous_block(block: &str) -> String {
     match block.split_whitespace().next() {
         Some("do") | None => block.to_string(),
         Some("begin" | "declare") => format!("do $body$\n{}\n$body$;", block),
-        Some(_) if TYPE_REGEX.is_match(&block) => process_type_definition(block),
+        Some(_) if TYPE_REGEX.is_match(block) => process_type_definition(block),
         Some(_) => format!("do $body$\nbegin\n{}\nend;\n$body$;", block),
     }
 }

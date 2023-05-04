@@ -285,7 +285,7 @@ mod test {
 
         let workflows = service.read_many().await?;
 
-        assert!(workflows.len() > 0);
+        assert!(!workflows.is_empty());
 
         Ok(())
     }
