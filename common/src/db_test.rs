@@ -142,13 +142,13 @@ async fn check_for_enum(block: &str, pool: &PgPool) -> Result<(), Box<dyn std::e
         return Ok(())
     };
     let Some(schema) = captures.name("schema") else {
-        Err(format!("No 'schema' capture group present in enum definition"))?
+        Err("No 'schema' capture group present in enum definition")?
     };
     let Some(name) = captures.name("name") else {
-        Err(format!("No 'name' capture group present in enum definition"))?
+        Err("No 'name' capture group present in enum definition")?
     };
     let Some(labels) = captures.name("labels") else {
-        Err(format!("No 'labels' capture group present in enum definition"))?
+        Err("No 'labels' capture group present in enum definition")?
     };
     let labels: Vec<&str> = labels
         .as_str()
@@ -172,13 +172,13 @@ async fn check_for_composite(block: &str, pool: &PgPool) -> Result<(), Box<dyn s
         return Ok(())
     };
     let Some(schema) = captures.name("schema") else {
-        Err(format!("No 'schema' capture group present in composite definition"))?
+        Err("No 'schema' capture group present in composite definition")?
     };
     let Some(name) = captures.name("name") else {
-        Err(format!("No 'name' capture group present in composite definition"))?
+        Err("No 'name' capture group present in composite definition")?
     };
     let Some(attributes) = captures.name("attributes") else {
-        Err(format!("No 'attributes' capture group present in composite definition"))?
+        Err("No 'attributes' capture group present in composite definition")?
     };
     let attributes: Vec<&str> = attributes
         .as_str()

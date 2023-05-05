@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use common::error::{EmError, EmResult};
 use log::error;
 use rocket::request::FromParam;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgListener, types::ipnetwork::IpNetwork, Database, PgPool, Pool, Postgres};
 
 use super::workflow_runs::WorkflowRunId;
@@ -72,9 +72,10 @@ impl std::fmt::Display for ExecutorId {
 /// interaction methods for the API and [Executor][crate::executor::Executor] instances. To
 /// implement the trait you must specify the [Database] you are working with and the
 /// [ChangeListener] the service will provide.
-pub trait ExecutorsService : Clone {
+#[async_trait::async_trait]
+pub trait ExecutorsService: Clone {
     type Database: Database;
-    type Listener: ChangeListener;
+    type Listener: ChangeListener<ExecutorStatusUpdate>;
 
     fn new(pool: &Pool<Self::Database>) -> Self;
     /// Register a new executor with the database. Creates a record for future processes to
@@ -125,6 +126,7 @@ pub struct PgExecutorsService {
     pool: PgPool,
 }
 
+#[async_trait::async_trait]
 impl ExecutorsService for PgExecutorsService {
     type Database = Postgres;
     type Listener = PgChangeListener<ExecutorStatusUpdate>;

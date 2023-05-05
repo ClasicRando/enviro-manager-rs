@@ -1,6 +1,3 @@
-#![allow(incomplete_features)]
-#![feature(async_fn_in_trait)]
-
 pub mod api;
 pub mod database;
 mod error;
@@ -19,5 +16,5 @@ pub use services::{
     task_queue::{PgTaskQueueService, TaskQueueRecord, TaskQueueService, TaskResponse},
     tasks::{PgTasksService, TasksService},
     workflow_runs::{PgWorkflowRunsService, WorkflowRunsService},
-    workflows::{WorkflowsService, PgWorkflowsService}
+    workflows::{PgWorkflowsService, WorkflowsService},
 };

@@ -4,17 +4,23 @@ use common::error::{EmError, EmResult};
 use log::error;
 use sqlx::postgres::PgListener;
 
-pub trait ChangeListener {
-    type Message;
-    async fn recv(&mut self) -> EmResult<Self::Message>;
+#[async_trait::async_trait]
+pub trait ChangeListener<M: FromStr<Err = EmError>>: Send {
+    async fn recv(&mut self) -> EmResult<M>;
 }
 
-pub struct PgChangeListener<M> {
+pub struct PgChangeListener<M>
+where
+    M: FromStr<Err = EmError> + Send,
+{
     listener: PgListener,
     marker: PhantomData<M>,
 }
 
-impl<M> PgChangeListener<M> {
+impl<M> PgChangeListener<M>
+where
+    M: FromStr<Err = EmError> + Send,
+{
     pub fn new(listener: PgListener) -> Self {
         Self {
             listener,
@@ -23,13 +29,12 @@ impl<M> PgChangeListener<M> {
     }
 }
 
-impl<M> ChangeListener for PgChangeListener<M>
+#[async_trait::async_trait]
+impl<M> ChangeListener<M> for PgChangeListener<M>
 where
-    M: FromStr<Err = EmError>,
+    M: FromStr<Err = EmError> + Send,
 {
-    type Message = M;
-
-    async fn recv(&mut self) -> EmResult<Self::Message> {
+    async fn recv(&mut self) -> EmResult<M> {
         let notification = match self.listener.recv().await {
             Ok(notification) => notification,
             Err(error) => {

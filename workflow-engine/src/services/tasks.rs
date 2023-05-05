@@ -62,7 +62,8 @@ impl std::fmt::Display for TaskId {
     }
 }
 
-pub trait TasksService {
+#[async_trait::async_trait]
+pub trait TasksService: Clone {
     type Database: Database;
 
     /// Create a new [TasksService] with the referenced pool as the data source
@@ -85,6 +86,7 @@ pub struct PgTasksService {
     pool: PgPool,
 }
 
+#[async_trait::async_trait]
 impl TasksService for PgTasksService {
     type Database = Postgres;
 

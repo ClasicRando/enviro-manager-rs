@@ -11,13 +11,12 @@ use worker::WorkflowRunWorker;
 
 use self::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage};
 use crate::{
-    database::listener::{ChangeListener, PgChangeListener},
+    database::listener::ChangeListener,
     services::{
         executors::{ExecutorId, ExecutorStatus, ExecutorsService},
-        task_queue::PgTaskQueueService,
+        task_queue::TaskQueueService,
         workflow_runs::{
-            ExecutorWorkflowRun, PgWorkflowRunsService, WorkflowRunId, WorkflowRunStatus,
-            WorkflowRunsService,
+            ExecutorWorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunsService,
         },
     },
 };
@@ -65,26 +64,32 @@ enum ExecutorNextOperation {
 /// the [Executor] enters shutdown and cleaning mode to free workflow runs that are currently in
 /// progress (if any). After cleaning all relevant resources, the [Executor] instance is dropped to
 /// avoid any issues with held services or workflow run handles.
-pub struct Executor<E> {
+pub struct Executor<E, W, T>
+where
+    E: ExecutorsService,
+    W: WorkflowRunsService,
+    T: TaskQueueService,
+{
     executor_id: ExecutorId,
     executor_service: E,
-    wr_service: PgWorkflowRunsService,
-    tq_service: PgTaskQueueService,
+    wr_service: W,
+    tq_service: T,
     wr_handles: HashMap<WorkflowRunId, WorkflowRunWorkerResult>,
 }
 
-impl<E> Executor<E>
+impl<U, C, S, E, W, T> Executor<E, W, T>
 where
-    E: ExecutorsService<Listener = PgChangeListener<ExecutorStatusUpdate>> + Clone,
+    U: ChangeListener<ExecutorStatusUpdate>,
+    C: ChangeListener<WorkflowRunCancelMessage>,
+    S: ChangeListener<WorkflowRunScheduledMessage>,
+    E: ExecutorsService<Listener = U>,
+    W: WorkflowRunsService<CancelListener = C, ScheduledListener = S>,
+    T: TaskQueueService,
 {
     /// Create a new [Executor] using the provided services. Cleans output unused or stale
     /// executors in the database before registering the current [Executor] and returning the new
     /// [Executor].
-    pub async fn new(
-        executor_service: &E,
-        wr_service: &PgWorkflowRunsService,
-        tq_service: &PgTaskQueueService,
-    ) -> EmResult<Self> {
+    pub async fn new(executor_service: &E, wr_service: &W, tq_service: &T) -> EmResult<Self> {
         executor_service.clean_executors().await?;
         let executor_id = executor_service.register_executor().await?;
         Ok(Self {
@@ -101,94 +106,6 @@ where
         &self.executor_id
     }
 
-    /// Add a new workflow run handle for the executor. Stored for checking if the spawned tokio
-    /// task is complete during cleanup scans.
-    fn add_workflow_run_handle(
-        &mut self,
-        workflow_run_id: WorkflowRunId,
-        handle: WorkflowRunWorkerResult,
-    ) {
-        info!(
-            "Created sub executor to handle workflow_run_id = {}",
-            workflow_run_id
-        );
-        self.wr_handles.insert(workflow_run_id, handle);
-    }
-
-    /// Read the current status of the executor as stored by the database
-    async fn status(&self) -> EmResult<ExecutorStatus> {
-        self.executor_service
-            .read_status(&self.executor_id)
-            .await
-            .map(|status| status.unwrap_or(ExecutorStatus::Canceled))
-    }
-
-    /// Handle a manual shutdown by the user (performed by a ctrl+c) by logging the even and
-    /// returning a [ExecutorNextOperation::Break] entry containing a
-    /// [ExecutorNotificationSignal::Shutdown] variant.
-    fn handle_manual_shutdown(&self) -> ExecutorNextOperation {
-        info!("Received shutdown signal. Starting graceful shutdown");
-        ExecutorNextOperation::Break(ExecutorStatusUpdate::Shutdown)
-    }
-
-    /// Select the next operation when in the active state of an executor. 1 of 4 operations are
-    /// awaited for first completion (priority given respective to order):
-    /// - ctrl+c
-    /// - executor status notification
-    /// - workflow run cancel notification
-    /// - next workflow run available polled
-    ///
-    /// Whichever operation completes first will handle the completed future and return an
-    /// [ExecutorNextOperation] variant to tell the executor what to do as the next step.
-    async fn next_operation_active(
-        &mut self,
-        executor_status_listener: &mut PgChangeListener<ExecutorStatusUpdate>,
-        workflow_run_cancel_listener: &mut PgChangeListener<WorkflowRunCancelMessage>,
-    ) -> EmResult<ExecutorNextOperation> {
-        Ok(tokio::select! {
-            biased;
-            _ = ctrl_c() => self.handle_manual_shutdown(),
-            notification = executor_status_listener.recv() => self
-                .handle_executor_status_notification(notification?),
-            notification = workflow_run_cancel_listener.recv() => self
-                .handle_workflow_run_cancel_notification(notification?).await?,
-            workflow_run_id = self.next_workflow_run() => {
-                let Some((workflow_run_id, run_result)) = workflow_run_id? else {
-                    return Ok(ExecutorNextOperation::Listen)
-                };
-                ExecutorNextOperation::NextWorkflowRun(workflow_run_id, run_result)
-            }
-        })
-    }
-
-    /// Select the next operation when in the listen state of an executor. 1 of 4 operations are
-    /// awaited for first completion (priority given respective to order):
-    /// - ctrl+c
-    /// - executor status notification
-    /// - workflow run cancel notification
-    /// - workflow run scheduled notification
-    ///
-    /// Whichever operation completes first will handle the completed future and return an
-    /// [ExecutorNextOperation] variant to tell the executor what to do as the next step.
-    async fn next_operation_listen(
-        &mut self,
-        executor_status_listener: &mut PgChangeListener<ExecutorStatusUpdate>,
-        workflow_run_cancel_listener: &mut PgChangeListener<WorkflowRunCancelMessage>,
-        workflow_run_scheduled_listener: &mut PgChangeListener<WorkflowRunScheduledMessage>,
-    ) -> EmResult<ExecutorNextOperation> {
-        Ok(tokio::select! {
-            biased;
-            _ = ctrl_c() => self.handle_manual_shutdown(),
-            notification = executor_status_listener.recv() => self
-                .handle_executor_status_notification(notification?),
-            notification = workflow_run_cancel_listener.recv() => self
-                .handle_workflow_run_cancel_notification(notification?).await?,
-            notification = workflow_run_scheduled_listener.recv() => self
-                .handle_workflow_run_scheduled_notification(notification)?,
-        })
-    }
-
-    ///
     #[allow(unused_assignments)]
     pub async fn run(mut self) -> EmResult<()> {
         let mut is_listen_mode = false;
@@ -257,6 +174,93 @@ where
         Ok(())
     }
 
+    /// Add a new workflow run handle for the executor. Stored for checking if the spawned tokio
+    /// task is complete during cleanup scans.
+    fn add_workflow_run_handle(
+        &mut self,
+        workflow_run_id: WorkflowRunId,
+        handle: WorkflowRunWorkerResult,
+    ) {
+        info!(
+            "Created sub executor to handle workflow_run_id = {}",
+            workflow_run_id
+        );
+        self.wr_handles.insert(workflow_run_id, handle);
+    }
+
+    /// Read the current status of the executor as stored by the database
+    async fn status(&self) -> EmResult<ExecutorStatus> {
+        self.executor_service
+            .read_status(&self.executor_id)
+            .await
+            .map(|status| status.unwrap_or(ExecutorStatus::Canceled))
+    }
+
+    /// Handle a manual shutdown by the user (performed by a ctrl+c) by logging the even and
+    /// returning a [ExecutorNextOperation::Break] entry containing a
+    /// [ExecutorNotificationSignal::Shutdown] variant.
+    fn handle_manual_shutdown(&self) -> ExecutorNextOperation {
+        info!("Received shutdown signal. Starting graceful shutdown");
+        ExecutorNextOperation::Break(ExecutorStatusUpdate::Shutdown)
+    }
+
+    /// Select the next operation when in the active state of an executor. 1 of 4 operations are
+    /// awaited for first completion (priority given respective to order):
+    /// - ctrl+c
+    /// - executor status notification
+    /// - workflow run cancel notification
+    /// - next workflow run available polled
+    ///
+    /// Whichever operation completes first will handle the completed future and return an
+    /// [ExecutorNextOperation] variant to tell the executor what to do as the next step.
+    async fn next_operation_active(
+        &mut self,
+        executor_status_listener: &mut U,
+        workflow_run_cancel_listener: &mut C,
+    ) -> EmResult<ExecutorNextOperation> {
+        Ok(tokio::select! {
+            biased;
+            _ = ctrl_c() => self.handle_manual_shutdown(),
+            notification = executor_status_listener.recv() => self
+                .handle_executor_status_notification(notification?),
+            notification = workflow_run_cancel_listener.recv() => self
+                .handle_workflow_run_cancel_notification(notification?).await?,
+            workflow_run_id = self.next_workflow_run() => {
+                let Some((workflow_run_id, run_result)) = workflow_run_id? else {
+                    return Ok(ExecutorNextOperation::Listen)
+                };
+                ExecutorNextOperation::NextWorkflowRun(workflow_run_id, run_result)
+            }
+        })
+    }
+
+    /// Select the next operation when in the listen state of an executor. 1 of 4 operations are
+    /// awaited for first completion (priority given respective to order):
+    /// - ctrl+c
+    /// - executor status notification
+    /// - workflow run cancel notification
+    /// - workflow run scheduled notification
+    ///
+    /// Whichever operation completes first will handle the completed future and return an
+    /// [ExecutorNextOperation] variant to tell the executor what to do as the next step.
+    async fn next_operation_listen(
+        &mut self,
+        executor_status_listener: &mut U,
+        workflow_run_cancel_listener: &mut C,
+        workflow_run_scheduled_listener: &mut S,
+    ) -> EmResult<ExecutorNextOperation> {
+        Ok(tokio::select! {
+            biased;
+            _ = ctrl_c() => self.handle_manual_shutdown(),
+            notification = executor_status_listener.recv() => self
+                .handle_executor_status_notification(notification?),
+            notification = workflow_run_cancel_listener.recv() => self
+                .handle_workflow_run_cancel_notification(notification?).await?,
+            notification = workflow_run_scheduled_listener.recv() => self
+                .handle_workflow_run_scheduled_notification(notification)?,
+        })
+    }
+
     /// Fetch the next available workflow run for the current executor.
     ///
     /// If there is an available workflow run, a workflow run worker is spawned and returned with
@@ -280,9 +284,9 @@ where
     ) -> WorkflowRunWorkerResult {
         let wr_service = self.wr_service.clone();
         let tq_service = self.tq_service.clone();
-        let workflow_run_id = workflow_run_id.to_owned();
+        let workflow_run_id = workflow_run_id.clone();
         tokio::spawn(async move {
-            let worker = WorkflowRunWorker::new(&workflow_run_id, wr_service, tq_service);
+            let worker = WorkflowRunWorker::new(workflow_run_id.clone(), wr_service, tq_service);
             let worker_result = worker.run().await;
 
             let mut err = None;

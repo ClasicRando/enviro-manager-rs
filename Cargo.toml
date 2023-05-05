@@ -18,3 +18,4 @@ indoc = "2"
 lettre = { version = "0.10.1", features = ["tokio1", "tokio1-native-tls"] }
 actix-web = { version = "4.3.1" }
 mime = "0.3.17"
+async-trait = "0.1.68"

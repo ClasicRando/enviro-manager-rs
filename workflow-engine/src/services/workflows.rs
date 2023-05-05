@@ -95,7 +95,8 @@ impl std::fmt::Display for WorkflowId {
     }
 }
 
-pub trait WorkflowsService {
+#[async_trait::async_trait]
+pub trait WorkflowsService: Clone {
     type Database: Database;
     /// Create a new [WorkflowsService] with the referenced pool as the data source
     fn new(pool: &Pool<Self::Database>) -> Self;
@@ -120,6 +121,7 @@ pub struct PgWorkflowsService {
     pool: PgPool,
 }
 
+#[async_trait::async_trait]
 impl WorkflowsService for PgWorkflowsService {
     type Database = Postgres;
 

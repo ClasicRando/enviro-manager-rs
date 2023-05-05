@@ -244,9 +244,12 @@ impl std::fmt::Display for JobId {
     }
 }
 
-pub trait JobsService : Clone {
+/// Service for fetching and interacting with task data. Wraps a [PgPool] and provides
+/// interaction methods for the API and [JobWorker][crate::job_worker::JobWorker].
+#[async_trait::async_trait]
+pub trait JobsService : Clone + Send {
     type Database: Database;
-    type Listener: ChangeListener;
+    type Listener: ChangeListener<NotificationAction>;
 
     /// Create a new [JobsService] with the referenced pool as the data source
     fn new(pool: &Pool<Self::Database>) -> Self;
@@ -272,8 +275,6 @@ pub trait JobsService : Clone {
     async fn listener(&self) -> EmResult<Self::Listener>;
 }
 
-/// Service for fetching and interacting with task data. Wraps a [PgPool] and provides
-/// interaction methods for the API and [JobWorker][crate::job_worker::JobWorker].
 #[derive(Clone)]
 pub struct PgJobsService {
     pool: PgPool,
@@ -315,6 +316,7 @@ impl PgJobsService {
     }
 }
 
+#[async_trait::async_trait]
 impl JobsService for PgJobsService {
     type Database = Postgres;
     type Listener = PgChangeListener<NotificationAction>;

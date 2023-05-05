@@ -10,7 +10,7 @@ use sqlx::{
         types::{PgRecordDecoder, PgRecordEncoder},
         PgArgumentBuffer, PgHasArrayType, PgTypeInfo, PgValueRef,
     },
-    PgPool, Pool, Postgres, Type, Database,
+    Database, PgPool, Pool, Postgres, Type,
 };
 
 use super::workflow_runs::WorkflowRunId;
@@ -75,7 +75,7 @@ impl PgHasArrayType for TaskRule {
 }
 
 /// Represents a row from the `task.task_queue` table
-#[derive(sqlx::FromRow, Serialize, Deserialize, Debug)]
+#[derive(sqlx::FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct TaskQueueRecord {
     workflow_run_id: i64,
     task_order: i32,
@@ -106,7 +106,8 @@ pub enum TaskResponse {
     },
 }
 
-pub trait TaskQueueService: Clone {
+#[async_trait::async_trait]
+pub trait TaskQueueService: Clone + Send + Sync + 'static {
     type Database: Database;
 
     /// Create a new [TaskQueueService] with the referenced pool as the data source
@@ -165,7 +166,7 @@ pub struct PgTaskQueueService {
 }
 
 impl PgTaskQueueService {
-        /// Process a response `message` from a remote task run. The expected format is of MessagePack
+    /// Process a response `message` from a remote task run. The expected format is of MessagePack
     /// and the contents are parsed to a [TaskResponse] variant. If the message is a
     /// [TaskResponse::Done] message, the contents are returned as a tuple. Otherwise, a [None]
     /// value is returned to signify the message has been processed but there are more to come.
@@ -221,6 +222,7 @@ impl PgTaskQueueService {
     }
 }
 
+#[async_trait::async_trait]
 impl TaskQueueService for PgTaskQueueService {
     type Database = Postgres;
 

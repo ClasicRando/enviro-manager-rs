@@ -186,10 +186,11 @@ impl std::fmt::Display for WorkflowRunId {
     }
 }
 
-pub trait WorkflowRunsService: Clone {
-    type CancelListener: ChangeListener;
+#[async_trait::async_trait]
+pub trait WorkflowRunsService: Clone + Send + Sync + 'static {
+    type CancelListener: ChangeListener<WorkflowRunCancelMessage>;
     type Database: Database;
-    type ScheduledListener: ChangeListener;
+    type ScheduledListener: ChangeListener<WorkflowRunScheduledMessage>;
 
     /// Create a new [WorkflowRunsService] with the referenced pool as the data source
     fn new(pool: &Pool<Self::Database>) -> Self;
@@ -255,6 +256,7 @@ pub struct PgWorkflowRunsService {
     pool: PgPool,
 }
 
+#[async_trait::async_trait]
 impl WorkflowRunsService for PgWorkflowRunsService {
     type CancelListener = PgChangeListener<WorkflowRunCancelMessage>;
     type Database = Postgres;
