@@ -5,21 +5,19 @@ use std::collections::HashMap;
 
 use common::error::EmResult;
 use log::{error, info, warn};
-use sqlx::{
-    postgres::{PgListener, PgNotification},
-    Error as SqlError,
-};
 use tokio::{signal::ctrl_c, task::JoinError};
 use utilities::{ExecutorStatusUpdate, WorkflowRunWorkerResult};
 use worker::WorkflowRunWorker;
 
+use self::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage};
 use crate::{
     database::listener::{ChangeListener, PgChangeListener},
     services::{
         executors::{ExecutorId, ExecutorStatus, ExecutorsService},
-        task_queue::TaskQueueService,
+        task_queue::PgTaskQueueService,
         workflow_runs::{
-            ExecutorWorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunsService,
+            ExecutorWorkflowRun, PgWorkflowRunsService, WorkflowRunId, WorkflowRunStatus,
+            WorkflowRunsService,
         },
     },
 };
@@ -70,8 +68,8 @@ enum ExecutorNextOperation {
 pub struct Executor<E> {
     executor_id: ExecutorId,
     executor_service: E,
-    wr_service: WorkflowRunsService,
-    tq_service: TaskQueueService,
+    wr_service: PgWorkflowRunsService,
+    tq_service: PgTaskQueueService,
     wr_handles: HashMap<WorkflowRunId, WorkflowRunWorkerResult>,
 }
 
@@ -84,8 +82,8 @@ where
     /// [Executor].
     pub async fn new(
         executor_service: &E,
-        wr_service: &WorkflowRunsService,
-        tq_service: &TaskQueueService,
+        wr_service: &PgWorkflowRunsService,
+        tq_service: &PgTaskQueueService,
     ) -> EmResult<Self> {
         executor_service.clean_executors().await?;
         let executor_id = executor_service.register_executor().await?;
@@ -145,7 +143,7 @@ where
     async fn next_operation_active(
         &mut self,
         executor_status_listener: &mut PgChangeListener<ExecutorStatusUpdate>,
-        workflow_run_cancel_listener: &mut PgListener,
+        workflow_run_cancel_listener: &mut PgChangeListener<WorkflowRunCancelMessage>,
     ) -> EmResult<ExecutorNextOperation> {
         Ok(tokio::select! {
             biased;
@@ -153,7 +151,7 @@ where
             notification = executor_status_listener.recv() => self
                 .handle_executor_status_notification(notification?),
             notification = workflow_run_cancel_listener.recv() => self
-                .handle_workflow_run_cancel_notification(notification).await?,
+                .handle_workflow_run_cancel_notification(notification?).await?,
             workflow_run_id = self.next_workflow_run() => {
                 let Some((workflow_run_id, run_result)) = workflow_run_id? else {
                     return Ok(ExecutorNextOperation::Listen)
@@ -175,8 +173,8 @@ where
     async fn next_operation_listen(
         &mut self,
         executor_status_listener: &mut PgChangeListener<ExecutorStatusUpdate>,
-        workflow_run_cancel_listener: &mut PgListener,
-        workflow_run_scheduled_listener: &mut PgListener,
+        workflow_run_cancel_listener: &mut PgChangeListener<WorkflowRunCancelMessage>,
+        workflow_run_scheduled_listener: &mut PgChangeListener<WorkflowRunScheduledMessage>,
     ) -> EmResult<ExecutorNextOperation> {
         Ok(tokio::select! {
             biased;
@@ -184,7 +182,7 @@ where
             notification = executor_status_listener.recv() => self
                 .handle_executor_status_notification(notification?),
             notification = workflow_run_cancel_listener.recv() => self
-                .handle_workflow_run_cancel_notification(notification).await?,
+                .handle_workflow_run_cancel_notification(notification?).await?,
             notification = workflow_run_scheduled_listener.recv() => self
                 .handle_workflow_run_scheduled_notification(notification)?,
         })
@@ -316,21 +314,10 @@ where
     /// through the database service.
     async fn handle_workflow_run_cancel_notification(
         &mut self,
-        result: Result<PgNotification, SqlError>,
+        message: WorkflowRunCancelMessage,
     ) -> EmResult<ExecutorNextOperation> {
-        let notification = match result {
-            Ok(notification) => notification,
-            Err(error) => {
-                error!(
-                    "Error receiving workflow run cancel notification.\n{:?}",
-                    error
-                );
-                return Err(error.into());
-            }
-        };
-        let Ok(workflow_run_id) = notification.payload().parse() else {
-            warn!("Cannot parse workflow_run_id from `{}`", notification.payload());
-            return Ok(ExecutorNextOperation::Continue);
+        let WorkflowRunCancelMessage(Some(workflow_run_id)) = message else {
+            return Ok(ExecutorNextOperation::Continue)
         };
         let Some(handle) = self.wr_handles.remove(&workflow_run_id) else {
             return Ok(ExecutorNextOperation::Continue)
@@ -352,7 +339,7 @@ where
     /// mode to handle new workflow runs.
     fn handle_workflow_run_scheduled_notification(
         &self,
-        result: Result<PgNotification, SqlError>,
+        result: EmResult<WorkflowRunScheduledMessage>,
     ) -> EmResult<ExecutorNextOperation> {
         match result {
             Ok(_) => {
@@ -361,7 +348,7 @@ where
             }
             Err(error) => {
                 error!("Error receiving workflow run notification.\n{:?}", error);
-                Err(error.into())
+                Err(error)
             }
         }
     }

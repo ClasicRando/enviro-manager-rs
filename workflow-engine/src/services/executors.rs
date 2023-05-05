@@ -2,8 +2,8 @@ use chrono::NaiveDateTime;
 use common::error::{EmError, EmResult};
 use log::error;
 use rocket::request::FromParam;
-use serde::Serialize;
-use sqlx::{postgres::PgListener, types::ipnetwork::IpNetwork, PgPool, Database, Postgres, Pool};
+use serde::{Serialize, Deserialize};
+use sqlx::{postgres::PgListener, types::ipnetwork::IpNetwork, Database, PgPool, Pool, Postgres};
 
 use super::workflow_runs::WorkflowRunId;
 use crate::{
@@ -50,7 +50,7 @@ pub struct Executor {
 
 /// Wrapper for an `executor_id` value. Made to ensure data passed as the id of an executor is
 /// correct and not just any i64 value.
-#[derive(sqlx::Type, Clone)]
+#[derive(sqlx::Type, Clone, Deserialize)]
 #[sqlx(transparent)]
 pub struct ExecutorId(i64);
 
@@ -68,9 +68,14 @@ impl std::fmt::Display for ExecutorId {
     }
 }
 
-pub trait ExecutorsService {
+/// Service for fetching and interacting with executor data. Wraps a [Pool] and provides
+/// interaction methods for the API and [Executor][crate::executor::Executor] instances. To
+/// implement the trait you must specify the [Database] you are working with and the
+/// [ChangeListener] the service will provide.
+pub trait ExecutorsService : Clone {
     type Database: Database;
     type Listener: ChangeListener;
+
     fn new(pool: &Pool<Self::Database>) -> Self;
     /// Register a new executor with the database. Creates a record for future processes to
     /// attribute workflow runs to the new executor.
@@ -113,8 +118,8 @@ pub trait ExecutorsService {
     async fn status_listener(&self, executor_id: &ExecutorId) -> EmResult<Self::Listener>;
 }
 
-/// Service for fetching and interacting with executor data. Wraps a [PgPool] and provides
-/// interaction methods for the API and [Executor][crate::executor::Executor] instances.
+/// Postgresql implementation of the [ExecutorsService]. Wraps a [PgPool] and provides interaction
+/// methods for the API and [Executor][crate::executor::Executor] instances.
 #[derive(Clone)]
 pub struct PgExecutorsService {
     pool: PgPool,
@@ -127,7 +132,7 @@ impl ExecutorsService for PgExecutorsService {
     fn new(pool: &PgPool) -> Self {
         Self { pool: pool.clone() }
     }
-    
+
     async fn register_executor(&self) -> EmResult<ExecutorId> {
         let executor_id = sqlx::query_scalar("select executor.register_executor()")
             .fetch_one(&self.pool)

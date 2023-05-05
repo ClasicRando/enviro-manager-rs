@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::{
     postgres::{PgHasArrayType, PgTypeInfo},
-    PgPool,
+    Database, PgPool, Pool, Postgres,
 };
 
 /// Task data as it can be seen from it's parent, a [Workflow] instance. Contains the underlining
@@ -95,22 +95,39 @@ impl std::fmt::Display for WorkflowId {
     }
 }
 
+pub trait WorkflowsService {
+    type Database: Database;
+    /// Create a new [WorkflowsService] with the referenced pool as the data source
+    fn new(pool: &Pool<Self::Database>) -> Self;
+    /// Create a new workflow using the `request` data to call the `workflow.create_workflow`
+    /// procedure. Returns the new [Workflow] created.
+    async fn create(&self, request: WorkflowRequest) -> EmResult<Workflow>;
+    /// Read a single [Workflow] record for the specified `workflow_id`. Returns [None] if the id
+    /// does not match any record in the database.
+    async fn read_one(&self, workflow_id: &WorkflowId) -> EmResult<Option<Workflow>>;
+    /// Read all [Workflow] records in the database
+    async fn read_many(&self) -> EmResult<Vec<Workflow>>;
+    /// Deprecate the workflow specified within the `request` data, pointing to a new workflow
+    /// if the `request` contains a `new_workflow_id` value. Returns the `workflow_id` that was
+    /// updated as a response.
+    async fn deprecate(&self, request: WorkflowDeprecationRequest) -> EmResult<i64>;
+}
+
 /// Service for fetching and interacting with workflow run data. Wraps a [PgPool] and provides
 /// interaction methods for the API.
 #[derive(Clone)]
-pub struct WorkflowsService {
+pub struct PgWorkflowsService {
     pool: PgPool,
 }
 
-impl WorkflowsService {
-    /// Create a new [WorkflowsService] with the referenced pool as the data source
-    pub fn new(pool: &PgPool) -> Self {
+impl WorkflowsService for PgWorkflowsService {
+    type Database = Postgres;
+
+    fn new(pool: &PgPool) -> Self {
         Self { pool: pool.clone() }
     }
 
-    /// Create a new workflow using the `request` data to call the `workflow.create_workflow`
-    /// procedure. Returns the new [Workflow] created.
-    pub async fn create(&self, request: WorkflowRequest) -> EmResult<Workflow> {
+    async fn create(&self, request: WorkflowRequest) -> EmResult<Workflow> {
         let workflow_id = sqlx::query_scalar("select workflow.create_workflow($1,$2)")
             .bind(request.name)
             .bind(request.tasks)
@@ -123,9 +140,7 @@ impl WorkflowsService {
         }
     }
 
-    /// Read a single [Workflow] record for the specified `workflow_id`. Returns [None] if the id
-    /// does not match any record in the database.
-    pub async fn read_one(&self, workflow_id: &WorkflowId) -> EmResult<Option<Workflow>> {
+    async fn read_one(&self, workflow_id: &WorkflowId) -> EmResult<Option<Workflow>> {
         let result = sqlx::query_as(
             r#"
             select w.workflow_id, w.name, w.tasks
@@ -138,8 +153,7 @@ impl WorkflowsService {
         Ok(result)
     }
 
-    /// Read all [Workflow] records in the database
-    pub async fn read_many(&self) -> EmResult<Vec<Workflow>> {
+    async fn read_many(&self) -> EmResult<Vec<Workflow>> {
         let result = sqlx::query_as(
             r#"
             select w.workflow_id, w.name, w.tasks
@@ -150,10 +164,7 @@ impl WorkflowsService {
         Ok(result)
     }
 
-    /// Deprecate the workflow specified within the `request` data, pointing to a new workflow
-    /// if the `request` contains a `new_workflow_id` value. Returns the `workflow_id` that was
-    /// updated as a response.
-    pub async fn deprecate(&self, request: WorkflowDeprecationRequest) -> EmResult<i64> {
+    async fn deprecate(&self, request: WorkflowDeprecationRequest) -> EmResult<i64> {
         sqlx::query("call workflow.deprecate_workflow($1,$2)")
             .bind(request.workflow_id)
             .bind(request.new_workflow_id)
@@ -169,8 +180,8 @@ mod test {
     use sqlx::PgPool;
 
     use super::{
-        WorkflowDeprecationRequest, WorkflowId, WorkflowRequest, WorkflowTaskRequest,
-        WorkflowsService,
+        PgWorkflowsService, WorkflowDeprecationRequest, WorkflowId, WorkflowRequest,
+        WorkflowTaskRequest, WorkflowsService,
     };
     use crate::{database::create_test_db_pool, services::workflows::Workflow};
 
@@ -220,7 +231,7 @@ mod test {
     #[sqlx::test]
     async fn create() -> EmResult<()> {
         let pool = create_test_db_pool().await?;
-        let service = WorkflowsService::new(&pool);
+        let service = PgWorkflowsService::new(&pool);
         let workflow_name = "Create test";
         let task_id = 1;
         let parameters = None;
@@ -249,7 +260,7 @@ mod test {
     #[sqlx::test]
     async fn read_one_should_return_some_when_record_exists() -> EmResult<()> {
         let pool = create_test_db_pool().await?;
-        let service = WorkflowsService::new(&pool);
+        let service = PgWorkflowsService::new(&pool);
         let workflow_id = 1;
         let workflow_name = "test";
         let task_id = 1;
@@ -268,7 +279,7 @@ mod test {
     #[sqlx::test]
     async fn read_one_should_return_none_when_record_exists() -> EmResult<()> {
         let pool = create_test_db_pool().await?;
-        let service = WorkflowsService::new(&pool);
+        let service = PgWorkflowsService::new(&pool);
         let workflow_id = -1;
 
         let result = service.read_one(&WorkflowId(workflow_id)).await?;
@@ -281,7 +292,7 @@ mod test {
     #[sqlx::test]
     async fn read_many() -> EmResult<()> {
         let pool = create_test_db_pool().await?;
-        let service = WorkflowsService::new(&pool);
+        let service = PgWorkflowsService::new(&pool);
 
         let workflows = service.read_many().await?;
 
@@ -293,7 +304,7 @@ mod test {
     #[sqlx::test]
     async fn deprecate_workflow_with_no_new_workflow() -> EmResult<()> {
         let pool = create_test_db_pool().await?;
-        let service = WorkflowsService::new(&pool);
+        let service = PgWorkflowsService::new(&pool);
 
         let workflow_name = "deprecate no new workflow test";
         let task_id = 1;
@@ -340,7 +351,7 @@ mod test {
     #[sqlx::test]
     async fn deprecate_workflow_with_new_workflow() -> EmResult<()> {
         let pool = create_test_db_pool().await?;
-        let service = WorkflowsService::new(&pool);
+        let service = PgWorkflowsService::new(&pool);
         let workflow_id = 1;
         let new_workflow_name = "deprecate workflow new workflow test";
         let task_id = 1;

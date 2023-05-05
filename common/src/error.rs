@@ -41,6 +41,8 @@ pub enum EmError {
     ParseInt(#[from] std::num::ParseIntError),
     #[error("Environment Variable error\n{0}")]
     EnvVar(#[from] std::env::VarError),
+    #[error("IO error\n{0}")]
+    IO(#[from] std::io::Error),
 }
 
 /// Generic [Result][std::result::Result] type where the error is always [Error]

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env};
+use std::{collections::HashMap, env, str::FromStr};
 
 use chrono::{NaiveDateTime, Utc};
 use common::error::{EmError, EmResult};
@@ -7,34 +7,32 @@ use lettre::{
     Tokio1Executor,
 };
 use log::{error, info, warn};
-use sqlx::postgres::PgNotification;
 use tokio::{
     signal::ctrl_c,
     time::{sleep as tokio_sleep, Duration as StdDuration},
 };
 
-use crate::services::jobs::{Job, JobId, JobsService};
+use crate::{services::jobs::{Job, JobId, PgJobsService, JobsService}, database::listener::ChangeListener};
 
 /// Action to perform after receiving a job worker notification. Notification payload should be a
 /// workflow run id (as an i64/bigint) to tell the job worker a job has been completed or an empty
 /// payload to tell the worker to refresh the job list.
-enum NotificationAction {
+pub enum NotificationAction {
     LoadJobs,
     CompleteJob(JobId),
 }
 
-impl TryFrom<PgNotification> for NotificationAction {
-    type Error = EmError;
+impl FromStr for NotificationAction {
+    type Err = EmError;
 
-    fn try_from(value: PgNotification) -> Result<Self, Self::Error> {
-        let payload = value.payload();
-        if payload.is_empty() {
+    fn from_str(s: &str) -> EmResult<Self> {
+        if s.is_empty() {
             return Ok(NotificationAction::LoadJobs);
         }
-        let Ok(job_id) = payload.parse::<i64>() else {
-            return Err(EmError::PayloadParseError(payload.to_owned()))
+        let Ok(job_id) = s.parse::<i64>() else {
+            return Err(EmError::PayloadParseError(s.to_owned()))
         };
-        info!("Received notification of \"{}\"", payload);
+        info!("Received notification of \"{}\"", s);
         Ok(NotificationAction::CompleteJob(job_id.into()))
     }
 }
@@ -42,7 +40,7 @@ impl TryFrom<PgNotification> for NotificationAction {
 /// Main unit of the recurring job run process. An instance of the worker is meant to be created
 /// and run as the lifecycle of the instance (dropped at the end of the  method).
 pub struct JobWorker {
-    service: JobsService,
+    service: PgJobsService,
     jobs: HashMap<JobId, NaiveDateTime>,
     next_job: JobId,
     mailer: AsyncSmtpTransport<Tokio1Executor>,
@@ -51,7 +49,7 @@ pub struct JobWorker {
 impl JobWorker {
     /// Create a new job worker, initializing with a reference to a [JobsService] and creating a
     /// mailer to send job related emails to maintainers.
-    pub async fn new(service: JobsService) -> EmResult<Self> {
+    pub async fn new(service: PgJobsService) -> EmResult<Self> {
         let username = env::var("CLIPPY_USERNAME")?;
         let password = env::var("CLIPPY_PASSWORD")?;
         let relay = env::var("CLIPPY_RELAY")?;
@@ -94,7 +92,7 @@ impl JobWorker {
                     break;
                 }
                 notification = job_channel.recv() => {
-                    self.handle_notification(notification?).await?
+                    self.handle_action(notification?).await?
                 }
                 _ = tokio_sleep(next_run) => {
                     self.run_next_job().await?;
@@ -127,15 +125,10 @@ impl JobWorker {
         Ok(())
     }
 
-    /// Handle a notification, parsing to a [NotificationAction] and handling each action. If the
-    /// notification is [NotificationAction::LoadJobs] then the jobs cache will be refreshed. If
-    /// the notification is [NotificationAction::CompleteJob] the the inner `job_id` will be used
-    /// to mark a job as complete and jobs list will be refreshed.
-    async fn handle_notification(&mut self, notification: PgNotification) -> EmResult<()> {
-        let action = match NotificationAction::try_from(notification) {
-            Ok(action) => action,
-            Err(error) => return Err(error),
-        };
+    /// Handle a piped [NotificationAction]. If the action is [NotificationAction::LoadJobs] then
+    /// the jobs cache will be refreshed. If the action is [NotificationAction::CompleteJob] the
+    /// the inner `job_id` will be used to mark a job as complete and jobs list will be refreshed.
+    async fn handle_action(&mut self, action: NotificationAction) -> EmResult<()> {
         match action {
             NotificationAction::LoadJobs => self.load_jobs().await?,
             NotificationAction::CompleteJob(job_id) => {

@@ -32,4 +32,6 @@ lettre = { workspace = true }
 rocket = { workspace = true }
 thiserror = { workspace = true }
 indoc = { workspace = true }
+actix-web = { workspace = true }
+mime = { workspace = true }
 common = { path = "../common" }

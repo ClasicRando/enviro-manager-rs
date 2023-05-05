@@ -2,16 +2,16 @@ use common::error::{EmError, EmResult};
 use log::{error, info};
 
 use crate::services::{
-    task_queue::{TaskQueueRecord, TaskQueueService},
-    workflow_runs::{WorkflowRunId, WorkflowRunsService},
+    task_queue::{TaskQueueRecord, PgTaskQueueService, TaskQueueService},
+    workflow_runs::{WorkflowRunId, PgWorkflowRunsService, WorkflowRunsService},
 };
 
 /// Container with the workflow run ID associated with the worker and the necessary services to
 /// complete workflow run operations
 pub struct WorkflowRunWorker<'w> {
     workflow_run_id: &'w WorkflowRunId,
-    wr_service: WorkflowRunsService,
-    tq_service: TaskQueueService,
+    wr_service: PgWorkflowRunsService,
+    tq_service: PgTaskQueueService,
 }
 
 impl<'w> WorkflowRunWorker<'w> {
@@ -24,8 +24,8 @@ impl<'w> WorkflowRunWorker<'w> {
     /// * `tq_service` - task queue service to interact with the database
     pub fn new(
         workflow_run_id: &'w WorkflowRunId,
-        wr_service: WorkflowRunsService,
-        tq_service: TaskQueueService,
+        wr_service: PgWorkflowRunsService,
+        tq_service: PgTaskQueueService,
     ) -> Self {
         Self {
             workflow_run_id,

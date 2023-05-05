@@ -12,11 +12,15 @@ use sqlx::{
         types::{PgRecordDecoder, PgRecordEncoder},
         PgArgumentBuffer, PgHasArrayType, PgListener, PgTypeInfo, PgValueRef,
     },
-    PgPool, Postgres, Type,
+    Database, PgPool, Pool, Postgres, Type,
 };
 
 use super::{executors::ExecutorId, task_queue::TaskRule, tasks::TaskStatus};
-use crate::services::workflows::WorkflowId;
+use crate::{
+    database::listener::{ChangeListener, PgChangeListener},
+    executor::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage},
+    services::workflows::WorkflowId,
+};
 
 /// Status of a workflow run as found in the database as a simple Postgresql enum type
 #[derive(sqlx::Type, PartialEq, Eq, Serialize)]
@@ -182,22 +186,85 @@ impl std::fmt::Display for WorkflowRunId {
     }
 }
 
+pub trait WorkflowRunsService: Clone {
+    type CancelListener: ChangeListener;
+    type Database: Database;
+    type ScheduledListener: ChangeListener;
+
+    /// Create a new [WorkflowRunsService] with the referenced pool as the data source
+    fn new(pool: &Pool<Self::Database>) -> Self;
+    /// Initialize a new workflow run for the specified `workflow_id`. Returns the new [WorkflowRun]
+    /// instance.
+    async fn initialize(&self, workflow_id: &WorkflowId) -> EmResult<WorkflowRun>;
+    /// Read a single [WorkflowRun] record from `workflow.v_workflow_runs` for the specified
+    /// `workflow_run_id`. Will return [None] when the id does not match a record.
+    async fn read_one(&self, workflow_run_id: &WorkflowRunId) -> EmResult<Option<WorkflowRun>>;
+    /// Read all [WorkflowRun] records found from `workflow.v_workflow_runs`
+    async fn read_many(&self) -> EmResult<Vec<WorkflowRun>>;
+    /// Update the status of the workflow run to 'Canceled' and send a notification to the
+    /// [Executor][crate::executor::Executor] handling the workflow run to stop operations.
+    async fn cancel(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun>;
+    /// Schedule a workflow run to be picked up by an available
+    /// [Executor][crate::executor::Executor]. Return a [WorkflowRun] with the new data from the
+    /// scheduled record of `workflow_run_id`.
+    async fn schedule(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun>;
+    /// Schedule a workflow run to be picked up by the [Executor][crate::executor::Executor]
+    /// specified by `executor_id`. Returns a [WorkflowRun] with the new data from the scheduled
+    /// record of `workflow_run_id`.
+    async fn schedule_with_executor(
+        &self,
+        workflow_run_id: &WorkflowRunId,
+        executor_id: &ExecutorId,
+    ) -> EmResult<WorkflowRun>;
+    /// Restart a workflow run to a 'Waiting' state. Copies current state of the `task_queue` before
+    /// updating restarting all tasks and the workflow run itself. Returns a [WorkflowRun] with the
+    /// new state of the workflow run for the specified `workflow_run_id`.
+    async fn restart(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun>;
+    /// Complete a workflow run by collecting stats about the run's tasks and updating the status
+    /// of the workflow run accordingly.
+    async fn complete(&self, workflow_run_id: &WorkflowRunId) -> EmResult<()>;
+    /// Fetch all workflow runs attached to an executor specified by `executor_id`.
+    async fn all_executor_workflows(
+        &self,
+        executor_id: &ExecutorId,
+    ) -> EmResult<Vec<ExecutorWorkflowRun>>;
+    /// Start the move of a workflow run to another executor (or back to the 'Scheduled' workflow
+    /// run pool if no executors are available). Updates the next task up for execution to the
+    /// 'Paused' status. Returns the new state of the [WorkflowRun] specified by `workflow_run_id`.
+    async fn start_move(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun>;
+    /// Complete the move of a workflow run to another executor (or back to the 'Scheduled' workflow
+    /// run pool if no executors are available). Updates the next task with a 'Paused' status to the
+    /// 'Waiting' status and schedules the workflow run for execution. Returns the new state of the
+    /// [WorkflowRun] specified by `workflow_run_id`.
+    async fn complete_move(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun>;
+    /// Get a new workflow run scheduled listener for the specified `executor_id`. The [PgListener]
+    /// checks a channel named `wr_scheduled_{executor_id}`
+    async fn scheduled_listener(
+        &self,
+        executor_id: &ExecutorId,
+    ) -> EmResult<Self::ScheduledListener>;
+    /// Get a new workflow run canceled listener for the specified `executor_id`. The [PgListener]
+    /// checks a channel named `wr_canceled_{executor_id}`
+    async fn cancel_listener(&self, executor_id: &ExecutorId) -> EmResult<Self::CancelListener>;
+}
+
 /// Service for fetching and interacting with workflow run data. Wraps a [PgPool] and provides
 /// interaction methods for the API and [Executor][crate::executor::Executor] instances.
 #[derive(Clone)]
-pub struct WorkflowRunsService {
+pub struct PgWorkflowRunsService {
     pool: PgPool,
 }
 
-impl WorkflowRunsService {
-    /// Create a new [WorkflowRunsService] with the referenced pool as the data source
-    pub fn new(pool: &PgPool) -> Self {
+impl WorkflowRunsService for PgWorkflowRunsService {
+    type CancelListener = PgChangeListener<WorkflowRunCancelMessage>;
+    type Database = Postgres;
+    type ScheduledListener = PgChangeListener<WorkflowRunScheduledMessage>;
+
+    fn new(pool: &PgPool) -> Self {
         Self { pool: pool.clone() }
     }
 
-    /// Initialize a new workflow run for the specified `workflow_id`. Returns the new [WorkflowRun]
-    /// instance.
-    pub async fn initialize(&self, workflow_id: &WorkflowId) -> EmResult<WorkflowRun> {
+    async fn initialize(&self, workflow_id: &WorkflowId) -> EmResult<WorkflowRun> {
         let workflow_run_id = sqlx::query_scalar("select workflow.initialize_workflow_run($1)")
             .bind(workflow_id)
             .fetch_one(&self.pool)
@@ -209,9 +276,7 @@ impl WorkflowRunsService {
         }
     }
 
-    /// Read a single [WorkflowRun] record from `workflow.v_workflow_runs` for the specified
-    /// `workflow_run_id`. Will return [None] when the id does not match a record.
-    pub async fn read_one(&self, workflow_run_id: &WorkflowRunId) -> EmResult<Option<WorkflowRun>> {
+    async fn read_one(&self, workflow_run_id: &WorkflowRunId) -> EmResult<Option<WorkflowRun>> {
         let result = sqlx::query_as(
             r#"
             select
@@ -226,8 +291,7 @@ impl WorkflowRunsService {
         Ok(result)
     }
 
-    /// Read all [WorkflowRun] records found from `workflow.v_workflow_runs`
-    pub async fn read_many(&self) -> EmResult<Vec<WorkflowRun>> {
+    async fn read_many(&self) -> EmResult<Vec<WorkflowRun>> {
         let result = sqlx::query_as(
             r#"
             select
@@ -240,9 +304,7 @@ impl WorkflowRunsService {
         Ok(result)
     }
 
-    /// Update the status of the workflow run to 'Canceled' and send a notification to the
-    /// [Executor][crate::executor::Executor] handling the workflow run to stop operations.
-    pub async fn cancel(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
+    async fn cancel(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
         sqlx::query("call workflow.cancel_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
@@ -254,10 +316,7 @@ impl WorkflowRunsService {
         }
     }
 
-    /// Schedule a workflow run to be picked up by an available
-    /// [Executor][crate::executor::Executor]. Return a [WorkflowRun] with the new data from the
-    /// scheduled record of `workflow_run_id`.
-    pub async fn schedule(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
+    async fn schedule(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
         sqlx::query("call workflow.schedule_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
@@ -269,10 +328,7 @@ impl WorkflowRunsService {
         }
     }
 
-    /// Schedule a workflow run to be picked up by the [Executor][crate::executor::Executor]
-    /// specified by `executor_id`. Returns a [WorkflowRun] with the new data from the scheduled
-    /// record of `workflow_run_id`.
-    pub async fn schedule_with_executor(
+    async fn schedule_with_executor(
         &self,
         workflow_run_id: &WorkflowRunId,
         executor_id: &ExecutorId,
@@ -289,10 +345,7 @@ impl WorkflowRunsService {
         }
     }
 
-    /// Restart a workflow run to a 'Waiting' state. Copies current state of the `task_queue` before
-    /// updating restarting all tasks and the workflow run itself. Returns a [WorkflowRun] with the
-    /// new state of the workflow run for the specified `workflow_run_id`.
-    pub async fn restart(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
+    async fn restart(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
         sqlx::query("call workflow.restart_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
@@ -304,9 +357,7 @@ impl WorkflowRunsService {
         }
     }
 
-    /// Complete a workflow run by collecting stats about the run's tasks and updating the status
-    /// of the workflow run accordingly.
-    pub async fn complete(&self, workflow_run_id: &WorkflowRunId) -> EmResult<()> {
+    async fn complete(&self, workflow_run_id: &WorkflowRunId) -> EmResult<()> {
         sqlx::query("call workflow.complete_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
@@ -314,8 +365,7 @@ impl WorkflowRunsService {
         Ok(())
     }
 
-    /// Fetch all workflow runs attached to an executor specified by `executor_id`.
-    pub async fn all_executor_workflows(
+    async fn all_executor_workflows(
         &self,
         executor_id: &ExecutorId,
     ) -> EmResult<Vec<ExecutorWorkflowRun>> {
@@ -330,10 +380,7 @@ impl WorkflowRunsService {
         Ok(result)
     }
 
-    /// Start the move of a workflow run to another executor (or back to the 'Scheduled' workflow
-    /// run pool if no executors are available). Updates the next task up for execution to the
-    /// 'Paused' status. Returns the new state of the [WorkflowRun] specified by `workflow_run_id`.
-    pub async fn start_move(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
+    async fn start_move(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
         sqlx::query("call workflow.start_workflow_run_move($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
@@ -345,11 +392,7 @@ impl WorkflowRunsService {
         }
     }
 
-    /// Complete the move of a workflow run to another executor (or back to the 'Scheduled' workflow
-    /// run pool if no executors are available). Updates the next task with a 'Paused' status to the
-    /// 'Waiting' status and schedules the workflow run for execution. Returns the new state of the
-    /// [WorkflowRun] specified by `workflow_run_id`.
-    pub async fn complete_move(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
+    async fn complete_move(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
         sqlx::query("call workflow.complete_workflow_run_move($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
@@ -361,23 +404,22 @@ impl WorkflowRunsService {
         }
     }
 
-    /// Get a new workflow run scheduled listener for the specified `executor_id`. The [PgListener]
-    /// checks a channel named `wr_scheduled_{executor_id}`
-    pub async fn scheduled_listener(&self, executor_id: &ExecutorId) -> EmResult<PgListener> {
+    async fn scheduled_listener(
+        &self,
+        executor_id: &ExecutorId,
+    ) -> EmResult<Self::ScheduledListener> {
         let mut listener = PgListener::connect_with(&self.pool).await?;
         listener
             .listen(&format!("wr_scheduled_{}", executor_id))
             .await?;
-        Ok(listener)
+        Ok(PgChangeListener::new(listener))
     }
 
-    /// Get a new workflow run canceled listener for the specified `executor_id`. The [PgListener]
-    /// checks a channel named `wr_canceled_{executor_id}`
-    pub async fn cancel_listener(&self, executor_id: &ExecutorId) -> EmResult<PgListener> {
+    async fn cancel_listener(&self, executor_id: &ExecutorId) -> EmResult<Self::CancelListener> {
         let mut listener = PgListener::connect_with(&self.pool).await?;
         listener
             .listen(&format!("wr_canceled_{}", executor_id))
             .await?;
-        Ok(listener)
+        Ok(PgChangeListener::new(listener))
     }
 }

@@ -1,7 +1,7 @@
 use common::error::{EmError, EmResult};
 use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::{PgPool, Pool, Database, Postgres};
 
 /// Status of a task as found in the database as a simple Postgresql enum type
 #[derive(sqlx::Type, Serialize)]
@@ -62,21 +62,37 @@ impl std::fmt::Display for TaskId {
     }
 }
 
+pub trait TasksService {
+    type Database: Database;
+
+    /// Create a new [TasksService] with the referenced pool as the data source
+    fn new(pool: &Pool<Self::Database>) -> Self;
+    /// Create a new task with the data contained within `request`
+    async fn create(&self, request: &TaskRequest) -> EmResult<Task>;
+    /// Read a single task record from `task.v_tasks` for the specified `task_id`. Will return
+    /// [None] when the id does not match a record.
+    async fn read_one(&self, task_id: &TaskId) -> EmResult<Option<Task>>;
+    /// Read all task records found from `task.v_tasks`
+    async fn read_many(&self) -> EmResult<Vec<Task>>;
+    /// Update a task specified by `task_id` with the new details contained within `request`
+    async fn update(&self, task_id: &TaskId, request: TaskRequest) -> EmResult<Option<Task>>;
+}
+
 /// Service for fetching and interacting with task data. Wraps a [PgPool] and provides
 /// interaction methods for the API.
 #[derive(Clone)]
-pub struct TasksService {
+pub struct PgTasksService {
     pool: PgPool,
 }
 
-impl TasksService {
-    /// Create a new [TasksService] with the referenced pool as the data source
-    pub fn new(pool: &PgPool) -> Self {
+impl TasksService for PgTasksService {
+    type Database = Postgres;
+
+    fn new(pool: &PgPool) -> Self {
         Self { pool: pool.clone() }
     }
 
-    /// Create a new task with the data contained within `request`
-    pub async fn create(&self, request: &TaskRequest) -> EmResult<Task> {
+    async fn create(&self, request: &TaskRequest) -> EmResult<Task> {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
@@ -91,9 +107,7 @@ impl TasksService {
         Ok(result)
     }
 
-    /// Read a single task record from `task.v_tasks` for the specified `task_id`. Will return
-    /// [None] when the id does not match a record.
-    pub async fn read_one(&self, task_id: &TaskId) -> EmResult<Option<Task>> {
+    async fn read_one(&self, task_id: &TaskId) -> EmResult<Option<Task>> {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
@@ -106,8 +120,7 @@ impl TasksService {
         Ok(result)
     }
 
-    /// Read all task records found from `task.v_tasks`
-    pub async fn read_many(&self) -> EmResult<Vec<Task>> {
+    async fn read_many(&self) -> EmResult<Vec<Task>> {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
@@ -118,9 +131,7 @@ impl TasksService {
         Ok(result)
     }
 
-    /// Update a task specified by `task_id` with the new details contained within `request`
-    #[allow(unused)]
-    pub async fn update(&self, task_id: &TaskId, request: TaskRequest) -> EmResult<Option<Task>> {
+    async fn update(&self, task_id: &TaskId, request: TaskRequest) -> EmResult<Option<Task>> {
         sqlx::query("call task.update_task($1,$2,$3,$4,$5)")
             .bind(task_id)
             .bind(request.name)
@@ -135,7 +146,7 @@ impl TasksService {
 
 #[cfg(test)]
 mod test {
-    use super::{TaskId, TaskRequest, TasksService};
+    use super::{TaskId, TaskRequest, PgTasksService, TasksService};
     use crate::database::utilities::create_test_db_pool;
 
     #[sqlx::test]
@@ -164,7 +175,7 @@ mod test {
             .execute(&pool)
             .await?;
 
-        let tasks_service = TasksService::new(&pool);
+        let tasks_service = PgTasksService::new(&pool);
 
         let task = tasks_service.create(&request).await?;
         let task_id = TaskId::from(task.task_id);

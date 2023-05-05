@@ -1,14 +1,8 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, str::FromStr};
 
-use common::error::EmResult;
+use common::error::{EmError, EmResult};
+use log::error;
 use sqlx::postgres::PgListener;
-
-pub trait FromPayload
-where
-    Self: Sized,
-{
-    fn from_payload(payload: &str) -> Self;
-}
 
 pub trait ChangeListener {
     type Message;
@@ -22,18 +16,27 @@ pub struct PgChangeListener<M> {
 
 impl<M> PgChangeListener<M> {
     pub fn new(listener: PgListener) -> Self {
-        Self { listener, marker: PhantomData }
+        Self {
+            listener,
+            marker: PhantomData,
+        }
     }
 }
 
 impl<M> ChangeListener for PgChangeListener<M>
 where
-    M: FromPayload,
+    M: FromStr<Err = EmError>,
 {
     type Message = M;
 
     async fn recv(&mut self) -> EmResult<Self::Message> {
-        let notification = self.listener.recv().await?;
-        Ok(M::from_payload(notification.payload()))
+        let notification = match self.listener.recv().await {
+            Ok(notification) => notification,
+            Err(error) => {
+                error!("Error receiving notification.\n{:?}", error);
+                return Err(error.into());
+            }
+        };
+        notification.payload().parse()
     }
 }

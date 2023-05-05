@@ -16,3 +16,5 @@ rocket = { version = "0.5.0-rc.2", features = ["serde_json", "json", "msgpack", 
 thiserror = "1.0.38"
 indoc = "2"
 lettre = { version = "0.10.1", features = ["tokio1", "tokio1-native-tls"] }
+actix-web = { version = "4.3.1" }
+mime = "0.3.17"
