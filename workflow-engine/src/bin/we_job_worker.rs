@@ -1,13 +1,17 @@
 use common::error::EmResult;
 use log::{error, info};
-use workflow_engine::{create_jobs_service, database::create_db_pool, JobWorker};
+use workflow_engine::{
+    create_jobs_service,
+    database::{ConnectionPool, PostgresConnectionPool},
+    JobWorker,
+};
 
 #[tokio::main]
 async fn main() -> EmResult<()> {
     log4rs::init_file("workflow-engine/job_worker_log.yml", Default::default()).unwrap();
 
     info!("Initializing Worker");
-    let pool = create_db_pool().await?;
+    let pool = PostgresConnectionPool::create_db_pool().await?;
     let jobs_service = create_jobs_service(&pool)?;
     let worker = match JobWorker::new(jobs_service).await {
         Ok(worker) => worker,

@@ -1,80 +1,58 @@
-use rocket::{
-    patch,
-    serde::{json::Json, msgpack::MsgPack},
-    State,
-};
+use log::error;
 
-use super::utilities::{ApiFormatType, ApiResponse};
+use super::utilities::ApiResponse;
 use crate::services::task_queue::{TaskQueueRequest, TaskQueueService};
 
-/// Retry the task queue entry specified  by `request` regardless of the serialized format
-async fn task_queue_retry(
-    request: TaskQueueRequest,
-    service: &TaskQueueService,
-    format: ApiFormatType,
-) -> ApiResponse<()> {
+// API endpoint to retry the task queue entry specified by `request`
+pub async fn task_queue_retry<T>(
+    data: actix_web::web::Bytes,
+    service: actix_web::web::Data<T>,
+) -> ApiResponse<()>
+where
+    T: TaskQueueService,
+{
+    let request: TaskQueueRequest = match rmp_serde::from_slice(&data) {
+        Ok(inner) => inner,
+        Err(error) => {
+            error!("{}", error);
+            return ApiResponse::failure(format!(
+                "Could not deserialize job request. Error: {}",
+                error
+            ));
+        }
+    };
     match service.retry_task(request).await {
-        Ok(_) => ApiResponse::message(
-            String::from("Successfully set task queue record to retry. Workflow scheduled for run"),
-            format,
-        ),
-        Err(error) => ApiResponse::error(error, format),
+        Ok(_) => ApiResponse::message(String::from(
+            "Successfully set task queue record to retry. Workflow scheduled for run",
+        )),
+        Err(error) => ApiResponse::error(error),
     }
 }
 
-/// API endpoint to retry the task queue entry specified by `request`
-#[patch("/task-queue/retry?<f>", format = "json", data = "<request>")]
-pub async fn task_queue_retry_json(
-    request: Json<TaskQueueRequest>,
-    f: ApiFormatType,
-    service: &State<TaskQueueService>,
-) -> ApiResponse<()> {
-    task_queue_retry(request.0, service, f).await
-}
-
-/// API endpoint to retry the task queue entry specified by `request`
-#[patch("/task-queue/retry?<f>", format = "msgpack", data = "<request>")]
-pub async fn task_queue_retry_msgpack(
-    request: MsgPack<TaskQueueRequest>,
-    f: ApiFormatType,
-    service: &State<TaskQueueService>,
-) -> ApiResponse<()> {
-    task_queue_retry(request.0, service, f).await
-}
-
-/// Complete the task queue entry specified by `request` regardless of the serialized format
-async fn task_queue_complete(
-    request: TaskQueueRequest,
-    service: &TaskQueueService,
-    format: ApiFormatType,
-) -> ApiResponse<()> {
+// API endpoint complete the task queue entry specified by `request`
+pub async fn task_queue_complete<T>(
+    data: actix_web::web::Bytes,
+    service: actix_web::web::Data<T>,
+) -> ApiResponse<()>
+where
+    T: TaskQueueService,
+{
+    let request: TaskQueueRequest = match rmp_serde::from_slice(&data) {
+        Ok(inner) => inner,
+        Err(error) => {
+            error!("{}", error);
+            return ApiResponse::failure(format!(
+                "Could not deserialize job request. Error: {}",
+                error
+            ));
+        }
+    };
     match service.complete_task(request).await {
         Ok(_) => ApiResponse::message(
             String::from(
                 "Successfully set task queue record to complete. Workflow scheduled for run",
             ),
-            format,
         ),
-        Err(error) => ApiResponse::error(error, format),
+        Err(error) => ApiResponse::error(error),
     }
-}
-
-/// API endpoint complete the task queue entry specified by `request`
-#[patch("/task-queue/complete?<f>", format = "json", data = "<request>")]
-pub async fn task_queue_complete_json(
-    request: Json<TaskQueueRequest>,
-    f: ApiFormatType,
-    service: &State<TaskQueueService>,
-) -> ApiResponse<()> {
-    task_queue_complete(request.0, service, f).await
-}
-
-/// API endpoint  complete the task queue entry specified by `request`
-#[patch("/task-queue/complete?<f>", format = "msgpack", data = "<request>")]
-pub async fn task_queue_complete_msgpack(
-    request: MsgPack<TaskQueueRequest>,
-    f: ApiFormatType,
-    service: &State<TaskQueueService>,
-) -> ApiResponse<()> {
-    task_queue_complete(request.0, service, f).await
 }

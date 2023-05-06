@@ -1,9 +1,24 @@
-use workflow_engine::build_api;
+use common::error::EmResult;
+use sqlx::Postgres;
+use workflow_engine::{
+    api, database::PostgresConnectionPool, PgExecutorsService, PgJobsService, PgTaskQueueService,
+    PgTasksService, PgWorkflowRunsService, PgWorkflowsService,
+};
 
-#[rocket::main]
-async fn main() -> Result<(), rocket::Error> {
+#[tokio::main]
+async fn main() -> EmResult<()> {
     log4rs::init_file("workflow-engine/api_server_log.yml", Default::default()).unwrap();
-
-    let _ = build_api().await.unwrap().launch().await?;
+    api::spawn_api_server::<
+        (&str, u16),
+        PostgresConnectionPool,
+        Postgres,
+        PgExecutorsService,
+        PgJobsService,
+        PgTaskQueueService,
+        PgWorkflowRunsService,
+        PgTasksService,
+        PgWorkflowsService,
+    >(("127.0.0.1", 8080))
+    .await?;
     Ok(())
 }

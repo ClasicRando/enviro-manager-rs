@@ -1,9 +1,9 @@
 use common::db_build::build_database;
-use workflow_engine::database::{create_db_pool, create_test_db_pool};
+use workflow_engine::database::{ConnectionPool, PostgresConnectionPool};
 
 ///
 async fn refresh_test_database() -> Result<(), Box<dyn std::error::Error>> {
-    let pool = create_db_pool().await?;
+    let pool = PostgresConnectionPool::create_db_pool().await?;
     sqlx::query("drop database if exists workflow_engine_test")
         .execute(&pool)
         .await?;
@@ -31,11 +31,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Refresh specified for the test database");
                 refresh_test_database().await?;
             }
-            create_test_db_pool().await?
+            PostgresConnectionPool::create_test_db_pool().await?
         }
         Some(name) if name == "prod" => {
             println!("Target specified as 'prod' to rebuild");
-            create_db_pool().await?
+            PostgresConnectionPool::create_db_pool().await?
         }
         Some(name) => {
             println!(

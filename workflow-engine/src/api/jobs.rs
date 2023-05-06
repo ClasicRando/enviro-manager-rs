@@ -1,78 +1,63 @@
 use log::error;
-use rocket::{
-    get, post,
-    serde::{json::Json, msgpack::MsgPack},
-    State,
-};
 
-use super::utilities::{ApiFormatType, ApiResponse};
+use super::utilities::ApiResponse;
 use crate::services::jobs::{Job, JobId, JobRequest, JobsService};
 
 /// API endpoint to fetch all `Job`s currently registered
-#[get("/jobs?<f>")]
-pub async fn jobs(f: ApiFormatType, service: &State<JobsService>) -> ApiResponse<Vec<Job>> {
+pub async fn jobs<J>(service: actix_web::web::Data<J>) -> ApiResponse<Vec<Job>>
+where
+    J: JobsService,
+{
     match service.read_many().await {
-        Ok(jobs) => ApiResponse::success(jobs, f),
+        Ok(jobs) => ApiResponse::success(jobs),
         Err(error) => {
             error!("{}", error);
-            ApiResponse::error(error, f)
+            ApiResponse::error(error)
         }
     }
 }
 
-/// API endpoint to fetch the [Job] details of a cron job specified by `job_id`
-#[get("/jobs/<job_id>?<f>")]
-pub async fn job(
-    job_id: JobId,
-    f: ApiFormatType,
-    service: &State<JobsService>,
-) -> ApiResponse<Job> {
+// /// API endpoint to fetch the [Job] details of a cron job specified by `job_id`
+pub async fn job<J>(
+    job_id: actix_web::web::Path<JobId>,
+    service: actix_web::web::Data<J>,
+) -> ApiResponse<Job>
+where
+    J: JobsService,
+{
     match service.read_one(&job_id).await {
-        Ok(Some(job)) => ApiResponse::success(job, f),
-        Ok(None) => {
-            ApiResponse::failure(format!("Could not find record for job_id = {}", job_id), f)
-        }
+        Ok(Some(job)) => ApiResponse::success(job),
+        Ok(None) => ApiResponse::failure(format!("Could not find record for job_id = {}", job_id)),
         Err(error) => {
             error!("{}", error);
-            ApiResponse::error(error, f)
+            ApiResponse::error(error)
         }
     }
 }
 
-/// Create a new [Job] using the provided [JobRequest] details regardless of the request
-/// serialization format
-async fn create_job(
-    job: JobRequest,
-    service: &State<JobsService>,
-    f: ApiFormatType,
-) -> ApiResponse<Job> {
+/// API endpoint to create a new [Job] using the provided [JobRequest] details
+pub async fn create_job<J>(
+    data: actix_web::web::Bytes,
+    service: actix_web::web::Data<J>,
+) -> ApiResponse<Job>
+where
+    J: JobsService,
+{
+    let job: JobRequest = match rmp_serde::from_slice(&data) {
+        Ok(inner) => inner,
+        Err(error) => {
+            error!("{}", error);
+            return ApiResponse::failure(format!(
+                "Could no deserialize job request. Error: {}",
+                error
+            ));
+        }
+    };
     match service.create(job).await {
-        Ok(job) => ApiResponse::success(job, f),
+        Ok(job) => ApiResponse::success(job),
         Err(error) => {
             error!("{}", error);
-            ApiResponse::error(error, f)
+            ApiResponse::error(error)
         }
     }
-}
-
-/// API endpoint to create a new [Job] using the provided [JobRequest] details serialized as JSON
-/// data
-#[post("/jobs?<f>", format = "json", data = "<job>")]
-pub async fn create_job_json(
-    job: Json<JobRequest>,
-    f: ApiFormatType,
-    service: &State<JobsService>,
-) -> ApiResponse<Job> {
-    create_job(job.0, service, f).await
-}
-
-/// API endpoint to create a new [Job] using the provided [JobRequest] details serialized as
-/// MessagePack data
-#[post("/jobs?<f>", format = "msgpack", data = "<job>")]
-pub async fn create_job_msgpack(
-    job: MsgPack<JobRequest>,
-    f: ApiFormatType,
-    service: &State<JobsService>,
-) -> ApiResponse<Job> {
-    create_job(job.0, service, f).await
 }

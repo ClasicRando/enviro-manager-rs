@@ -10,7 +10,7 @@ use sqlx::{
         types::{PgRecordDecoder, PgRecordEncoder},
         PgArgumentBuffer, PgHasArrayType, PgTypeInfo, PgValueRef,
     },
-    PgPool, Postgres, Type,
+    Database, PgPool, Pool, Postgres, Type,
 };
 
 use super::workflow_runs::WorkflowRunId;
@@ -75,7 +75,7 @@ impl PgHasArrayType for TaskRule {
 }
 
 /// Represents a row from the `task.task_queue` table
-#[derive(sqlx::FromRow, Serialize, Deserialize, Debug)]
+#[derive(sqlx::FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct TaskQueueRecord {
     workflow_run_id: i64,
     task_order: i32,
@@ -106,106 +106,66 @@ pub enum TaskResponse {
     },
 }
 
-/// Service for fetching and interacting with `task_queue` data. Wraps a [PgPool] and provides
-/// interaction methods for the API and [Executor][crate::executor::Executor] instances.
-#[derive(Clone)]
-pub struct TaskQueueService {
-    pool: PgPool,
-}
+#[async_trait::async_trait]
+pub trait TaskQueueService: Clone + Send + Sync + 'static {
+    type Database: Database;
 
-impl TaskQueueService {
     /// Create a new [TaskQueueService] with the referenced pool as the data source
-    pub fn new(pool: &PgPool) -> Self {
-        Self { pool: pool.clone() }
-    }
-
+    fn new(pool: &Pool<Self::Database>) -> Self;
     /// Read a single task record from `task.task_queue` for the specified `request`data. Will
     /// return [None] when the ids in the `request` do not match a record.
-    pub async fn read_one(&self, request: TaskQueueRequest) -> EmResult<Option<TaskQueueRecord>> {
-        let result = sqlx::query_as(
-            r#"
-            select tq.workflow_run_id, tq.task_order, tq.task_id, tq.parameters, tq.url
-            from task.task_queue tq
-            where
-                tq.workflow_run_id = $1
-                and tq.task_order = $2"#,
-        )
-        .bind(request.workflow_run_id)
-        .bind(request.task_order)
-        .fetch_optional(&self.pool)
-        .await?;
-        Ok(result)
-    }
-
+    async fn read_one(&self, request: TaskQueueRequest) -> EmResult<Option<TaskQueueRecord>>;
     /// Append the task `rule` data to the specified `task_queue` record
     async fn append_task_rule(
         &self,
         workflow_run_id: &WorkflowRunId,
         task_order: i32,
         rule: TaskRule,
-    ) -> EmResult<()> {
-        sqlx::query("call workflow.append_task_rule($1,$2,$3)")
-            .bind(workflow_run_id)
-            .bind(task_order)
-            .bind(rule)
-            .execute(&self.pool)
-            .await?;
-        Ok(())
-    }
-
+    ) -> EmResult<()>;
     /// Update the specified `task_queue` record with the new progress value
     async fn set_task_progress(
         &self,
         workflow_run_id: &WorkflowRunId,
         task_order: i32,
         progress: i16,
-    ) -> EmResult<()> {
-        sqlx::query("call workflow.set_task_progress($1,$2,$3)")
-            .bind(workflow_run_id)
-            .bind(task_order)
-            .bind(progress)
-            .execute(&self.pool)
-            .await?;
-        Ok(())
-    }
-
+    ) -> EmResult<()>;
     /// Retry the specified `task_queue` record. Note, the record must be in the 'Failed' or
     /// 'Rule Broken' state to qualify for a retry.
-    pub async fn retry_task(&self, request: TaskQueueRequest) -> EmResult<()> {
-        sqlx::query("call workflow.retry_task($1,$2)")
-            .bind(request.workflow_run_id)
-            .bind(request.task_order)
-            .execute(&self.pool)
-            .await?;
-        Ok(())
-    }
-
+    async fn retry_task(&self, request: TaskQueueRequest) -> EmResult<()>;
     /// Complete the specified `task_queue` record to allow for continuing of a workflow run after
     /// a user interruption. Note, the record must be in the 'Paused' state for a successful
     /// complete.
-    pub async fn complete_task(&self, request: TaskQueueRequest) -> EmResult<()> {
-        sqlx::query("call workflow.complete_task($1,$2)")
-            .bind(request.workflow_run_id)
-            .bind(request.task_order)
-            .execute(&self.pool)
-            .await?;
-        Ok(())
-    }
-
+    async fn complete_task(&self, request: TaskQueueRequest) -> EmResult<()>;
     /// Acquire the next available task for a workflow run execution. Modifies the next available
     /// record to mark it as started. Will return [None] if there are no more available tasks to
     /// run.
-    pub async fn next_task(
-        &self,
-        workflow_run_id: &WorkflowRunId,
-    ) -> EmResult<Option<TaskQueueRecord>> {
-        let task_queue_record = sqlx::query_as("call workflow.acquire_next_task($1)")
-            .bind(workflow_run_id)
-            .fetch_optional(&self.pool)
-            .await?;
-        Ok(task_queue_record)
-    }
+    async fn next_task(&self, workflow_run_id: &WorkflowRunId)
+        -> EmResult<Option<TaskQueueRecord>>;
+    /// Run the specified task `record` to completion. See [TaskQueueService::remote_task_run] for
+    /// more details. Remote task execution is run against the [Pool::close_event] so in the event
+    /// of a pool close or database connection loss, the remote task execution is canceled.
+    async fn run_task(&self, record: &TaskQueueRecord) -> EmResult<(bool, Option<String>)>;
+    /// Mark the specified task `record` as failed with the error message included
+    async fn fail_task_run(&self, record: &TaskQueueRecord, error: EmError) -> EmResult<()>;
 
+    /// Complete the specified task `record` as complete (or paused if the `is_paused` flag is
+    /// true). Includes an optional message if provided.
+    async fn complete_task_run(
+        &self,
+        record: &TaskQueueRecord,
+        is_paused: bool,
+        message: Option<String>,
+    ) -> EmResult<()>;
+}
+
+/// Service for fetching and interacting with `task_queue` data. Wraps a [PgPool] and provides
+/// interaction methods for the API and [Executor][crate::executor::Executor] instances.
+#[derive(Clone)]
+pub struct PgTaskQueueService {
+    pool: PgPool,
+}
+
+impl PgTaskQueueService {
     /// Process a response `message` from a remote task run. The expected format is of MessagePack
     /// and the contents are parsed to a [TaskResponse] variant. If the message is a
     /// [TaskResponse::Done] message, the contents are returned as a tuple. Otherwise, a [None]
@@ -260,20 +220,99 @@ impl TaskQueueService {
         }
         Err(EmError::ExitedTask)
     }
+}
 
-    /// Run the specified task `record` to completion. See [TaskQueueService::remote_task_run] for
-    /// more details. Remote task execution is run against the
-    /// [Pool::close_event][sqlx::Pool::close_event] so in the event of a pool close or database
-    /// connection loss, the remote task execution is canceled.
-    pub async fn run_task(&self, record: &TaskQueueRecord) -> EmResult<(bool, Option<String>)> {
+#[async_trait::async_trait]
+impl TaskQueueService for PgTaskQueueService {
+    type Database = Postgres;
+
+    fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
+    }
+
+    async fn read_one(&self, request: TaskQueueRequest) -> EmResult<Option<TaskQueueRecord>> {
+        let result = sqlx::query_as(
+            r#"
+            select tq.workflow_run_id, tq.task_order, tq.task_id, tq.parameters, tq.url
+            from task.task_queue tq
+            where
+                tq.workflow_run_id = $1
+                and tq.task_order = $2"#,
+        )
+        .bind(request.workflow_run_id)
+        .bind(request.task_order)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(result)
+    }
+
+    async fn append_task_rule(
+        &self,
+        workflow_run_id: &WorkflowRunId,
+        task_order: i32,
+        rule: TaskRule,
+    ) -> EmResult<()> {
+        sqlx::query("call workflow.append_task_rule($1,$2,$3)")
+            .bind(workflow_run_id)
+            .bind(task_order)
+            .bind(rule)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn set_task_progress(
+        &self,
+        workflow_run_id: &WorkflowRunId,
+        task_order: i32,
+        progress: i16,
+    ) -> EmResult<()> {
+        sqlx::query("call workflow.set_task_progress($1,$2,$3)")
+            .bind(workflow_run_id)
+            .bind(task_order)
+            .bind(progress)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn retry_task(&self, request: TaskQueueRequest) -> EmResult<()> {
+        sqlx::query("call workflow.retry_task($1,$2)")
+            .bind(request.workflow_run_id)
+            .bind(request.task_order)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn complete_task(&self, request: TaskQueueRequest) -> EmResult<()> {
+        sqlx::query("call workflow.complete_task($1,$2)")
+            .bind(request.workflow_run_id)
+            .bind(request.task_order)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn next_task(
+        &self,
+        workflow_run_id: &WorkflowRunId,
+    ) -> EmResult<Option<TaskQueueRecord>> {
+        let task_queue_record = sqlx::query_as("call workflow.acquire_next_task($1)")
+            .bind(workflow_run_id)
+            .fetch_optional(&self.pool)
+            .await?;
+        Ok(task_queue_record)
+    }
+
+    async fn run_task(&self, record: &TaskQueueRecord) -> EmResult<(bool, Option<String>)> {
         self.pool
             .close_event()
             .do_until(self.remote_task_run(record))
             .await?
     }
 
-    /// Mark the specified task `record` as failed with the error message included
-    pub async fn fail_task_run(&self, record: &TaskQueueRecord, error: EmError) -> EmResult<()> {
+    async fn fail_task_run(&self, record: &TaskQueueRecord, error: EmError) -> EmResult<()> {
         sqlx::query("call fail_task_run($1,$2,$3)")
             .bind(record.workflow_run_id)
             .bind(record.task_order)
@@ -283,9 +322,7 @@ impl TaskQueueService {
         Ok(())
     }
 
-    /// Complete the specified task `record` as complete (or paused if the `is_paused` flag is
-    /// true). Includes an optional message if provided.
-    pub async fn complete_task_run(
+    async fn complete_task_run(
         &self,
         record: &TaskQueueRecord,
         is_paused: bool,

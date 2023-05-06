@@ -31,11 +31,7 @@ impl DbBuild {
 
     /// Run the database build operations by building the common schema requirements then
     /// proceeding to run each [DbBuildEntry] to completion.
-    async fn run(
-        &self,
-        directory: &Path,
-        pool: &PgPool,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    async fn run(&self, directory: &Path, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
         for dep in &self.common_dependencies {
             build_common_schema(dep, pool).await?
         }
@@ -70,11 +66,7 @@ impl DbBuildEntry {
     /// Run the build entry by fetching the entries file contents (relative path to the
     /// `directory` passed) and executing the entry's contents as an anonymous block against the
     /// `pool`.
-    async fn run(
-        &self,
-        directory: &Path,
-        pool: &PgPool,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    async fn run(&self, directory: &Path, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
         let path = directory.join(&self.name);
         let block = read_file(&path).await?;
         if let Err(error) = execute_anonymous_block(&block, pool).await {

@@ -1,6 +1,5 @@
 use chrono::NaiveDateTime;
 use common::error::{EmError, EmResult};
-use rocket::request::FromParam;
 use serde::{
     de::{MapAccess, Visitor},
     ser::SerializeStruct,
@@ -8,10 +7,14 @@ use serde::{
 };
 use sqlx::{
     postgres::{types::PgInterval, PgListener},
-    PgPool,
+    Database, PgPool, Pool, Postgres,
 };
 
 use super::workflow_runs::WorkflowRunStatus;
+use crate::{
+    database::listener::{ChangeListener, PgChangeListener},
+    job_worker::NotificationAction,
+};
 
 /// Represents the `job_type` Postgresql enum value within the database. Should never be used by
 /// itself but rather used to parse into the [JobType] enum that hold the job running details.
@@ -218,21 +221,13 @@ pub struct JobRequest {
 
 /// Wrapper for a `job_id` value. Made to ensure data passed as the id of a job is correct and not
 /// just any i64 value.
-#[derive(sqlx::Type, Eq, Hash, PartialEq)]
+#[derive(sqlx::Type, Eq, Hash, PartialEq, Deserialize)]
 #[sqlx(transparent)]
 pub struct JobId(i64);
 
 impl From<i64> for JobId {
     fn from(value: i64) -> Self {
         Self(value)
-    }
-}
-
-impl<'a> FromParam<'a> for JobId {
-    type Error = EmError;
-
-    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
-        Ok(Self(param.parse::<i64>()?))
     }
 }
 
@@ -244,42 +239,41 @@ impl std::fmt::Display for JobId {
 
 /// Service for fetching and interacting with task data. Wraps a [PgPool] and provides
 /// interaction methods for the API and [JobWorker][crate::job_worker::JobWorker].
+#[async_trait::async_trait]
+pub trait JobsService: Clone + Send {
+    type Database: Database;
+    type Listener: ChangeListener<NotificationAction>;
+
+    /// Create a new [JobsService] with the referenced pool as the data source
+    fn new(pool: &Pool<Self::Database>) -> Self;
+    /// Create a new job with the data contained within `request`. Branches to specific calls for
+    /// [JobType::Scheduled] and [JobType::Interval].
+    async fn create(&self, request: JobRequest) -> EmResult<Job>;
+    /// Read a single job record from `job.v_jobs` for the specified `job_id`. Will return [None]
+    /// when the id does not match a record
+    async fn read_one(&self, job_id: &JobId) -> EmResult<Option<Job>>;
+
+    /// Read all job records found from `job.v_jobs`
+    async fn read_many(&self) -> EmResult<Vec<Job>>;
+    /// Read all job records from `job.v_queued_jobs`. This excludes all job entries that are
+    /// paused or currently have a workflow run that not complete. Ordered by the `next_run` field
+    async fn read_queued(&self) -> EmResult<Vec<JobMin>>;
+    /// Run the job specified by the `job_id`. Returns the [Job] entry if the `job_id` matches a
+    /// record
+    async fn run_job(&self, job_id: &JobId) -> EmResult<Option<Job>>;
+    /// Complete the job specified by the `job_id`. Returns the [Job] entry if the `job_id` matches
+    /// a record
+    async fn complete_job(&self, job_id: &JobId) -> EmResult<Option<Job>>;
+    /// Get a [ChangeListener] for updates on the job queue this service is watching.
+    async fn listener(&self) -> EmResult<Self::Listener>;
+}
+
 #[derive(Clone)]
-pub struct JobsService {
+pub struct PgJobsService {
     pool: PgPool,
 }
 
-impl JobsService {
-    /// Create a new [JobsService] with the referenced pool as the data source
-    pub fn new(pool: &PgPool) -> Self {
-        Self { pool: pool.clone() }
-    }
-
-    /// Create a new job with the data contained within `request`. Branches to specific calls for
-    /// [JobType::Scheduled] and [JobType::Interval].
-    pub async fn create(&self, request: JobRequest) -> EmResult<Job> {
-        let job_id = match &request.job_type {
-            JobType::Scheduled(schedule) => {
-                self.create_scheduled_job(&request.workflow_id, &request.maintainer, schedule)
-                    .await?
-            }
-            JobType::Interval(interval) => {
-                self.create_interval_job(
-                    &request.workflow_id,
-                    &request.maintainer,
-                    interval,
-                    &request.next_run,
-                )
-                .await?
-            }
-        };
-        match self.read_one(&job_id).await {
-            Ok(Some(job)) => Ok(job),
-            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
-            Err(error) => Err(error),
-        }
-    }
-
+impl PgJobsService {
     /// Create a new interval job using the specified details from the parameters
     async fn create_interval_job(
         &self,
@@ -313,10 +307,41 @@ impl JobsService {
             .await?;
         Ok(job_id)
     }
+}
 
-    /// Read a single job record from `job.v_jobs` for the specified `job_id`. Will return [None]
-    /// when the id does not match a record
-    pub async fn read_one(&self, job_id: &JobId) -> EmResult<Option<Job>> {
+#[async_trait::async_trait]
+impl JobsService for PgJobsService {
+    type Database = Postgres;
+    type Listener = PgChangeListener<NotificationAction>;
+
+    fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
+    }
+
+    async fn create(&self, request: JobRequest) -> EmResult<Job> {
+        let job_id = match &request.job_type {
+            JobType::Scheduled(schedule) => {
+                self.create_scheduled_job(&request.workflow_id, &request.maintainer, schedule)
+                    .await?
+            }
+            JobType::Interval(interval) => {
+                self.create_interval_job(
+                    &request.workflow_id,
+                    &request.maintainer,
+                    interval,
+                    &request.next_run,
+                )
+                .await?
+            }
+        };
+        match self.read_one(&job_id).await {
+            Ok(Some(job)) => Ok(job),
+            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
+            Err(error) => Err(error),
+        }
+    }
+
+    async fn read_one(&self, job_id: &JobId) -> EmResult<Option<Job>> {
         let result = sqlx::query_as(
             r#"
             select job_id, workflow_id, workflow_name, job_type, maintainer, job_schedule, job_interval, is_paused,
@@ -330,8 +355,7 @@ impl JobsService {
         Ok(result)
     }
 
-    /// Read all job records found from `job.v_jobs`
-    pub async fn read_many(&self) -> EmResult<Vec<Job>> {
+    async fn read_many(&self) -> EmResult<Vec<Job>> {
         let result = sqlx::query_as(
             r#"
             select job_id, workflow_id, workflow_name, job_type, maintainer, job_schedule, job_interval, is_paused,
@@ -343,9 +367,7 @@ impl JobsService {
         Ok(result)
     }
 
-    /// Read all job records from `job.v_queued_jobs`. This excludes all job entries that are
-    /// paused or currently have a workflow run that not complete. Ordered by the `next_run` field
-    pub async fn read_queued(&self) -> EmResult<Vec<JobMin>> {
+    async fn read_queued(&self) -> EmResult<Vec<JobMin>> {
         let result = sqlx::query_as(
             r#"
             select job_id, next_run
@@ -356,9 +378,7 @@ impl JobsService {
         Ok(result)
     }
 
-    /// Run the job specified by the `job_id`. Returns the [Job] entry if the `job_id` matches a
-    /// record
-    pub async fn run_job(&self, job_id: &JobId) -> EmResult<Option<Job>> {
+    async fn run_job(&self, job_id: &JobId) -> EmResult<Option<Job>> {
         sqlx::query("call job.run_job($1)")
             .bind(job_id)
             .execute(&self.pool)
@@ -366,8 +386,7 @@ impl JobsService {
         self.read_one(job_id).await
     }
 
-    ///
-    pub async fn complete_job(&self, job_id: &JobId) -> EmResult<Option<Job>> {
+    async fn complete_job(&self, job_id: &JobId) -> EmResult<Option<Job>> {
         let mut transaction = self.pool.begin().await?;
         let result = sqlx::query_scalar("call job.complete_job($1)")
             .bind(job_id)
@@ -388,10 +407,9 @@ impl JobsService {
         Err(EmError::Generic(message))
     }
 
-    ///
-    pub async fn listener(&self) -> EmResult<PgListener> {
+    async fn listener(&self) -> EmResult<Self::Listener> {
         let mut listener = PgListener::connect_with(&self.pool).await?;
         listener.listen("jobs").await?;
-        Ok(listener)
+        Ok(PgChangeListener::new(listener))
     }
 }
