@@ -26,7 +26,7 @@ async fn main() -> EmResult<()> {
 
     info!("Running Executor, id = {}", executor_id);
     if let Err(error) = executor.run().await {
-        executor_service.post_error(&executor_id, error).await?;
+        executor_service.post_error(&executor_id, error).await;
     }
     info!("Exiting executor, id = {}", executor_id);
     Ok(())

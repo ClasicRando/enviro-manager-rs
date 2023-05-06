@@ -101,7 +101,7 @@ pub trait ExecutorsService: Clone + Send {
     async fn close(&self, executor_id: &ExecutorId, is_cancelled: bool) -> EmResult<()>;
     /// Post the specified `error` message to the `executor_id` record. If the SQL call happens to
     /// fail that error will be logged alongside the original `error`.
-    async fn post_error(&self, executor_id: &ExecutorId, error: EmError) -> EmResult<()>;
+    async fn post_error(&self, executor_id: &ExecutorId, error: EmError);
     /// Clean executor database records, setting correct statuses for executors that are no longer
     /// alive but marked as active.
     async fn clean_executors(&self) -> EmResult<()>;
@@ -222,7 +222,7 @@ impl ExecutorsService for PgExecutorsService {
         Ok(())
     }
 
-    async fn post_error(&self, executor_id: &ExecutorId, error: EmError) -> EmResult<()> {
+    async fn post_error(&self, executor_id: &ExecutorId, error: EmError) {
         let message = format!("{}", error);
         let sql_result = sqlx::query("call executor.post_executor_error_message($1,$2)")
             .bind(executor_id)
@@ -236,7 +236,6 @@ impl ExecutorsService for PgExecutorsService {
             );
         }
         error!("Executor fatal error. {}", message);
-        Ok(())
     }
 
     async fn clean_executors(&self) -> EmResult<()> {
@@ -341,7 +340,7 @@ mod test {
 
         let error = EmError::Generic(String::from("Executor 'post_error' test"));
         let error_message = error.to_string();
-        executor_service.post_error(&executor_id, error).await?;
+        executor_service.post_error(&executor_id, error).await;
 
         let query = indoc! {
             r#"
