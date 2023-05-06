@@ -1,7 +1,6 @@
 use chrono::NaiveDateTime;
 use common::error::{EmError, EmResult};
 use log::error;
-use rocket::request::FromParam;
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgListener, types::ipnetwork::IpNetwork, Database, PgPool, Pool, Postgres};
 
@@ -54,14 +53,6 @@ pub struct Executor {
 #[sqlx(transparent)]
 pub struct ExecutorId(i64);
 
-impl<'a> FromParam<'a> for ExecutorId {
-    type Error = EmError;
-
-    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
-        Ok(Self(param.parse::<i64>()?))
-    }
-}
-
 impl std::fmt::Display for ExecutorId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
@@ -73,7 +64,7 @@ impl std::fmt::Display for ExecutorId {
 /// implement the trait you must specify the [Database] you are working with and the
 /// [ChangeListener] the service will provide.
 #[async_trait::async_trait]
-pub trait ExecutorsService: Clone {
+pub trait ExecutorsService: Clone + Send {
     type Database: Database;
     type Listener: ChangeListener<ExecutorStatusUpdate>;
 
@@ -271,13 +262,13 @@ mod test {
 
     use super::{ExecutorStatus, ExecutorsService, PgExecutorsService};
     use crate::{
-        database::{listener::ChangeListener, utilities::create_test_db_pool},
+        database::{listener::ChangeListener, ConnectionPool, PostgresConnectionPool},
         executor::utilities::ExecutorStatusUpdate,
     };
 
     #[sqlx::test]
     async fn create_executor() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = create_test_db_pool().await?;
+        let pool = PostgresConnectionPool::create_test_db_pool().await?;
         let executor_service = PgExecutorsService { pool };
 
         let executor_id = match executor_service.register_executor().await {
@@ -298,7 +289,7 @@ mod test {
 
     #[sqlx::test]
     async fn cancel_executor() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = create_test_db_pool().await?;
+        let pool = PostgresConnectionPool::create_test_db_pool().await?;
         let executor_service = PgExecutorsService { pool };
 
         let executor_id = match executor_service.register_executor().await {
@@ -319,7 +310,7 @@ mod test {
 
     #[sqlx::test]
     async fn shutdown_executor() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = create_test_db_pool().await?;
+        let pool = PostgresConnectionPool::create_test_db_pool().await?;
         let executor_service = PgExecutorsService { pool };
 
         let executor_id = match executor_service.register_executor().await {
@@ -340,7 +331,7 @@ mod test {
 
     #[sqlx::test]
     async fn post_error() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = create_test_db_pool().await?;
+        let pool = PostgresConnectionPool::create_test_db_pool().await?;
         let executor_service = PgExecutorsService::new(&pool);
 
         let executor_id = match executor_service.register_executor().await {
@@ -369,7 +360,7 @@ mod test {
 
     #[sqlx::test]
     async fn status_listener() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = create_test_db_pool().await?;
+        let pool = PostgresConnectionPool::create_test_db_pool().await?;
         let executor_service = PgExecutorsService::new(&pool);
 
         let executor_id = match executor_service.register_executor().await {
@@ -391,7 +382,7 @@ mod test {
 
     #[sqlx::test]
     async fn clean_executors() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = create_test_db_pool().await?;
+        let pool = PostgresConnectionPool::create_test_db_pool().await?;
         let executor_service = PgExecutorsService::new(&pool);
 
         let inactive_executor_id = match executor_service.register_executor().await {
@@ -403,7 +394,7 @@ mod test {
         pool.close().await;
         drop(pool);
 
-        let pool = create_test_db_pool().await?;
+        let pool = PostgresConnectionPool::create_test_db_pool().await?;
         let executor_service = PgExecutorsService::new(&pool);
         executor_service.clean_executors().await?;
 

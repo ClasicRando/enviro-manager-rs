@@ -2,7 +2,8 @@ use common::error::EmResult;
 use log::{error, info};
 use workflow_engine::{
     create_executors_service, create_task_queue_service, create_workflow_runs_service,
-    database::create_db_pool, Executor, ExecutorsService, PgExecutorsService, PgWorkflowRunsService, PgTaskQueueService
+    database::{ConnectionPool, PostgresConnectionPool},
+    Executor, ExecutorsService, PgExecutorsService, PgTaskQueueService, PgWorkflowRunsService,
 };
 
 #[tokio::main]
@@ -10,7 +11,7 @@ async fn main() -> EmResult<()> {
     log4rs::init_file("workflow-engine/executor_log.yml", Default::default()).unwrap();
 
     info!("Initializing Executor");
-    let pool = create_db_pool().await?;
+    let pool = PostgresConnectionPool::create_db_pool().await?;
     let executor_service: PgExecutorsService = create_executors_service(&pool)?;
     let wr_service: PgWorkflowRunsService = create_workflow_runs_service(&pool)?;
     let tq_service: PgTaskQueueService = create_task_queue_service(&pool)?;

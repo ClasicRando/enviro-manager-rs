@@ -12,7 +12,6 @@ chrono = { version = "0.4.23", default-features = false, features = ["clock", "s
 rmp-serde = "1.1.1"
 futures = "0.3.25"
 reqwest = { version = "0.11.11", features = ["stream"] }
-rocket = { version = "0.5.0-rc.2", features = ["serde_json", "json", "msgpack", "secrets"] }
 thiserror = "1.0.38"
 indoc = "2"
 lettre = { version = "0.10.1", features = ["tokio1", "tokio1-native-tls"] }

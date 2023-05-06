@@ -15,8 +15,8 @@
 // ) -> ApiResponse<()> {
 //     match service.retry_task(request).await {
 //         Ok(_) => ApiResponse::message(
-//             String::from("Successfully set task queue record to retry. Workflow scheduled for run"),
-//             format,
+//             String::from("Successfully set task queue record to retry. Workflow scheduled for
+// run"),             format,
 //         ),
 //         Err(error) => ApiResponse::error(error, format),
 //     }

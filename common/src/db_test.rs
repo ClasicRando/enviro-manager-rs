@@ -4,7 +4,6 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use serde::Deserialize;
 use sqlx::PgPool;
-
 use tokio::{
     fs::{read_dir, File},
     io::AsyncReadExt,

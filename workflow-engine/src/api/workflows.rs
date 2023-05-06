@@ -22,8 +22,8 @@
 //     }
 // }
 
-// /// API endpoint to fetch a workflow specified by `workflow_id`. Returns a single [Workflow] record
-// /// if any exists.
+// /// API endpoint to fetch a workflow specified by `workflow_id`. Returns a single [Workflow]
+// record /// if any exists.
 // #[get("/workflows/<workflow_id>?<f>")]
 // pub async fn workflow(
 //     workflow_id: WorkflowId,

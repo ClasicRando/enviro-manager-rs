@@ -1,7 +1,6 @@
-use common::error::{EmError, EmResult};
-use rocket::request::FromParam;
+use common::error::EmResult;
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, Pool, Database, Postgres};
+use sqlx::{Database, PgPool, Pool, Postgres};
 
 /// Status of a task as found in the database as a simple Postgresql enum type
 #[derive(sqlx::Type, Serialize)]
@@ -48,14 +47,6 @@ impl From<i64> for TaskId {
     }
 }
 
-impl<'a> FromParam<'a> for TaskId {
-    type Error = EmError;
-
-    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
-        Ok(Self(param.parse::<i64>()?))
-    }
-}
-
 impl std::fmt::Display for TaskId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
@@ -63,7 +54,7 @@ impl std::fmt::Display for TaskId {
 }
 
 #[async_trait::async_trait]
-pub trait TasksService: Clone {
+pub trait TasksService: Clone + Send {
     type Database: Database;
 
     /// Create a new [TasksService] with the referenced pool as the data source
@@ -148,8 +139,8 @@ impl TasksService for PgTasksService {
 
 #[cfg(test)]
 mod test {
-    use super::{TaskId, TaskRequest, PgTasksService, TasksService};
-    use crate::database::utilities::create_test_db_pool;
+    use super::{PgTasksService, TaskId, TaskRequest, TasksService};
+    use crate::database::{ConnectionPool, PostgresConnectionPool};
 
     #[sqlx::test]
     async fn task() -> Result<(), Box<dyn std::error::Error>> {
@@ -165,7 +156,7 @@ mod test {
             url: task_url.to_string(),
         };
 
-        let pool = create_test_db_pool().await?;
+        let pool = PostgresConnectionPool::create_test_db_pool().await?;
         let (task_service_name, service_url): (String, String) =
             sqlx::query_as("select name, base_url from task.task_services where service_id = $1")
                 .bind(task_service_id)

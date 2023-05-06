@@ -12,7 +12,10 @@ use tokio::{
     time::{sleep as tokio_sleep, Duration as StdDuration},
 };
 
-use crate::{services::jobs::{Job, JobId, PgJobsService, JobsService}, database::listener::ChangeListener};
+use crate::{
+    database::listener::ChangeListener,
+    services::jobs::{Job, JobId, JobsService, PgJobsService},
+};
 
 /// Action to perform after receiving a job worker notification. Notification payload should be a
 /// workflow run id (as an i64/bigint) to tell the job worker a job has been completed or an empty

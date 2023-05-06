@@ -1,6 +1,5 @@
 use chrono::NaiveDateTime;
 use common::error::{EmError, EmResult};
-use rocket::request::FromParam;
 use serde::{
     de::{MapAccess, Visitor},
     ser::SerializeStruct,
@@ -8,12 +7,14 @@ use serde::{
 };
 use sqlx::{
     postgres::{types::PgInterval, PgListener},
-    PgPool, Pool, Database, Postgres,
+    Database, PgPool, Pool, Postgres,
 };
 
-use crate::{database::listener::{ChangeListener, PgChangeListener}, job_worker::NotificationAction};
-
 use super::workflow_runs::WorkflowRunStatus;
+use crate::{
+    database::listener::{ChangeListener, PgChangeListener},
+    job_worker::NotificationAction,
+};
 
 /// Represents the `job_type` Postgresql enum value within the database. Should never be used by
 /// itself but rather used to parse into the [JobType] enum that hold the job running details.
@@ -230,14 +231,6 @@ impl From<i64> for JobId {
     }
 }
 
-impl<'a> FromParam<'a> for JobId {
-    type Error = EmError;
-
-    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
-        Ok(Self(param.parse::<i64>()?))
-    }
-}
-
 impl std::fmt::Display for JobId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
@@ -247,7 +240,7 @@ impl std::fmt::Display for JobId {
 /// Service for fetching and interacting with task data. Wraps a [PgPool] and provides
 /// interaction methods for the API and [JobWorker][crate::job_worker::JobWorker].
 #[async_trait::async_trait]
-pub trait JobsService : Clone + Send {
+pub trait JobsService: Clone + Send {
     type Database: Database;
     type Listener: ChangeListener<NotificationAction>;
 

@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use chrono::NaiveDateTime;
 use common::error::{EmError, EmResult};
-use rocket::request::FromParam;
 use serde::Serialize;
 use serde_json::Value;
 use sqlx::{
@@ -169,14 +168,6 @@ impl FromStr for WorkflowRunId {
 impl From<i64> for WorkflowRunId {
     fn from(value: i64) -> Self {
         Self(value)
-    }
-}
-
-impl<'a> FromParam<'a> for WorkflowRunId {
-    type Error = EmError;
-
-    fn from_param(param: &'a str) -> Result<Self, Self::Error> {
-        param.parse()
     }
 }
 
