@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use chrono::NaiveDateTime;
 use common::error::{EmError, EmResult};
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use sqlx::{
     decode::Decode,
@@ -153,7 +153,7 @@ pub struct ExecutorWorkflowRun {
 
 /// Wrapper for a `workflow_run_id` value. Made to ensure data passed as the id of a workflow run is
 /// correct and not just any i64 value.
-#[derive(sqlx::Type, Eq, PartialEq, Hash, Clone)]
+#[derive(sqlx::Type, Eq, PartialEq, Hash, Clone, Deserialize)]
 #[sqlx(transparent)]
 pub struct WorkflowRunId(i64);
 

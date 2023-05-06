@@ -221,7 +221,7 @@ pub struct JobRequest {
 
 /// Wrapper for a `job_id` value. Made to ensure data passed as the id of a job is correct and not
 /// just any i64 value.
-#[derive(sqlx::Type, Eq, Hash, PartialEq)]
+#[derive(sqlx::Type, Eq, Hash, PartialEq, Deserialize)]
 #[sqlx(transparent)]
 pub struct JobId(i64);
 

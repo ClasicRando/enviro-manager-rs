@@ -12,7 +12,7 @@ pub mod workflow_runs;
 pub mod workflows;
 
 use actix_web::{
-    web::{get, Data},
+    web::{get, post, Data},
     App, HttpServer,
 };
 
@@ -62,6 +62,54 @@ where
                 .route(
                     "/executors/cancel/{executor_id}",
                     get().to(api::executors::cancel_executor::<E>),
+                )
+                .route("/jobs", get().to(api::jobs::jobs::<J>))
+                .route("/jobs/{job_id}", get().to(api::jobs::job::<J>))
+                .route("/jobs", post().to(api::jobs::create_job::<J>))
+                .route(
+                    "/task-queue/retry",
+                    post().to(api::task_queue::task_queue_retry::<Q>),
+                )
+                .route(
+                    "/task-queue/complete",
+                    post().to(api::task_queue::task_queue_complete::<Q>),
+                )
+                .route("/tasks", get().to(api::tasks::tasks::<T>))
+                .route("/tasks/{task_id}", get().to(api::tasks::task::<T>))
+                .route("/tasks", post().to(api::tasks::create_task::<T>))
+                .route("/tasks", post().to(api::tasks::create_task::<T>))
+                .route(
+                    "/workflow_runs/{workflow_run_id}",
+                    get().to(api::workflow_runs::workflow_run::<R>),
+                )
+                .route(
+                    "/workflow_runs/init/{workflow_id}",
+                    get().to(api::workflow_runs::init_workflow_run::<R>),
+                )
+                .route(
+                    "/workflow_runs/cancel/{workflow_run_id}",
+                    get().to(api::workflow_runs::cancel_workflow_run::<R>),
+                )
+                .route(
+                    "/workflow_runs/schedule/{workflow_run_id}",
+                    get().to(api::workflow_runs::schedule_workflow_run::<R>),
+                )
+                .route(
+                    "/workflow_runs/restart/{workflow_run_id}",
+                    get().to(api::workflow_runs::restart_workflow_run::<R>),
+                )
+                .route("/workflows", get().to(api::workflows::workflows::<W>))
+                .route(
+                    "/workflows/{workflow_id}",
+                    get().to(api::workflows::workflow::<W>),
+                )
+                .route(
+                    "/workflows",
+                    post().to(api::workflows::create_workflow::<W>),
+                )
+                .route(
+                    "/workflows/deprecate",
+                    post().to(api::workflows::deprecate_workflow::<W>),
                 ),
         )
     })

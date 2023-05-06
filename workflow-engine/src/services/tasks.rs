@@ -37,7 +37,7 @@ pub struct TaskRequest {
 
 /// Wrapper for a `task_id` value. Made to ensure data passed as the id of a task is correct and
 /// not just any i64 value.
-#[derive(sqlx::Type)]
+#[derive(sqlx::Type, Deserialize)]
 #[sqlx(transparent)]
 pub struct TaskId(i64);
 

@@ -70,7 +70,7 @@ pub struct Workflow {
 
 /// Wrapper for a `workflow_id` value. Made to ensure data passed as the id of a workflow is correct
 /// and not just any i64 value.
-#[derive(sqlx::Type)]
+#[derive(sqlx::Type, Deserialize)]
 #[sqlx(transparent)]
 pub struct WorkflowId(i64);
 
