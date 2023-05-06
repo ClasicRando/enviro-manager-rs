@@ -11,14 +11,16 @@ use worker::WorkflowRunWorker;
 
 use self::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage};
 use crate::{
-    database::listener::ChangeListener,
+    database::{listener::ChangeListener, ConnectionPool, PostgresConnectionPool},
     services::{
+        create_executors_service, create_task_queue_service, create_workflow_runs_service,
         executors::{ExecutorId, ExecutorStatus, ExecutorsService},
         task_queue::TaskQueueService,
         workflow_runs::{
             ExecutorWorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunsService,
         },
     },
+    PgExecutorsService, PgTaskQueueService, PgWorkflowRunsService,
 };
 
 /// Next operations available to an [Executor] after performing various checks on the status of
@@ -77,6 +79,16 @@ where
     wr_handles: HashMap<WorkflowRunId, WorkflowRunWorkerResult>,
 }
 
+impl Executor<PgExecutorsService, PgWorkflowRunsService, PgTaskQueueService> {
+    pub async fn new_postgres() -> EmResult<Self> {
+        let pool = PostgresConnectionPool::create_db_pool().await?;
+        let executor_service: PgExecutorsService = create_executors_service(&pool)?;
+        let wr_service: PgWorkflowRunsService = create_workflow_runs_service(&pool)?;
+        let tq_service: PgTaskQueueService = create_task_queue_service(&pool)?;
+        Self::new(&executor_service, &wr_service, &tq_service).await
+    }
+}
+
 impl<U, C, S, E, W, T> Executor<E, W, T>
 where
     U: ChangeListener<ExecutorStatusUpdate>,
@@ -89,7 +101,7 @@ where
     /// Create a new [Executor] using the provided services. Cleans output unused or stale
     /// executors in the database before registering the current [Executor] and returning the new
     /// [Executor].
-    pub async fn new(executor_service: &E, wr_service: &W, tq_service: &T) -> EmResult<Self> {
+    async fn new(executor_service: &E, wr_service: &W, tq_service: &T) -> EmResult<Self> {
         executor_service.clean_executors().await?;
         let executor_id = executor_service.register_executor().await?;
         Ok(Self {
@@ -106,8 +118,14 @@ where
         &self.executor_id
     }
 
+    pub async fn run(mut self) {
+        if let Err(error) = self.run_loop().await {
+            self.executor_service.post_error(&self.executor_id, error).await;
+        }
+    }
+
     #[allow(unused_assignments)]
-    pub async fn run(mut self) -> EmResult<()> {
+    async fn run_loop(&mut self) -> EmResult<()> {
         let mut is_listen_mode = false;
         let mut executor_signal: ExecutorStatusUpdate;
         let mut executor_status_listener = self
@@ -505,7 +523,7 @@ where
     /// Close the executor by first shutting down workflow run workers then closing the executor
     /// from the database's perspective. The executor instance is dropped at the end of this
     /// function.
-    async fn close_executor(mut self, signal: ExecutorStatusUpdate) -> EmResult<()> {
+    async fn close_executor(&mut self, signal: ExecutorStatusUpdate) -> EmResult<()> {
         info!("Shutting down workers");
         let is_cancelled = signal.is_cancelled();
         self.shutdown_workers(is_cancelled).await?;
