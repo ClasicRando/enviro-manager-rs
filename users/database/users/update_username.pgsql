@@ -1,4 +1,4 @@
-create or replace procedure enviro_manager_user.update_username(
+create or replace procedure users.update_username(
     username text,
     password text,
     new_username text
@@ -10,12 +10,12 @@ declare
 begin
     select u.em_uid
     into strict v_em_uid
-    from enviro_manager_user.users u
+    from users.users u
     where
         u.username = $1
         and u.password = crypt($2, u.password);
 
-    update enviro_manager_user.users u
+    update users.users u
     set username = $3
     where u.em_uid = v_em_uid;
 exception
@@ -24,7 +24,7 @@ exception
 end;
 $$;
 
-comment on procedure enviro_manager_user.update_username IS $$
+comment on procedure users.update_username IS $$
 Update an existing user with new username provided. Will raise exception if the username already
 exists.
 

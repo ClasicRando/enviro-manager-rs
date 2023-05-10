@@ -1,4 +1,4 @@
-create or replace procedure enviro_manager_user.add_user_role(
+create or replace procedure users.add_user_role(
     action_em_uid bigint,
     em_uid bigint,
     role text
@@ -6,14 +6,15 @@ create or replace procedure enviro_manager_user.add_user_role(
 language plpgsql
 as $$
 begin
-    call enviro_manager_user.check_user_role($1, 'add role');
-    insert into enviro_manager_user.user_roles(em_uid,role)
+    perform set_config('em.uid',$1::text,false);
+    call users.check_user_role($1, 'add role');
+    insert into users.user_roles(em_uid,role)
     values($2,$3)
     on conflict (name,description) do nothing;
 end;
 $$;
 
-comment on procedure enviro_manager_user.add_user_role IS $$
+comment on procedure users.add_user_role IS $$
 Add a role to a user's list of roles. Note, if the user already has the role, nothing happens.
 
 Arguments:

@@ -75,7 +75,7 @@ impl RoleService for PgRoleService {
         let result = sqlx::query_as(
             r#"
             select name, description
-            from enviro_manager_user.roles"#,
+            from users.roles"#,
         )
         .fetch_all(&self.pool)
         .await?;
@@ -83,7 +83,7 @@ impl RoleService for PgRoleService {
     }
 
     async fn create_role(&self, request: &CreateRoleRequest) -> EmResult<()> {
-        sqlx::query("call enviro_manager_user.create_role($1, $2, $3)")
+        sqlx::query("call users.create_role($1, $2, $3)")
             .bind(&request.current_em_uid)
             .bind(&request.name)
             .bind(&request.description)
@@ -93,7 +93,7 @@ impl RoleService for PgRoleService {
     }
 
     async fn update_role(&self, request: &UpdateRoleRequest) -> EmResult<()> {
-        sqlx::query("call enviro_manager_user.update_role($1, $2, $3)")
+        sqlx::query("call users.update_role($1, $2, $3)")
             .bind(&request.current_em_uid)
             .bind(&request.name)
             .bind(&request.new_name)

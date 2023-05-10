@@ -9,118 +9,108 @@
             "dependencies": []
         },
         {
-            "name": "enviro_manager_user/users.pgsql",
+            "name": "users/users.pgsql",
             "dependencies": [
                 "schema.pgsql"
             ]
         },
         {
-            "name": "enviro_manager_user/roles.pgsql",
+            "name": "users/roles.pgsql",
             "dependencies": [
                 "schema.pgsql"
             ]
         },
         {
-            "name": "enviro_manager_user/user_roles.pgsql",
+            "name": "users/user_roles.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "enviro_manager_user/users.pgsql",
-                "enviro_manager_user/roles.pgsql"
+                "users/users.pgsql",
+                "users/roles.pgsql"
             ]
         },
         {
-            "name": "enviro_manager_user/v_users.pgsql",
+            "name": "users/v_users.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "enviro_manager_user/users.pgsql",
-                "enviro_manager_user/roles.pgsql",
-                "enviro_manager_user/user_roles.pgsql"
+                "users/users.pgsql",
+                "users/roles.pgsql",
+                "users/user_roles.pgsql"
             ]
         },
         {
-            "name": "enviro_manager_user/validate_password.pgsql",
+            "name": "users/validate_password.pgsql",
             "dependencies": [
                 "schema.pgsql"
             ]
         },
         {
-            "name": "enviro_manager_user/validate_user.pgsql",
+            "name": "users/validate_user.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "enviro_manager_user/users.pgsql",
-                "enviro_manager_user/v_users.pgsql"
+                "users/users.pgsql",
+                "users/v_users.pgsql"
             ]
         },
         {
-            "name": "enviro_manager_user/create_user.pgsql",
+            "name": "users/create_user.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "enviro_manager_user/users.pgsql",
-                "enviro_manager_user/user_roles.pgsql",
-                "enviro_manager_user/validate_password.pgsql",
-                "enviro_manager_user/get_current_em_uid.pgsql",
-                "enviro_manager_user/check_user_role.pgsql"
+                "users/users.pgsql",
+                "users/user_roles.pgsql",
+                "users/validate_password.pgsql",
+                "users/check_user_role.pgsql"
             ]
         },
         {
-            "name": "enviro_manager_user/reset_password.pgsql",
+            "name": "users/reset_password.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "enviro_manager_user/users.pgsql"
+                "users/users.pgsql"
             ]
         },
         {
-            "name": "enviro_manager_user/update_full_name.pgsql",
+            "name": "users/update_full_name.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "enviro_manager_user/users.pgsql"
+                "users/users.pgsql"
             ]
         },
         {
-            "name": "enviro_manager_user/update_username.pgsql",
+            "name": "users/update_username.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "enviro_manager_user/users.pgsql"
+                "users/users.pgsql"
             ]
         },
         {
-            "name": "enviro_manager_user/add_user_role.pgsql",
+            "name": "users/add_user_role.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "enviro_manager_user/get_current_em_uid.pgsql",
-                "enviro_manager_user/check_user_role.pgsql",
-                "enviro_manager_user/user_roles.pgsql"
+                "users/check_user_role.pgsql",
+                "users/user_roles.pgsql"
             ]
         },
         {
-            "name": "enviro_manager_user/check_user_role.pgsql",
+            "name": "users/check_user_role.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "enviro_manager_user/user_roles.pgsql"
+                "users/user_roles.pgsql"
             ]
         },
         {
-            "name": "enviro_manager_user/create_role.pgsql",
+            "name": "users/create_role.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "enviro_manager_user/get_current_em_uid.pgsql",
-                "enviro_manager_user/check_user_role.pgsql",
-                "enviro_manager_user/roles.pgsql"
+                "users/check_user_role.pgsql",
+                "users/roles.pgsql"
             ]
         },
         {
-            "name": "enviro_manager_user/get_current_em_uid.pgsql",
-            "dependencies": [
-                "schema.pgsql"
-            ]
-        },
-        {
-            "name": "enviro_manager_user/update_role.pgsql",
+            "name": "users/update_role.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "enviro_manager_user/get_current_em_uid.pgsql",
-                "enviro_manager_user/check_user_role.pgsql",
-                "enviro_manager_user/roles.pgsql"
+                "users/check_user_role.pgsql",
+                "users/roles.pgsql"
             ]
         }
     ]

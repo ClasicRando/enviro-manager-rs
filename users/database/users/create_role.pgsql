@@ -1,4 +1,4 @@
-create or replace procedure enviro_manager_user.create_role(
+create or replace procedure users.create_role(
     action_em_uid bigint,
     name text,
     description text
@@ -6,13 +6,14 @@ create or replace procedure enviro_manager_user.create_role(
 language plpgsql
 as $$
 begin
-    call enviro_manager_user.check_user_role($1, 'create role');
-    insert into enviro_manager_user.roles(name,description)
+    perform set_config('em.uid',$1::text,false);
+    call users.check_user_role($1, 'create role');
+    insert into users.roles(name,description)
     values($2,$3);
 end;
 $$;
 
-comment on procedure enviro_manager_user.create_role IS $$
+comment on procedure users.create_role IS $$
 Create a new role. Will raise exceptions if the name or description are empty or null.
 
 Arguments:

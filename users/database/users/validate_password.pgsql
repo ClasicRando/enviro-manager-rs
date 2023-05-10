@@ -1,4 +1,4 @@
-create or replace procedure enviro_manager_user.validate_password(password text)
+create or replace procedure users.validate_password(password text)
 language plpgsql
 as $$
 begin
@@ -17,7 +17,7 @@ begin
 end;
 $$;
 
-comment on procedure enviro_manager_user.validate_password IS $$
+comment on procedure users.validate_password IS $$
 Raises an exception if the password does not meet the requirements. Must contains at least 1
 uppercase character, digit and non-alphanumeric character to be validated.
 

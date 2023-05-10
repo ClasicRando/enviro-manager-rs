@@ -1,4 +1,4 @@
-create or replace procedure enviro_manager_user.check_user_role(
+create or replace procedure users.check_user_role(
     em_uid bigint,
     role text
 )
@@ -7,13 +7,13 @@ as $$
 begin
     if current_user != 'emu_admin' || not exists(
         select 1
-        from enviro_manager_user.user_roles ur
+        from users.user_roles ur
         where
             ur.em_uid = $1
             and ur.role = $2
         union all
         select 1
-        from enviro_manager_user.user_roles ur
+        from users.user_roles ur
         where
             ur.em_uid = $1
             and ur.role = 'admin'
@@ -24,7 +24,7 @@ begin
 end;
 $$;
 
-comment on procedure enviro_manager_user.check_user_role IS $$
+comment on procedure users.check_user_role IS $$
 Checks to ensure the specified user has the provided role. If not, an exception is raised. Note, if
 the current user is the admin user, then this procedure never fails.
 

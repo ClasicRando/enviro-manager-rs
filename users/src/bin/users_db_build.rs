@@ -14,7 +14,7 @@ async fn refresh_test_database() -> Result<(), Box<dyn std::error::Error>> {
     sqlx::query(
         r#"
         create database em_user_test with
-            owner = emu_admin
+            owner = users_admin
             encoding = 'UTF8'"#,
     )
     .execute(&pool)

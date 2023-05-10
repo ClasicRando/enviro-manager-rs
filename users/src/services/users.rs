@@ -146,7 +146,7 @@ impl UserService for PgUserService {
 
     async fn create_user(&self, request: UserRequest) -> EmResult<User> {
         let result =
-            sqlx::query_as("select enviro_manager_user.create_user($1, $2, $3, $4, $5, $6)")
+            sqlx::query_as("select users.create_user($1, $2, $3, $4, $5, $6)")
                 .bind(&request.current_em_uid)
                 .bind(&request.first_name)
                 .bind(&request.last_name)
@@ -159,7 +159,7 @@ impl UserService for PgUserService {
     }
 
     async fn update_username(&self, request: &UsernameUpdateRequest) -> EmResult<()> {
-        sqlx::query("call enviro_manager_user.update_username($1, $2, $3)")
+        sqlx::query("call users.update_username($1, $2, $3)")
             .bind(&request.username)
             .bind(&request.password)
             .bind(&request.new_username)
@@ -169,7 +169,7 @@ impl UserService for PgUserService {
     }
 
     async fn update_full_name(&self, request: &FullNameUpdateRequest) -> EmResult<()> {
-        sqlx::query("call enviro_manager_user.update_full_name($1, $2, $3, $4)")
+        sqlx::query("call users.update_full_name($1, $2, $3, $4)")
             .bind(&request.username)
             .bind(&request.password)
             .bind(&request.new_first_name)
@@ -180,7 +180,7 @@ impl UserService for PgUserService {
     }
 
     async fn validate_user(&self, request: ValidateUserRequest) -> EmResult<Option<User>> {
-        let result = sqlx::query_as("select enviro_manager_user.validate_user($1, $2)")
+        let result = sqlx::query_as("select users.validate_user($1, $2)")
             .bind(&request.username)
             .bind(&request.password)
             .fetch_optional(&self.pool)
@@ -189,7 +189,7 @@ impl UserService for PgUserService {
     }
 
     async fn reset_password(&self, request: &ResetUserPasswordRequest) -> EmResult<()> {
-        sqlx::query("call enviro_manager_user.reset_password($1, $2, $3)")
+        sqlx::query("call users.reset_password($1, $2, $3)")
             .bind(&request.username)
             .bind(&request.password)
             .bind(&request.new_password)
@@ -199,7 +199,7 @@ impl UserService for PgUserService {
     }
 
     async fn add_user_role(&self, request: &ModifyUserRoleRequest) -> EmResult<()> {
-        sqlx::query("call enviro_manager_user.add_user_role($1, $2, $3)")
+        sqlx::query("call users.add_user_role($1, $2, $3)")
             .bind(&request.current_em_uid)
             .bind(&request.em_uid)
             .bind(&request.role)
@@ -209,7 +209,7 @@ impl UserService for PgUserService {
     }
 
     async fn revoke_user_role(&self, request: &ModifyUserRoleRequest) -> EmResult<()> {
-        sqlx::query("call enviro_manager_user.revoke_user_role($1, $2, $3)")
+        sqlx::query("call users.revoke_user_role($1, $2, $3)")
             .bind(&request.current_em_uid)
             .bind(&request.em_uid)
             .bind(&request.role)

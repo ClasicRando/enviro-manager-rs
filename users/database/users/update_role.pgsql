@@ -1,4 +1,4 @@
-create or replace procedure enviro_manager_user.update_role(
+create or replace procedure users.update_role(
     action_em_uid bigint,
     name text,
     new_name text default null,
@@ -7,8 +7,9 @@ create or replace procedure enviro_manager_user.update_role(
 language plpgsql
 as $$
 begin
-    call enviro_manager_user.check_user_role($1, 'create role');
-    update enviro_manager_user.roles r
+    perform set_config('em.uid',$1::text,false);
+    call users.check_user_role($1, 'create role');
+    update users.roles r
     set
         name = case when $4 is null then r.name else $4 end,
         description = case when $3 is null then r.description else $3 end
@@ -16,7 +17,7 @@ begin
 end;
 $$;
 
-comment on procedure enviro_manager_user.update_role IS $$
+comment on procedure users.update_role IS $$
 Update the name and/or the description of a role specified by the name parameter. If either new
 value is null then the original value is kept.
 
