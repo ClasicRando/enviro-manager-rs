@@ -6,6 +6,7 @@ use sqlx::PgPool;
 use tokio::{fs::File, io::AsyncReadExt};
 
 pub mod api;
+pub mod database;
 pub mod db_build;
 pub mod db_test;
 pub mod error;
