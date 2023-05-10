@@ -1,4 +1,5 @@
-use super::utilities::ApiResponse;
+use common::api::ApiResponse;
+
 use crate::services::executors::{Executor, ExecutorId, ExecutorsService};
 
 /// API endpoint to fetch all active executors

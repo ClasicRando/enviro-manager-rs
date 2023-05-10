@@ -1,4 +1,5 @@
-use super::utilities::ApiResponse;
+use common::api::ApiResponse;
+
 use crate::services::{
     workflow_runs::{WorkflowRun, WorkflowRunId, WorkflowRunsService},
     workflows::WorkflowId,

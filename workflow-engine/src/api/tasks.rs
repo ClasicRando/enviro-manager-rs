@@ -1,5 +1,6 @@
+use common::api::ApiResponse;
 use log::error;
-use super::utilities::{ApiResponse};
+
 use crate::services::tasks::{Task, TaskId, TaskRequest, TasksService};
 
 // API endpoint to fetch all tasks. Return an array of [Task] entries
@@ -25,9 +26,9 @@ where
     match service.read_one(&task_id).await {
         Ok(task_option) => match task_option {
             Some(task) => ApiResponse::success(task),
-            None => ApiResponse::failure(
-                format!("Could not find record for task_id = {}", task_id),
-            ),
+            None => {
+                ApiResponse::failure(format!("Could not find record for task_id = {}", task_id))
+            }
         },
         Err(error) => ApiResponse::error(error),
     }

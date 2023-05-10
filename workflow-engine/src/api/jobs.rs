@@ -1,6 +1,6 @@
+use common::api::ApiResponse;
 use log::error;
 
-use super::utilities::ApiResponse;
 use crate::services::jobs::{Job, JobId, JobRequest, JobsService};
 
 /// API endpoint to fetch all `Job`s currently registered

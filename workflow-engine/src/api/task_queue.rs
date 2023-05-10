@@ -1,6 +1,6 @@
+use common::api::ApiResponse;
 use log::error;
 
-use super::utilities::ApiResponse;
 use crate::services::task_queue::{TaskQueueRequest, TaskQueueService};
 
 // API endpoint to retry the task queue entry specified by `request`
@@ -48,11 +48,9 @@ where
         }
     };
     match service.complete_task(request).await {
-        Ok(_) => ApiResponse::message(
-            String::from(
-                "Successfully set task queue record to complete. Workflow scheduled for run",
-            ),
-        ),
+        Ok(_) => ApiResponse::message(String::from(
+            "Successfully set task queue record to complete. Workflow scheduled for run",
+        )),
         Err(error) => ApiResponse::error(error),
     }
 }
