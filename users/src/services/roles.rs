@@ -43,7 +43,6 @@ impl UpdateRoleRequest {
 }
 
 ///
-#[async_trait::async_trait]
 pub trait RoleService: Clone + Send + Sync {
     type Database: Database;
 
@@ -63,7 +62,6 @@ pub struct PgRoleService {
     pool: PgPool,
 }
 
-#[async_trait::async_trait]
 impl RoleService for PgRoleService {
     type Database = Postgres;
 

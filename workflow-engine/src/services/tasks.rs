@@ -53,7 +53,8 @@ impl std::fmt::Display for TaskId {
     }
 }
 
-#[async_trait::async_trait]
+/// Service for fetching and interacting with task data. Wraps a [Pool] and provides
+/// interaction methods for the API.
 pub trait TasksService: Clone + Send {
     type Database: Database;
 
@@ -70,14 +71,12 @@ pub trait TasksService: Clone + Send {
     async fn update(&self, task_id: &TaskId, request: TaskRequest) -> EmResult<Option<Task>>;
 }
 
-/// Service for fetching and interacting with task data. Wraps a [PgPool] and provides
-/// interaction methods for the API.
+/// Postgres implementation of [TasksService]
 #[derive(Clone)]
 pub struct PgTasksService {
     pool: PgPool,
 }
 
-#[async_trait::async_trait]
 impl TasksService for PgTasksService {
     type Database = Postgres;
 

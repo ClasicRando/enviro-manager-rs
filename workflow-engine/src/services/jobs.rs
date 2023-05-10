@@ -239,7 +239,6 @@ impl std::fmt::Display for JobId {
 
 /// Service for fetching and interacting with task data. Wraps a [PgPool] and provides
 /// interaction methods for the API and [JobWorker][crate::job_worker::JobWorker].
-#[async_trait::async_trait]
 pub trait JobsService: Clone + Send {
     type Database: Database;
     type Listener: ChangeListener<NotificationAction>;
@@ -309,7 +308,6 @@ impl PgJobsService {
     }
 }
 
-#[async_trait::async_trait]
 impl JobsService for PgJobsService {
     type Database = Postgres;
     type Listener = PgChangeListener<NotificationAction>;

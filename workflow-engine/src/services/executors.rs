@@ -63,7 +63,6 @@ impl std::fmt::Display for ExecutorId {
 /// interaction methods for the API and [Executor][crate::executor::Executor] instances. To
 /// implement the trait you must specify the [Database] you are working with and the
 /// [ChangeListener] the service will provide.
-#[async_trait::async_trait]
 pub trait ExecutorsService: Clone + Send {
     type Database: Database;
     type Listener: ChangeListener<ExecutorStatusUpdate>;
@@ -117,7 +116,6 @@ pub struct PgExecutorsService {
     pool: PgPool,
 }
 
-#[async_trait::async_trait]
 impl ExecutorsService for PgExecutorsService {
     type Database = Postgres;
     type Listener = PgChangeListener<ExecutorStatusUpdate>;
