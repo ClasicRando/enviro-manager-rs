@@ -1,19 +1,18 @@
 create or replace procedure enviro_manager_user.update_role(
+    action_em_uid bigint,
     name text,
     new_name text default null,
     new_description text default null
 )
 language plpgsql
 as $$
-declare
-    v_uid bigint := enviro_manager_user.get_current_em_uid();
 begin
-    call enviro_manager_user.check_user_role(v_uid, 'create role');
+    call enviro_manager_user.check_user_role($1, 'create role');
     update enviro_manager_user.roles r
     set
-        name = case when $3 is null then r.name else $3 end,
-        description = case when $2 is null then r.description else $2 end
-    where r.name = $1;
+        name = case when $4 is null then r.name else $4 end,
+        description = case when $3 is null then r.description else $3 end
+    where r.name = $2;
 end;
 $$;
 
@@ -22,6 +21,8 @@ Update the name and/or the description of a role specified by the name parameter
 value is null then the original value is kept.
 
 Arguments:
+action_em_uid:
+    User ID that is attempting to perform the action
 name:
     Name of the existing role to update
 new_name:

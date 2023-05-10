@@ -1,4 +1,5 @@
 create or replace procedure enviro_manager_user.create_user(
+    action_em_uid bigint,
     first_name text,
     last_name text,
     username text,
@@ -14,17 +15,17 @@ declare
     v_uid bigint := enviro_manager_user.get_current_em_uid();
     v_em_uid bigint;
 begin
-    call enviro_manager_user.check_user_role(v_uid, 'create user');
-    call enviro_manager_user.validate_password($4);
+    call enviro_manager_user.check_user_role($1, 'create user');
+    call enviro_manager_user.validate_password($5);
 
     insert into enviro_manager_user.users(first_name,last_name,username,password)
-    values($1,$2,$3,crypt($4, gen_salt('bf')))
+    values($2,$3,$4,crypt($5, gen_salt('bf')))
     returning em_uid into v_em_uid;
 
     begin
         insert into enviro_manager_user.user_roles(em_uid,role)
         select v_em_uid, d.name
-        from unnest($5) d(name);
+        from unnest($6) d(name);
     exception
         when others then
             rollback;
@@ -32,7 +33,7 @@ begin
     end;
 
     select u.em_uid, u.full_name, u.roles
-    into $6, $7, $8
+    into $7, $8, $9
     from enviro_manager_user.v_users u
     where u.em_uid = v_em_uid;
 end;
@@ -43,6 +44,8 @@ Create a new user with the provided details, returning the new user data if succ
 exceptions if the password is invalid or any role entry does not match an existing role type.
 
 Arguments:
+action_em_uid:
+    User ID that is attempting to perform the action
 first_name:
     First name of the new user
 last_name:
