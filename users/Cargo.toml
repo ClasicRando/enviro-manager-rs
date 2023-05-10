@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "emu_db_build"
+name = "users_db_build"
 
 [dependencies]
 sqlx = { workspace = true }
@@ -18,4 +18,6 @@ rmp-serde = { workspace = true }
 futures = { workspace = true }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
+mockall = { workspace = true }
+actix-web = { workspace = true }
 common = { path = "../common" }
