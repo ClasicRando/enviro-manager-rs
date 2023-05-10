@@ -5,6 +5,7 @@ use regex::Regex;
 use sqlx::PgPool;
 use tokio::{fs::File, io::AsyncReadExt};
 
+pub mod api;
 pub mod db_build;
 pub mod db_test;
 pub mod error;
