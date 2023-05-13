@@ -13,6 +13,8 @@ begin
 end;
 $$;
 
+grant execute on procedure users.create_role to users_web;
+
 comment on procedure users.create_role IS $$
 Create a new role. Will raise exceptions if the name or description are empty or null.
 

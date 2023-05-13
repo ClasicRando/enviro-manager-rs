@@ -29,6 +29,8 @@ exception
 end;
 $$;
 
+grant execute on procedure users.reset_password to users_web;
+
 comment on procedure users.reset_password IS $$
 Update an existing user with new username provided. Will raise exception if the username already
 exists.

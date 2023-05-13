@@ -10,3 +10,5 @@ create or replace view users.v_users as
     from users.users u
     join user_roles ur
     on u.em_uid = ur.em_uid;
+
+grant select on users.v_users to users_web;

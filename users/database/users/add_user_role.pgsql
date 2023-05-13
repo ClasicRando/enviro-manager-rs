@@ -22,6 +22,8 @@ begin
 end;
 $$;
 
+grant execute on procedure users.add_user_role to users_web;
+
 comment on procedure users.add_user_role IS $$
 Add a role to a user's list of roles. Note, if the user already has the role, nothing happens.
 

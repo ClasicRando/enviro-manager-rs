@@ -17,6 +17,8 @@ begin
 end;
 $$;
 
+grant execute on procedure users.update_role to users_web;
+
 comment on procedure users.update_role IS $$
 Update the name and/or the description of a role specified by the name parameter. If either new
 value is null then the original value is kept.

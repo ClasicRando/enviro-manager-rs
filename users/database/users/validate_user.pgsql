@@ -22,6 +22,8 @@ where
     )
 $$;
 
+grant execute on function users.validate_user to users_web;
+
 comment on function users.validate_user IS $$
 Validates that the credentials passed in match a user. If the user is found, then it returns the
 user ID, name and the roles of the user.

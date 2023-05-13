@@ -39,6 +39,8 @@ begin
 end;
 $$;
 
+grant execute on procedure users.create_user to users_web;
+
 comment on procedure users.create_user IS $$
 Create a new user with the provided details, returning the new user data if successful. Will raise
 exceptions if the password is invalid or any role entry does not match an existing role type.

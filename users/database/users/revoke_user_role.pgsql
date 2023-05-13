@@ -23,6 +23,8 @@ begin
 end;
 $$;
 
+grant execute on procedure users.add_user_role to users_web;
+
 comment on procedure users.add_user_role IS $$
 Revoke a role for a specified user.
 
