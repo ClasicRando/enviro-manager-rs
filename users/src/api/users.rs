@@ -24,7 +24,7 @@ where
             ));
         }
     };
-    match service.create_user(user_request).await {
+    match service.create_user(&user_request).await {
         Ok(user) => ApiResponse::success(user),
         Err(error) => ApiResponse::error(error),
     }
@@ -72,7 +72,7 @@ where
             ));
         }
     };
-    match service.validate_user(user_request).await {
+    match service.validate_user(&user_request).await {
         Ok(user) => ApiResponse::success(user),
         Err(error) if matches!(error, EmError::InvalidUser) => {
             ApiResponse::failure("Invalid user credentials".to_string())
