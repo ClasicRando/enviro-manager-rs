@@ -35,7 +35,7 @@ where
     match service.create_role(&role_request).await {
         Ok(_) => ApiResponse::message(format!(
             "Successfully created role `{}`",
-            role_request.name()
+            role_request.name
         )),
         Err(error) => ApiResponse::error(error),
     }
@@ -62,7 +62,7 @@ where
     match service.update_role(&role_request).await {
         Ok(_) => ApiResponse::message(format!(
             "Successfully update role `{}`",
-            role_request.name()
+            role_request.name
         )),
         Err(error) => ApiResponse::error(error),
     }
