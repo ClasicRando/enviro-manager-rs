@@ -65,21 +65,24 @@
             "name": "users/reset_password.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "users/users.pgsql"
+                "users/users.pgsql",
+                "users/validate_user.pgsql"
             ]
         },
         {
             "name": "users/update_full_name.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "users/users.pgsql"
+                "users/users.pgsql",
+                "users/validate_user.pgsql"
             ]
         },
         {
             "name": "users/update_username.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "users/users.pgsql"
+                "users/users.pgsql",
+                "users/validate_user.pgsql"
             ]
         },
         {
