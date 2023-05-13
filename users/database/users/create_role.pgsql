@@ -1,7 +1,9 @@
 create or replace procedure users.create_role(
     action_em_uid bigint,
     name text,
-    description text
+    description text,
+    out r_name text,
+    out r_description text
 )
 language plpgsql
 as $$
@@ -9,7 +11,8 @@ begin
     perform set_config('em.uid',$1::text,false);
     call users.check_user_role($1, 'create role');
     insert into users.roles(name,description)
-    values($2,$3);
+    values($2,$3)
+    returning name, description into $4, $5;
 end;
 $$;
 

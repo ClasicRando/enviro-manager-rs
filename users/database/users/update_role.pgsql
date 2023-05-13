@@ -2,7 +2,9 @@ create or replace procedure users.update_role(
     action_em_uid bigint,
     name text,
     new_name text default null,
-    new_description text default null
+    new_description text default null,
+    out r_name text,
+    out r_description text
 )
 language plpgsql
 as $$
@@ -11,9 +13,10 @@ begin
     call users.check_user_role($1, 'create role');
     update users.roles r
     set
-        name = case when $4 is null then r.name else $4 end,
-        description = case when $3 is null then r.description else $3 end
-    where r.name = $2;
+        name = coalesce($3, r.name),
+        description = coalesce($4, r.description)
+    where r.name = $2
+    returning r.name, r.description into $5, $6;
 end;
 $$;
 

@@ -36,7 +36,7 @@ pub trait RoleService: Clone + Send + Sync {
     ///
     async fn read_many(&self) -> EmResult<Vec<Role>>;
     ///
-    async fn create_role(&self, request: &CreateRoleRequest) -> EmResult<()>;
+    async fn create_role(&self, request: &CreateRoleRequest) -> EmResult<Role>;
     ///
-    async fn update_role(&self, request: &UpdateRoleRequest) -> EmResult<()>;
+    async fn update_role(&self, request: &UpdateRoleRequest) -> EmResult<Role>;
 }

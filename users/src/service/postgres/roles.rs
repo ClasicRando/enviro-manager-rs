@@ -27,24 +27,24 @@ impl RoleService for PgRoleService {
         Ok(result)
     }
 
-    async fn create_role(&self, request: &CreateRoleRequest) -> EmResult<()> {
-        sqlx::query("call users.create_role($1, $2, $3)")
+    async fn create_role(&self, request: &CreateRoleRequest) -> EmResult<Role> {
+        let role = sqlx::query_as("call users.create_role($1, $2, $3)")
             .bind(request.current_em_uid)
             .bind(&request.name)
             .bind(&request.description)
-            .execute(&self.pool)
+            .fetch_one(&self.pool)
             .await?;
-        Ok(())
+        Ok(role)
     }
 
-    async fn update_role(&self, request: &UpdateRoleRequest) -> EmResult<()> {
-        sqlx::query("call users.update_role($1, $2, $3)")
+    async fn update_role(&self, request: &UpdateRoleRequest) -> EmResult<Role> {
+        let role = sqlx::query_as("call users.update_role($1, $2, $3)")
             .bind(request.current_em_uid)
             .bind(&request.name)
             .bind(&request.new_name)
             .bind(&request.new_description)
-            .execute(&self.pool)
+            .fetch_one(&self.pool)
             .await?;
-        Ok(())
+        Ok(role)
     }
 }
