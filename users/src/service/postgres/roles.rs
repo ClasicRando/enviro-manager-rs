@@ -20,7 +20,7 @@ impl RoleService for PgRoleService {
         let result = sqlx::query_as(
             r#"
             select name, description
-            from users.roles"#,
+            from users.v_roles"#,
         )
         .fetch_all(&self.pool)
         .await?;
