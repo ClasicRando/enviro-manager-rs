@@ -1,5 +1,6 @@
 create table if not exists users.users (
     em_uid bigint primary key generated always as identity,
+    uid uuid not null unique default gen_random_uuid (),
     first_name text not null check(data_check.check_not_blank_or_empty(first_name)),
     last_name text not null check(data_check.check_not_blank_or_empty(last_name)),
     username text not null check(data_check.check_not_blank_or_empty(last_name)) unique,
@@ -13,7 +14,9 @@ revoke all on users.users from public;
 comment on table users.users is
 'All users that will access EnviroManager resources';
 comment on column users.users.em_uid is
-'Unique identifier for each user';
+'Unique internal identifier for each user';
+comment on column users.users.uid is
+'Unique external identifier for each user';
 comment on column users.users.first_name is
 'First name of the user for message/display purposes';
 comment on column users.users.last_name is

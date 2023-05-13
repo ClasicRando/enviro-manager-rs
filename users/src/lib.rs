@@ -3,4 +3,4 @@
 
 pub mod api;
 pub mod database;
-pub mod services;
+pub mod service;

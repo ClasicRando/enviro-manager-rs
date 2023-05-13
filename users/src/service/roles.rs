@@ -1,8 +1,7 @@
 use common::error::EmResult;
 use serde::{Deserialize, Serialize};
 use sqlx::{Database, PgPool, Pool, Postgres};
-
-use crate::services::users::EmUid;
+use uuid::Uuid;
 
 ///
 #[derive(Serialize, sqlx::FromRow)]
@@ -14,7 +13,7 @@ pub struct Role {
 ///
 #[derive(Deserialize)]
 pub struct CreateRoleRequest {
-    current_em_uid: EmUid,
+    current_em_uid: Uuid,
     name: String,
     description: String,
 }
@@ -29,7 +28,7 @@ impl CreateRoleRequest {
 ///
 #[derive(Deserialize)]
 pub struct UpdateRoleRequest {
-    current_em_uid: EmUid,
+    current_em_uid: Uuid,
     name: String,
     new_name: String,
     new_description: String,
@@ -82,7 +81,7 @@ impl RoleService for PgRoleService {
 
     async fn create_role(&self, request: &CreateRoleRequest) -> EmResult<()> {
         sqlx::query("call users.create_role($1, $2, $3)")
-            .bind(&request.current_em_uid)
+            .bind(request.current_em_uid)
             .bind(&request.name)
             .bind(&request.description)
             .execute(&self.pool)
@@ -92,7 +91,7 @@ impl RoleService for PgRoleService {
 
     async fn update_role(&self, request: &UpdateRoleRequest) -> EmResult<()> {
         sqlx::query("call users.update_role($1, $2, $3)")
-            .bind(&request.current_em_uid)
+            .bind(request.current_em_uid)
             .bind(&request.name)
             .bind(&request.new_name)
             .bind(&request.new_description)

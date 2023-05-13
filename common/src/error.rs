@@ -43,6 +43,17 @@ pub enum EmError {
     EnvVar(#[from] std::env::VarError),
     #[error("IO error\n{0}")]
     IO(#[from] std::io::Error),
+    #[error("Invalid User")]
+    InvalidUser,
+    #[error("User missing privilege. UID = {uid}, role = {role}")]
+    MissingPrivilege {
+        uid: i64,
+        role: String,
+    },
+    #[error("Password is not valid. {reason}")]
+    InvalidPassword {
+        reason: String,
+    },
 }
 
 /// Generic [Result][std::result::Result] type where the error is always [Error]

@@ -1,7 +1,10 @@
 create or replace procedure users.reset_password(
     username text,
     password text,
-    new_password text
+    new_password text,
+    out uid uuid,
+    out full_name text,
+    out roles users.roles[]
 )
 language plpgsql
 as $$
@@ -10,13 +13,15 @@ declare
 begin
     select u.em_uid
     into strict v_em_uid
-    from users.users u
-    where 
-        u.username = $1
-        and u.password = crypt($2, u.password);
+    from users.validate_user($1, $2);
 
     update users.users u
     set password = crypt($3, gen_salt('bf'))
+    where u.em_uid = v_em_uid;
+    
+    select u.uid, u.full_name, u.roles
+    into $4, $5, $6
+    from users.v_users u
     where u.em_uid = v_em_uid;
 exception
     when no_data_found then

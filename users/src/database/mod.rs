@@ -42,7 +42,7 @@ mod test {
 
     #[tokio::test]
     async fn run_workflow_engine_database_tests() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = PgConnectionPool::create_test_db_pool(test_db_options()?).await?;
+        let pool = PgConnectionPool::create_db_pool(test_db_options()?).await?;
         run_db_tests(&pool).await?;
         Ok(())
     }

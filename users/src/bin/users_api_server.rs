@@ -3,7 +3,7 @@ use sqlx::Postgres;
 use users::{
     api,
     database::db_options,
-    services::{roles::PgRoleService, users::PgUserService},
+    service::{roles::PgRoleService, users::PgUserService},
 };
 
 #[tokio::main]

@@ -10,7 +10,7 @@ returns null on null input
 immutable
 language sql
 as $$
-select u.em_uid, u.full_name, u.roles
+select u.em_uid, u.uid, u.full_name, u.roles
 from users.v_users u
 where
     u.em_uid in (

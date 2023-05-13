@@ -1,12 +1,13 @@
 create or replace procedure users.add_user_role(
-    action_em_uid bigint,
-    em_uid bigint,
-    role text
+    action_uid uuid,
+    uid uuid,
+    role text,
+    out uid uuid,
+    out full_name text,
+    out roles users.roles[]
 )
 language plpgsql
 as $$
-declare
-    v_uid bigint := users.get_current_em_uid();
 begin
     perform set_config('em.uid',$1::text,false);
     call users.check_user_role(v_uid, 'add role');
@@ -14,6 +15,11 @@ begin
     where
         ur.em_uid = $1
         and ur.role = $2;
+
+    select u.uid, u.full_name, u.roles
+    into $4, $5, $6
+    from users.v_users u
+    where u.em_uid = v_em_uid;
 end;
 $$;
 

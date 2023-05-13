@@ -1,7 +1,7 @@
 use common::api::ApiResponse;
 use log::error;
 
-use crate::services::roles::{CreateRoleRequest, Role, RoleService, UpdateRoleRequest};
+use crate::service::roles::{CreateRoleRequest, Role, RoleService, UpdateRoleRequest};
 
 /// API endpoint to fetch all roles
 pub async fn roles<R>(service: actix_web::web::Data<R>) -> ApiResponse<Vec<Role>>

@@ -20,4 +20,6 @@ thiserror = { workspace = true }
 async-trait = { workspace = true }
 mockall = { workspace = true }
 actix-web = { workspace = true }
+lazy-regex = { workspace = true }
+uuid = { workspace = true }
 common = { path = "../common" }

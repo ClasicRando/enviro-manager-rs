@@ -1,25 +1,29 @@
 create or replace procedure users.check_user_role(
-    em_uid bigint,
+    uid uuid,
     role text
 )
 language plpgsql
 as $$
 begin
-    if current_user != 'emu_admin' || not exists(
+    if current_user != 'users_admin' || not exists(
         select 1
-        from users.user_roles ur
+        from users.users u
+        join users.user_roles ur
+        on u.em_uid = ur.em_uid
         where
-            ur.em_uid = $1
+            u.uid = $1
             and ur.role = $2
         union all
         select 1
-        from users.user_roles ur
+        from users.users u
+        join users.user_roles ur
+        on u.em_uid = ur.em_uid
         where
-            ur.em_uid = $1
+            ur.uid = $1
             and ur.role = 'admin'
     ) then
         raise exception using message =
-            'User ID = ' || em_uid::text || ' does not have the required role, "' || role || '"';
+            'User ID = ' || $1::text || ' does not have the required role, "' || $2 || '"';
     end if;
 end;
 $$;

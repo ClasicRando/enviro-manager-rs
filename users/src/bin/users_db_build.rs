@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Refresh specified for the test database");
                 refresh_test_database().await?;
             }
-            PgConnectionPool::create_test_db_pool(test_db_options()?).await?
+            PgConnectionPool::create_db_pool(test_db_options()?).await?
         }
         Some(name) if name == "prod" => {
             println!("Target specified as 'prod' to rebuild");

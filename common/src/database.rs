@@ -9,10 +9,6 @@ use crate::error::EmResult;
 pub trait ConnectionPool<D: Database> {
     /// Return a new pool of postgres connections
     async fn create_db_pool(options: <D::Connection as Connection>::Options) -> EmResult<Pool<D>>;
-    // Return a new pool of postgres connections for the test database
-    async fn create_test_db_pool(
-        options: <D::Connection as Connection>::Options,
-    ) -> EmResult<Pool<D>>;
 }
 
 pub struct PgConnectionPool;
@@ -25,11 +21,6 @@ impl ConnectionPool<Postgres> for PgConnectionPool {
             .max_connections(20)
             .connect_with(options)
             .await?;
-        Ok(pool)
-    }
-
-    async fn create_test_db_pool(options: PgConnectOptions) -> EmResult<PgPool> {
-        let pool = PgPoolOptions::new().connect_with(options).await?;
         Ok(pool)
     }
 }
