@@ -82,7 +82,7 @@ begin
         row_data,
         changed_fields,
         statement_only,
-        em_user_id
+        em_uuid
     )
     values (
         audit_row.schema_name,
@@ -101,7 +101,7 @@ begin
         audit_row.row_data,
         audit_row.changed_fields,
         audit_row.statement_only,
-        audit_row.em_user_id
+        audit_row.em_uuid
     );
     return null;
 end;
