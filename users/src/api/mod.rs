@@ -4,7 +4,7 @@ use actix_web::{
     web::{get, patch, post, Data},
     App, HttpServer,
 };
-use common::{database::ConnectionPool, error::EmResult};
+use common::{database::ConnectionBuilder, error::EmResult};
 use sqlx::{Connection, Database};
 
 pub mod roles;
@@ -18,12 +18,12 @@ pub async fn spawn_api_server<A, C, D, R, U>(
 ) -> EmResult<()>
 where
     A: ToSocketAddrs,
-    C: ConnectionPool<D>,
+    C: ConnectionBuilder<D>,
     D: Database,
     R: RoleService<Database = D> + Send + Sync + 'static,
     U: UserService<Database = D> + Send + Sync + 'static,
 {
-    let pool = C::create_db_pool(options).await?;
+    let pool = C::create_pool(options, 20, 10).await?;
     let roles_service: Data<R> = Data::new(R::new(&pool));
     let users_service: Data<U> = Data::new(U::new(&pool));
     HttpServer::new(move || {

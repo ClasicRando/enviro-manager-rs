@@ -5,20 +5,27 @@ use sqlx::{
 
 use crate::error::EmResult;
 
-#[async_trait::async_trait]
-pub trait ConnectionPool<D: Database> {
-    /// Return a new pool of postgres connections
-    async fn create_db_pool(options: <D::Connection as Connection>::Options) -> EmResult<Pool<D>>;
+pub trait ConnectionBuilder<D: Database> {
+    /// Return a new pool of database connections. Requires the connection `options` and min/max
+    /// number of connections to hold.
+    async fn create_pool(
+        options: <D::Connection as Connection>::Options,
+        max_connections: u32,
+        min_connection: u32,
+    ) -> EmResult<Pool<D>>;
 }
 
-pub struct PgConnectionPool;
+pub struct PgConnectionBuilder;
 
-#[async_trait::async_trait]
-impl ConnectionPool<Postgres> for PgConnectionPool {
-    async fn create_db_pool(options: PgConnectOptions) -> EmResult<PgPool> {
+impl ConnectionBuilder<Postgres> for PgConnectionBuilder {
+    async fn create_pool(
+        options: PgConnectOptions,
+        max_connections: u32,
+        min_connection: u32,
+    ) -> EmResult<PgPool> {
         let pool = PgPoolOptions::new()
-            .min_connections(10)
-            .max_connections(20)
+            .min_connections(min_connection)
+            .max_connections(max_connections)
             .connect_with(options)
             .await?;
         Ok(pool)

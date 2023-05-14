@@ -1,5 +1,5 @@
 use common::{
-    database::{ConnectionPool, PgConnectionPool},
+    database::{ConnectionBuilder, PgConnectionBuilder},
     db_build::build_database,
 };
 
@@ -7,7 +7,7 @@ use users::database::{db_options, test_db_options};
 
 ///
 async fn refresh_test_database() -> Result<(), Box<dyn std::error::Error>> {
-    let pool = PgConnectionPool::create_db_pool(db_options()?).await?;
+    let pool = PgConnectionBuilder::create_pool(db_options()?, 1, 1).await?;
     sqlx::query("drop database if exists em_user_test")
         .execute(&pool)
         .await?;
@@ -35,11 +35,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Refresh specified for the test database");
                 refresh_test_database().await?;
             }
-            PgConnectionPool::create_db_pool(test_db_options()?).await?
+            PgConnectionBuilder::create_pool(test_db_options()?, 1, 1).await?
         }
         Some(name) if name == "prod" => {
             println!("Target specified as 'prod' to rebuild");
-            PgConnectionPool::create_db_pool(db_options()?).await?
+            PgConnectionBuilder::create_pool(db_options()?, 1, 1).await?
         }
         Some(name) => {
             println!(
