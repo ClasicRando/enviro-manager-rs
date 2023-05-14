@@ -19,6 +19,15 @@ async fn refresh_test_database() -> Result<(), Box<dyn std::error::Error>> {
     )
     .execute(&pool)
     .await?;
+
+    let pool = PgConnectionBuilder::create_pool(test_db_options()?, 1, 1).await?;
+    sqlx::query(
+        r#"
+        create extension pgcrypto"#,
+    )
+    .execute(&pool)
+    .await?;
+
     Ok(())
 }
 
