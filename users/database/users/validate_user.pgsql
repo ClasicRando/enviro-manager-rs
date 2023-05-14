@@ -2,6 +2,7 @@ create or replace function users.validate_user(
     username text,
     password text,
     out em_uid bigint,
+    out uid uuid,
     out full_name text,
     out roles users.roles[]
 )
