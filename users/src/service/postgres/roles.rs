@@ -1,7 +1,66 @@
 use common::error::EmResult;
-use sqlx::{PgPool, Pool, Postgres};
+use sqlx::{
+    decode::Decode,
+    encode::{Encode, IsNull},
+    postgres::{
+        types::{PgRecordDecoder, PgRecordEncoder},
+        PgArgumentBuffer, PgHasArrayType, PgTypeInfo, PgValueRef,
+    },
+    PgPool, Pool, Postgres, Type,
+};
 
 use crate::service::roles::{CreateRoleRequest, Role, RoleService, UpdateRoleRequest};
+
+impl Encode<'_, Postgres> for Role
+where
+    String: for<'q> Encode<'q, Postgres>,
+    String: Type<Postgres>,
+    String: for<'q> Encode<'q, Postgres>,
+    String: Type<Postgres>,
+{
+    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> IsNull {
+        let mut encoder = PgRecordEncoder::new(buf);
+        encoder.encode(&self.name);
+        encoder.encode(&self.description);
+        encoder.finish();
+        IsNull::No
+    }
+
+    fn size_hint(&self) -> usize {
+        2usize * (4 + 4)
+            + <String as Encode<Postgres>>::size_hint(&self.name)
+            + <String as Encode<Postgres>>::size_hint(&self.description)
+    }
+}
+
+impl<'r> Decode<'r, Postgres> for Role
+where
+    String: Decode<'r, Postgres>,
+    String: Type<Postgres>,
+    String: Decode<'r, Postgres>,
+    String: Type<Postgres>,
+{
+    fn decode(
+        value: PgValueRef<'r>,
+    ) -> Result<Self, Box<dyn std::error::Error + 'static + Send + Sync>> {
+        let mut decoder = PgRecordDecoder::new(value)?;
+        let name = decoder.try_decode::<String>()?;
+        let description = decoder.try_decode::<String>()?;
+        Ok(Role { name, description })
+    }
+}
+
+impl Type<Postgres> for Role {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("roles")
+    }
+}
+
+impl PgHasArrayType for Role {
+    fn array_type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("_roles")
+    }
+}
 
 /// Postgresql implementation of [RoleService]
 #[derive(Clone)]

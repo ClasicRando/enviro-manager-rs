@@ -3,12 +3,14 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Database, Pool};
 use uuid::Uuid;
 
+use super::roles::Role;
+
 ///
 #[derive(Serialize, sqlx::FromRow)]
 pub struct User {
-    uid: Uuid,
-    full_name: String,
-    roles: Vec<String>,
+    pub(crate) uid: Uuid,
+    pub(crate) full_name: String,
+    pub(crate) roles: Vec<Role>,
 }
 
 ///
