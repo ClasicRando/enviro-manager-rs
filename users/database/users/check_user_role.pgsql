@@ -5,7 +5,7 @@ create or replace procedure users.check_user_role(
 language plpgsql
 as $$
 begin
-    if current_user != 'users_admin' || not exists(
+    if current_user != 'users_admin' and not exists(
         select 1
         from users.users u
         join users.user_roles ur
@@ -19,7 +19,7 @@ begin
         join users.user_roles ur
         on u.em_uid = ur.em_uid
         where
-            ur.uid = $1
+            u.uid = $1
             and ur.role = 'admin'
     ) then
         raise exception using message =
