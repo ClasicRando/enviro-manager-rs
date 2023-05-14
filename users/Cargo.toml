@@ -22,4 +22,5 @@ mockall = { workspace = true }
 actix-web = { workspace = true }
 lazy-regex = { workspace = true }
 uuid = { workspace = true }
+rstest = { workspace = true }
 common = { path = "../common" }
