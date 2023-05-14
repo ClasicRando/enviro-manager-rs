@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use common::{
     database::{ConnectionBuilder, PgConnectionBuilder},
     db_build::build_database,
@@ -37,8 +39,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|v| &v == "true")
         .unwrap_or_default();
 
-    let pool = match std::env::var("USERS_DB_BUILD_TARGET").ok() {
-        Some(name) if name == "test" => {
+    let Some(name) = std::env::var("USERS_DB_BUILD_TARGET").ok() else {
+        println!(
+            "Could not find a value for the database build target. Please specify with the \
+             'USERS_DB_BUILD_TARGET' environment variable"
+        );
+        return Ok(());
+    };
+    let pool = match name.as_str() {
+        "test" => {
             println!("Target specified as 'test' to rebuild");
             if db_refresh {
                 println!("Refresh specified for the test database");
@@ -46,11 +55,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             PgConnectionBuilder::create_pool(test_db_options()?, 1, 1).await?
         }
-        Some(name) if name == "prod" => {
+        "prod" => {
             println!("Target specified as 'prod' to rebuild");
             PgConnectionBuilder::create_pool(db_options()?, 1, 1).await?
         }
-        Some(name) => {
+        _ => {
             println!(
                 "Target specified in 'USERS_DB_BUILD_TARGET' environment variable ('{}') was not \
                  valid. Acceptable values are 'test' or 'prod'",
@@ -58,14 +67,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             return Ok(());
         }
-        None => {
-            println!(
-                "Could not find a value for the database build target. Please specify with the \
-                 'USERS_DB_BUILD_TARGET' environment variable"
-            );
-            return Ok(());
-        }
     };
     build_database(&pool).await?;
+
+    if name == "test" {
+        let test_scaffold_path = PathBuf::from("./users/database/test_scaffold.pgsql");
+        if let Ok(sql_block) = common::read_file(&test_scaffold_path).await {
+            common::execute_anonymous_block(&sql_block, &pool).await?;
+        }
+    }
+    
     Ok(())
 }
