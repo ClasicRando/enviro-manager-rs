@@ -48,3 +48,63 @@ impl RoleService for PgRoleService {
         Ok(role)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use common::{
+        database::{ConnectionBuilder, PgConnectionBuilder},
+        error::EmResult,
+    };
+    use rstest::{fixture, rstest};
+    use sqlx::PgPool;
+    use uuid::{uuid, Uuid};
+
+    use super::PgRoleService;
+    use crate::{
+        database::test_db_options,
+        service::roles::{CreateRoleRequest, RoleService},
+    };
+
+    #[fixture]
+    async fn database_pool() -> EmResult<PgPool> {
+        PgConnectionBuilder::create_pool(test_db_options()?, 1, 1).await
+    }
+
+    fn create_role_request(uuid: Uuid, name: &str, description: &str) -> CreateRoleRequest {
+        CreateRoleRequest {
+            current_uid: uuid,
+            name: name.to_string(),
+            description: description.to_string(),
+        }
+    }
+
+    #[rstest]
+    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "test", "This is a test role that should succeed")]
+    #[tokio::test]
+    async fn create_role_should_succeed_when_valid_request(
+        #[future] database_pool: EmResult<PgPool>,
+        #[case] uuid: Uuid,
+        #[case] name: &str,
+        #[case] description: &str,
+    ) -> EmResult<()> {
+        let pool = database_pool.await?;
+        let service = PgRoleService::new(&pool);
+        let request = create_role_request(uuid, name, description);
+        let cleanup = async move {
+            sqlx::query("delete from users.roles where name = $1")
+                .bind(name)
+                .execute(&pool)
+                .await
+        };
+
+        let action = service.create_role(&request).await;
+        cleanup.await?;
+
+        let role = action?;
+
+        assert_eq!(role.name, name);
+        assert_eq!(role.description, description);
+
+        Ok(())
+    }
+}
