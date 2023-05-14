@@ -1,8 +1,8 @@
 create or replace procedure users.update_role(
-    action_em_uid bigint,
+    action_uid uuid,
     name text,
-    new_name text default null,
-    new_description text default null,
+    new_name text,
+    new_description text,
     out r_name text,
     out r_description text
 )
@@ -13,8 +13,8 @@ begin
     call users.check_user_role($1, 'create role');
     update users.roles r
     set
-        name = coalesce($3, r.name),
-        description = coalesce($4, r.description)
+        name = coalesce(nullif(trim($3),''), r.name),
+        description = coalesce(nullif(trim($4),''), r.description)
     where r.name = $2
     returning r.name, r.description into $5, $6;
 end;
@@ -27,7 +27,7 @@ Update the name and/or the description of a role specified by the name parameter
 value is null then the original value is kept.
 
 Arguments:
-action_em_uid:
+action_uid:
     User ID that is attempting to perform the action
 name:
     Name of the existing role to update
