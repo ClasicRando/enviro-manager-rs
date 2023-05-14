@@ -1,13 +1,13 @@
 create or replace procedure users.create_user(
-    action_em_uid bigint,
-    first_name text,
-    last_name text,
-    username text,
-    password text,
-    roles text[],
-    out em_uid bigint,
+    in_action_uid uuid,
+    in_first_name text,
+    in_last_name text,
+    in_username text,
+    in_password text,
+    in_roles text[],
+    out uid uuid,
     out full_name text,
-    out roles2 users.roles[]
+    out roles users.roles[]
 )
 language plpgsql
 as $$
@@ -32,7 +32,7 @@ begin
             raise;
     end;
 
-    select u.em_uid, u.full_name, u.roles
+    select u.uid, u.full_name, u.roles
     into $7, $8, $9
     from users.v_users u
     where u.em_uid = v_em_uid;
