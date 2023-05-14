@@ -13,7 +13,7 @@ declare
 begin
     select u.em_uid
     into strict v_em_uid
-    from users.validate_user($1, $2);
+    from users.validate_user($1, $2) u;
 
     update users.users u
     set username = $3
