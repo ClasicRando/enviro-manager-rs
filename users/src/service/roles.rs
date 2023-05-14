@@ -6,14 +6,14 @@ use uuid::Uuid;
 ///
 #[derive(Serialize, sqlx::FromRow)]
 pub struct Role {
-    name: String,
-    description: String,
+    pub(crate) name: String,
+    pub(crate) description: String,
 }
 
 ///
 #[derive(Deserialize)]
 pub struct CreateRoleRequest {
-    pub(crate) current_em_uid: Uuid,
+    pub(crate) current_uid: Uuid,
     pub(crate) name: String,
     pub(crate) description: String,
 }
@@ -21,7 +21,7 @@ pub struct CreateRoleRequest {
 ///
 #[derive(Deserialize)]
 pub struct UpdateRoleRequest {
-    pub(crate) current_em_uid: Uuid,
+    pub(crate) current_uid: Uuid,
     pub(crate) name: String,
     pub(crate) new_name: String,
     pub(crate) new_description: String,
