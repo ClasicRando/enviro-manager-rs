@@ -150,24 +150,16 @@ impl UserService for PgUserService {
 
 #[cfg(test)]
 mod test {
-    use common::{
-        database::{ConnectionBuilder, PgConnectionBuilder},
-        error::EmResult,
-    };
-    use rstest::{fixture, rstest};
+    use common::error::EmResult;
+    use rstest::rstest;
     use sqlx::PgPool;
     use uuid::{uuid, Uuid};
 
     use super::PgUserService;
-    use crate::{
-        database::test_db_options,
-        service::users::{CreateUserRequest, UserService},
+    use crate::service::{
+        postgres::test::database,
+        users::{CreateUserRequest, UserService},
     };
-
-    #[fixture]
-    async fn database_pool() -> EmResult<PgPool> {
-        PgConnectionBuilder::create_pool(test_db_options()?, 1, 1).await
-    }
 
     fn create_user_request(
         uuid: Uuid,
@@ -191,7 +183,7 @@ mod test {
     #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "Mr", "Test", "test", "Test1!", vec!["admin"])]
     #[tokio::test]
     async fn create_user_should_succeed_when_valid_request(
-        #[future] database_pool: EmResult<PgPool>,
+        database: &PgPool,
         #[case] uuid: Uuid,
         #[case] first_name: &str,
         #[case] last_name: &str,
@@ -199,14 +191,13 @@ mod test {
         #[case] password: &str,
         #[case] roles: Vec<&str>,
     ) -> EmResult<()> {
-        let pool = database_pool.await?;
-        let service = PgUserService::new(&pool);
+        let service = PgUserService::new(database);
         let user_request =
             create_user_request(uuid, first_name, last_name, username, password, &roles);
         let cleanup = async move {
             sqlx::query("delete from users.users where username = $1")
                 .bind(username)
-                .execute(&pool)
+                .execute(database)
                 .await
         };
 

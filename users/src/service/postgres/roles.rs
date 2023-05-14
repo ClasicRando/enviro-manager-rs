@@ -110,24 +110,16 @@ impl RoleService for PgRoleService {
 
 #[cfg(test)]
 mod test {
-    use common::{
-        database::{ConnectionBuilder, PgConnectionBuilder},
-        error::EmResult,
-    };
-    use rstest::{fixture, rstest};
+    use common::error::EmResult;
+    use rstest::rstest;
     use sqlx::PgPool;
     use uuid::{uuid, Uuid};
 
     use super::PgRoleService;
-    use crate::{
-        database::test_db_options,
-        service::roles::{CreateRoleRequest, RoleService},
+    use crate::service::{
+        postgres::test::database,
+        roles::{CreateRoleRequest, RoleService},
     };
-
-    #[fixture]
-    async fn database_pool() -> EmResult<PgPool> {
-        PgConnectionBuilder::create_pool(test_db_options()?, 1, 1).await
-    }
 
     fn create_role_request(uuid: Uuid, name: &str, description: &str) -> CreateRoleRequest {
         CreateRoleRequest {
@@ -141,18 +133,17 @@ mod test {
     #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "test", "This is a test role that should succeed")]
     #[tokio::test]
     async fn create_role_should_succeed_when_valid_request(
-        #[future] database_pool: EmResult<PgPool>,
+        database: &PgPool,
         #[case] uuid: Uuid,
         #[case] name: &str,
         #[case] description: &str,
     ) -> EmResult<()> {
-        let pool = database_pool.await?;
-        let service = PgRoleService::new(&pool);
+        let service = PgRoleService::new(database);
         let request = create_role_request(uuid, name, description);
         let cleanup = async move {
             sqlx::query("delete from users.roles where name = $1")
                 .bind(name)
-                .execute(&pool)
+                .execute(database)
                 .await
         };
 
@@ -171,13 +162,12 @@ mod test {
     #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "admin", "This is a role that should not succeed")]
     #[tokio::test]
     async fn create_role_should_fail_when_role_name_already_exists(
-        #[future] database_pool: EmResult<PgPool>,
+        database: &PgPool,
         #[case] uuid: Uuid,
         #[case] name: &str,
         #[case] description: &str,
     ) -> EmResult<()> {
-        let pool = database_pool.await?;
-        let service = PgRoleService::new(&pool);
+        let service = PgRoleService::new(database);
         let request = create_role_request(uuid, name, description);
 
         let action = service.create_role(&request).await;
