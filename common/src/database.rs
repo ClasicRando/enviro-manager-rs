@@ -13,6 +13,13 @@ pub trait ConnectionBuilder<D: Database> {
         max_connections: u32,
         min_connection: u32,
     ) -> EmResult<Pool<D>>;
+    /// Return a new pool of database connection with no actual connections made. Requires the
+    /// connection `options` and min/max number of connections to hold.
+    fn create_pool_lazy(
+        options: PgConnectOptions,
+        max_connections: u32,
+        min_connection: u32,
+    ) -> EmResult<PgPool>;
 }
 
 pub struct PgConnectionBuilder;
@@ -28,6 +35,18 @@ impl ConnectionBuilder<Postgres> for PgConnectionBuilder {
             .max_connections(max_connections)
             .connect_with(options)
             .await?;
+        Ok(pool)
+    }
+
+    fn create_pool_lazy(
+        options: PgConnectOptions,
+        max_connections: u32,
+        min_connection: u32,
+    ) -> EmResult<PgPool> {
+        let pool = PgPoolOptions::new()
+            .min_connections(min_connection)
+            .max_connections(max_connections)
+            .connect_lazy_with(options);
         Ok(pool)
     }
 }
