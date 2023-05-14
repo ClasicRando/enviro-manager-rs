@@ -77,15 +77,16 @@ impl UserService for PgUserService {
             password,
             roles,
         } = request;
-        let result = sqlx::query_as("select users.create_user($1, $2, $3, $4, $5, $6)")
-            .bind(current_uid)
-            .bind(first_name)
-            .bind(last_name)
-            .bind(username)
-            .bind(password)
-            .bind(roles)
-            .fetch_one(&self.pool)
-            .await?;
+        let result =
+            sqlx::query_as("call users.create_user($1, $2, $3, $4, $5, $6, null, null, null)")
+                .bind(current_uid)
+                .bind(first_name)
+                .bind(last_name)
+                .bind(username)
+                .bind(password)
+                .bind(roles)
+                .fetch_one(&self.pool)
+                .await?;
         Ok(result)
     }
 
