@@ -1,7 +1,7 @@
 create or replace procedure users.add_user_role(
-    action_uid uuid,
-    uid uuid,
-    role text,
+    in_action_uid uuid,
+    in_uid uuid,
+    in_role text,
     out uid uuid,
     out full_name text,
     out roles users.roles[]
