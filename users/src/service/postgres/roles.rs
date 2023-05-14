@@ -166,4 +166,23 @@ mod test {
 
         Ok(())
     }
+
+    #[rstest]
+    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "admin", "This is a role that should not succeed")]
+    #[tokio::test]
+    async fn create_role_should_fail_when_role_name_already_exists(
+        #[future] database_pool: EmResult<PgPool>,
+        #[case] uuid: Uuid,
+        #[case] name: &str,
+        #[case] description: &str,
+    ) -> EmResult<()> {
+        let pool = database_pool.await?;
+        let service = PgRoleService::new(&pool);
+        let request = create_role_request(uuid, name, description);
+
+        let action = service.create_role(&request).await;
+
+        assert!(action.is_err());
+        Ok(())
+    }
 }
