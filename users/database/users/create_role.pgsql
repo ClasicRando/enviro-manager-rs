@@ -9,7 +9,7 @@ language plpgsql
 as $$
 begin
     perform set_config('em.uid',$1::text,false);
-    call users.check_user_role($1, 'create role');
+    call users.check_user_role($1, 'create-role');
     insert into users.roles as r (name,description)
     values($2,$3)
     returning r.name, r.description into $4, $5;

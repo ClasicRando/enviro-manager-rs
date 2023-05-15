@@ -10,7 +10,7 @@ language plpgsql
 as $$
 begin
     perform set_config('em.uid',$1::text,false);
-    call users.check_user_role(v_uid, 'add role');
+    call users.check_user_role(v_uid, 'add-role');
     delete from users.user_roles ur
     where
         ur.em_uid = $1

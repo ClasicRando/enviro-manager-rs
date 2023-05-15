@@ -10,7 +10,7 @@ language plpgsql
 as $$
 begin
     perform set_config('em.uid',$1::text,false);
-    call users.check_user_role($1, 'add role');
+    call users.check_user_role($1, 'add-role');
     insert into users.user_roles(em_uid,role)
     values($2,$3)
     on conflict (name,description) do nothing;

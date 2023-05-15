@@ -15,7 +15,7 @@ declare
     v_em_uid bigint;
 begin
     perform set_config('em.uid',$1::text,false);
-    call users.check_user_role($1, 'create user');
+    call users.check_user_role($1, 'create-user');
     call users.validate_password($5);
 
     insert into users.users(first_name,last_name,username,password)

@@ -10,7 +10,7 @@ language plpgsql
 as $$
 begin
     perform set_config('em.uid',$1::text,false);
-    call users.check_user_role($1, 'create role');
+    call users.check_user_role($1, 'create-role');
     update users.roles r
     set
         name = coalesce(nullif(trim($3),''), r.name),
