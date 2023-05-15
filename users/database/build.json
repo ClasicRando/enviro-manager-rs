@@ -38,6 +38,13 @@
             ]
         },
         {
+            "name": "users/v_roles.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "users/roles.pgsql"
+            ]
+        },
+        {
             "name": "users/validate_password.pgsql",
             "dependencies": [
                 "schema.pgsql"
