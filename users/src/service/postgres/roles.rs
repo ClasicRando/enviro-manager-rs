@@ -130,6 +130,44 @@ mod test {
     }
 
     #[rstest]
+    #[tokio::test]
+    async fn read_many_should_return_base_roles(database: &PgPool) -> EmResult<()> {
+        let service = PgRoleService::new(database);
+
+        let roles = service.read_many().await?;
+
+        let admin_role = roles
+            .iter()
+            .find(|r| r.name == "admin")
+            .expect("Could not find an `admin` role");
+
+        assert_eq!(admin_role.description, "Role with full access to all other roles");
+
+        let create_user_role = roles
+            .iter()
+            .find(|r| r.name == "create-user")
+            .expect("Could not find an `create-user` role");
+
+        assert_eq!(create_user_role.description, "Provides a user with the ability to create other users");
+
+        let create_role_role = roles
+            .iter()
+            .find(|r| r.name == "create-role")
+            .expect("Could not find an `create-role` role");
+
+        assert_eq!(create_role_role.description, "Provides a user with the ability to create/modify roles");
+
+        let add_role_role = roles
+            .iter()
+            .find(|r| r.name == "add-role")
+            .expect("Could not find an `add-role` role");
+
+        assert_eq!(add_role_role.description, "Provides a user with the ability to add/remove roles from a user");
+
+        Ok(())
+    }
+
+    #[rstest]
     #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "test", "This is a test role that should succeed")]
     #[tokio::test]
     async fn create_role_should_succeed_when_valid_request_as_admin(
