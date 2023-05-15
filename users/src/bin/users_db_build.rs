@@ -25,7 +25,17 @@ async fn refresh_test_database() -> Result<(), Box<dyn std::error::Error>> {
     let pool = PgConnectionBuilder::create_pool(test_db_options()?, 1, 1).await?;
     sqlx::query(
         r#"
-        create extension pgcrypto"#,
+        create extension pgcrypto;
+        grant all on schema users to users_test;
+        grant all on schema data_check to users_test;
+        grant all on schema audit to users_test;
+        grant all on all tables in schema users to users_test;
+        grant all on all procedures in schema users to users_test;
+        grant all on all functions in schema users to users_test;
+        grant all on all functions in schema data_check to users_test;
+        grant all on all tables in schema audit to users_test;
+        grant all on all procedures in schema audit to users_test;
+        grant all on all functions in schema audit to users_test;"#,
     )
     .execute(&pool)
     .await?;
