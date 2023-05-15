@@ -132,7 +132,36 @@ mod test {
     #[rstest]
     #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "test", "This is a test role that should succeed")]
     #[tokio::test]
-    async fn create_role_should_succeed_when_valid_request(
+    async fn create_role_should_succeed_when_valid_request_as_admin(
+        database: &PgPool,
+        #[case] uuid: Uuid,
+        #[case] name: &str,
+        #[case] description: &str,
+    ) -> EmResult<()> {
+        let service = PgRoleService::new(database);
+        let request = create_role_request(uuid, name, description);
+        let cleanup = async move {
+            sqlx::query("delete from users.roles where name = $1")
+                .bind(name)
+                .execute(database)
+                .await
+        };
+
+        let action = service.create_role(&request).await;
+        cleanup.await?;
+
+        let role = action?;
+
+        assert_eq!(role.name, name);
+        assert_eq!(role.description, description);
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[case(uuid!("bca9ff0f-06f8-40bb-9373-7ca0e10ed8ca"), "test2", "This is a test role that should succeed")]
+    #[tokio::test]
+    async fn create_role_should_succeed_when_valid_request_without_admin(
         database: &PgPool,
         #[case] uuid: Uuid,
         #[case] name: &str,
@@ -162,6 +191,60 @@ mod test {
     #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "admin", "This is a role that should not succeed")]
     #[tokio::test]
     async fn create_role_should_fail_when_role_name_already_exists(
+        database: &PgPool,
+        #[case] uuid: Uuid,
+        #[case] name: &str,
+        #[case] description: &str,
+    ) -> EmResult<()> {
+        let service = PgRoleService::new(database);
+        let request = create_role_request(uuid, name, description);
+
+        let action = service.create_role(&request).await;
+
+        assert!(action.is_err());
+        Ok(())
+    }
+
+    #[rstest]
+    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "missing-priv", "This is a role that should not succeed")]
+    #[tokio::test]
+    async fn create_role_should_fail_when_action_user_missing_privilege(
+        database: &PgPool,
+        #[case] uuid: Uuid,
+        #[case] name: &str,
+        #[case] description: &str,
+    ) -> EmResult<()> {
+        let service = PgRoleService::new(database);
+        let request = create_role_request(uuid, name, description);
+
+        let action = service.create_role(&request).await;
+
+        assert!(action.is_err());
+        Ok(())
+    }
+
+    #[rstest]
+    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "", "This is a role that should not succeed")]
+    #[tokio::test]
+    async fn create_role_should_fail_when_name_is_empty(
+        database: &PgPool,
+        #[case] uuid: Uuid,
+        #[case] name: &str,
+        #[case] description: &str,
+    ) -> EmResult<()> {
+        let service = PgRoleService::new(database);
+        let request = create_role_request(uuid, name, description);
+
+        let action = service.create_role(&request).await;
+
+        assert!(action.is_err());
+        Ok(())
+    }
+
+    #[rstest]
+    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "description-empty", "")]
+    #[tokio::test]
+    async fn create_role_should_fail_when_description_is_empty(
         database: &PgPool,
         #[case] uuid: Uuid,
         #[case] name: &str,
