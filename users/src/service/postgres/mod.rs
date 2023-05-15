@@ -14,6 +14,5 @@ mod test {
     pub(crate) fn database() -> PgPool {
         let options = test_db_options().expect("Failed to create test database options");
         PgConnectionBuilder::create_pool_lazy(options, 20, 0)
-            .expect("Could not create a test database connection for postgres service tests")
     }
 }

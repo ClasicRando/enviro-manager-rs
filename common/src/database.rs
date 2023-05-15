@@ -19,7 +19,7 @@ pub trait ConnectionBuilder<D: Database> {
         options: PgConnectOptions,
         max_connections: u32,
         min_connection: u32,
-    ) -> EmResult<PgPool>;
+    ) -> PgPool;
 }
 
 pub struct PgConnectionBuilder;
@@ -42,11 +42,10 @@ impl ConnectionBuilder<Postgres> for PgConnectionBuilder {
         options: PgConnectOptions,
         max_connections: u32,
         min_connection: u32,
-    ) -> EmResult<PgPool> {
-        let pool = PgPoolOptions::new()
+    ) -> PgPool {
+        PgPoolOptions::new()
             .min_connections(min_connection)
             .max_connections(max_connections)
-            .connect_lazy_with(options);
-        Ok(pool)
+            .connect_lazy_with(options)
     }
 }
