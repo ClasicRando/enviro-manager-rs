@@ -1,7 +1,7 @@
-create or replace procedure users.add_user_role(
-    action_uid uuid,
-    uid uuid,
-    role text,
+create or replace procedure users.revoke_user_role(
+    in_action_uid uuid,
+    in_uid uuid,
+    in_role text,
     out uid uuid,
     out full_name text,
     out roles users.roles[]
@@ -23,9 +23,9 @@ begin
 end;
 $$;
 
-grant execute on procedure users.add_user_role to users_web;
+grant execute on procedure users.revoke_user_role to users_web;
 
-comment on procedure users.add_user_role IS $$
+comment on procedure users.revoke_user_role IS $$
 Revoke a role for a specified user.
 
 Arguments:
