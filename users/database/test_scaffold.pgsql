@@ -15,14 +15,35 @@ declare
         'add-role',
         'Provides a user with the ability to add/remove roles from a user'
     )::users.roles;
+    v_update_role_test1 users.roles := row(
+        'update-role-1',
+        'Test role to update'
+    )::users.roles;
+    v_update_role_test2 users.roles := row(
+        'update-role-2',
+        'Test role to update'
+    )::users.roles;
+    v_update_role_test4 users.roles := row(
+        'update-role-3',
+        'Test role to update'
+    )::users.roles;
+    v_update_role_test3 users.roles := row(
+        'update-role-4',
+        'Test role to update'
+    )::users.roles;
     v_roles users.roles[] := array[
         v_admin_role,
         v_create_user_role,
         v_create_role_role,
-        v_add_role_role
+        v_add_role_role,
+        v_update_role_test1,
+        v_update_role_test2,
+        v_update_role_test3,
+        v_update_role_test4
     ];
     v_em_uids bigint[];
 begin
+	truncate users.user_roles, users.roles, users.users;
     -- Create base roles
     insert into users.roles(name, description)
     select r.name, r.description
