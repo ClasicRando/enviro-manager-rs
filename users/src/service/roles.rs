@@ -23,8 +23,10 @@ pub struct CreateRoleRequest {
 pub struct UpdateRoleRequest {
     pub(crate) current_uid: Uuid,
     pub(crate) name: String,
-    pub(crate) new_name: String,
-    pub(crate) new_description: String,
+    #[serde(default)]
+    pub(crate) new_name: Option<String>,
+    #[serde(default)]
+    pub(crate) new_description: Option<String>,
 }
 
 ///
