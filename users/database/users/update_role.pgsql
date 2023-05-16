@@ -1,10 +1,10 @@
 create or replace procedure users.update_role(
-    action_uid uuid,
-    name text,
-    new_name text,
-    new_description text,
-    out r_name text,
-    out r_description text
+    in_action_uid uuid,
+    in_name text,
+    in_new_name text,
+    in_new_description text,
+    out name text,
+    out description text
 )
 language plpgsql
 as $$
