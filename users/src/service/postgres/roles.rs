@@ -118,7 +118,7 @@ mod test {
     use super::PgRoleService;
     use crate::service::{
         postgres::test::database,
-        roles::{CreateRoleRequest, RoleService},
+        roles::{CreateRoleRequest, RoleService, UpdateRoleRequest},
     };
 
     fn create_role_request(uuid: Uuid, name: &str, description: &str) -> CreateRoleRequest {
@@ -126,6 +126,28 @@ mod test {
             current_uid: uuid,
             name: name.to_string(),
             description: description.to_string(),
+        }
+    }
+
+    fn update_role_request(
+        uuid: Uuid,
+        name: &str,
+        new_name: &str,
+        new_description: &str,
+    ) -> UpdateRoleRequest {
+        UpdateRoleRequest {
+            current_uid: uuid,
+            name: name.to_string(),
+            new_name: if new_name.trim().is_empty() {
+                None
+            } else {
+                Some(new_name.to_string())
+            },
+            new_description: if new_description.trim().is_empty() {
+                None
+            } else {
+                Some(new_description.to_string())
+            },
         }
     }
 
@@ -306,6 +328,139 @@ mod test {
         let action = service.create_role(&request).await;
 
         assert!(action.is_err());
+        Ok(())
+    }
+
+    #[rstest]
+    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "update-role-1", "update-role-1-1", "New Description")]
+    #[tokio::test]
+    async fn update_role_should_succeed_when_valid_request_to_update_both_fields_as_admin(
+        database: &PgPool,
+        #[case] uuid: Uuid,
+        #[case] name: &str,
+        #[case] new_name: &str,
+        #[case] new_description: &str,
+    ) -> EmResult<()> {
+        let service = PgRoleService::new(database);
+        let request = update_role_request(uuid, name, new_name, new_description);
+        let cleanup = async move {
+            sqlx::query(
+                r#"
+                update users.roles
+                set
+                    name = $1,
+                    description = 'Test role to update'
+                where name = $2"#,
+            )
+            .bind(name)
+            .bind(new_name)
+            .execute(database)
+            .await
+        };
+
+        let action = service.update_role(&request).await;
+        cleanup.await?;
+        let role = action?;
+
+        assert_eq!(role.name, new_name);
+        assert_eq!(role.description, new_description);
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "update-role-2", "update-role-2-1", "")]
+    #[tokio::test]
+    async fn update_role_should_succeed_when_valid_request_to_update_name_only_as_admin(
+        database: &PgPool,
+        #[case] uuid: Uuid,
+        #[case] name: &str,
+        #[case] new_name: &str,
+        #[case] new_description: &str,
+    ) -> EmResult<()> {
+        let service = PgRoleService::new(database);
+        let request = update_role_request(uuid, name, new_name, new_description);
+        let cleanup = async move {
+            sqlx::query(
+                r#"
+                update users.roles
+                set
+                    name = $1,
+                    description = 'Test role to update'
+                where name = $2"#,
+            )
+            .bind(name)
+            .bind(new_name)
+            .execute(database)
+            .await
+        };
+
+        let action = service.update_role(&request).await;
+        cleanup.await?;
+        let role = action?;
+
+        assert_eq!(role.name, new_name);
+        assert_eq!(role.description, "Test role to update");
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "update-role-3", "", "New Description")]
+    #[tokio::test]
+    async fn update_role_should_succeed_when_valid_request_to_update_description_only_as_admin(
+        database: &PgPool,
+        #[case] uuid: Uuid,
+        #[case] name: &str,
+        #[case] new_name: &str,
+        #[case] new_description: &str,
+    ) -> EmResult<()> {
+        let service = PgRoleService::new(database);
+        let request = update_role_request(uuid, name, new_name, new_description);
+        let cleanup = async move {
+            sqlx::query(
+                r#"
+                update users.roles
+                set
+                    name = $1,
+                    description = 'Test role to update'
+                where name = $2"#,
+            )
+            .bind(name)
+            .bind(new_name)
+            .execute(database)
+            .await
+        };
+
+        let action = service.update_role(&request).await;
+        cleanup.await?;
+        let role = action?;
+
+        assert_eq!(role.name, name);
+        assert_eq!(role.description, new_description);
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "update-role-4", "", "")]
+    #[tokio::test]
+    async fn update_role_should_not_alter_role_when_request_to_update_nothing(
+        database: &PgPool,
+        #[case] uuid: Uuid,
+        #[case] name: &str,
+        #[case] new_name: &str,
+        #[case] new_description: &str,
+    ) -> EmResult<()> {
+        let service = PgRoleService::new(database);
+        let request = update_role_request(uuid, name, new_name, new_description);
+
+        let action = service.update_role(&request).await;
+        let role = action?;
+
+        assert_eq!(role.name, name);
+        assert_eq!(role.description, "Test role to update");
+
         Ok(())
     }
 }
