@@ -97,7 +97,7 @@ impl RoleService for PgRoleService {
     }
 
     async fn update_role(&self, request: &UpdateRoleRequest) -> EmResult<Role> {
-        let role = sqlx::query_as("call users.update_role($1, $2, $3)")
+        let role = sqlx::query_as("call users.update_role($1, $2, $3, $4, null, null)")
             .bind(request.current_uid)
             .bind(&request.name)
             .bind(&request.new_name)
