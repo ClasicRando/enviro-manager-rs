@@ -244,7 +244,7 @@ mod test {
     }
 
     #[rstest]
-    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "missing-priv", "This is a role that should not succeed")]
+    #[case(uuid!("1cc58326-84aa-4c08-bb91-8c4536797e8c"), "missing-priv", "This is a role that should not succeed")]
     #[tokio::test]
     async fn create_role_should_fail_when_action_user_missing_privilege(
         database: &PgPool,
