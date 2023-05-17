@@ -46,14 +46,9 @@ pub enum EmError {
     #[error("Invalid User")]
     InvalidUser,
     #[error("User missing privilege. UID = {uid}, role = {role}")]
-    MissingPrivilege {
-        uid: i64,
-        role: String,
-    },
+    MissingPrivilege { uid: i64, role: String },
     #[error("Password is not valid. {reason}")]
-    InvalidPassword {
-        reason: String,
-    },
+    InvalidPassword { reason: String },
 }
 
 /// Generic [Result][std::result::Result] type where the error is always [Error]

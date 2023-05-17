@@ -37,7 +37,7 @@ where
                 .route("/users", post().to(users::create_user::<U>))
                 .route("/users/username", patch().to(users::update_user::<U>))
                 .route("/users/validate", patch().to(users::validate_user::<U>))
-                .route("/users/role", post().to(users::modify_user_role::<U>))
+                .route("/users/role", post().to(users::modify_user_role::<U>)),
         )
     })
     .bind(address)?
