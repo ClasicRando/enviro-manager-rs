@@ -6,7 +6,7 @@ appenders:
 
   all:
     kind: rolling_file
-    path: "log/api_server_all.log"
+    path: "log/users/api_server_all.log"
     append: true
     encoder:
       pattern: "{d(%Y-%m-%d %H:%M:%S)(utc)} | {({l}):5.5} | {f}:{L} - {m}{n}"
@@ -22,7 +22,7 @@ appenders:
 
   errors:
     kind: rolling_file
-    path: "log/api_server_errors.log"
+    path: "log/users/api_server_errors.log"
     append: true
     encoder:
       pattern: "{d(%Y-%m-%d %H:%M:%S)(utc)} | {({l}):5.5} | {f}:{L} - {m}{n}"
@@ -37,7 +37,7 @@ appenders:
         kind: fixed_window
         base: 1
         count: 10
-        pattern: "log/api_server_errors{}.log"
+        pattern: "log/users/api_server_errors{}.log"
 
 root:
   level: info
