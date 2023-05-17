@@ -202,9 +202,9 @@ mod test {
     }
 
     #[rstest]
-    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "test", "This is a test role that should succeed")]
+    #[case(uuid!("bca9ff0f-06f8-40bb-9373-7ca0e10ed8ca"), "test", "This is a test role that should succeed")]
     #[tokio::test]
-    async fn create_role_should_succeed_when_valid_request_as_admin(
+    async fn create_role_should_succeed_when_valid_request(
         database: &PgPool,
         #[case] uuid: Uuid,
         #[case] name: &str,
@@ -231,36 +231,7 @@ mod test {
     }
 
     #[rstest]
-    #[case(uuid!("bca9ff0f-06f8-40bb-9373-7ca0e10ed8ca"), "test2", "This is a test role that should succeed")]
-    #[tokio::test]
-    async fn create_role_should_succeed_when_valid_request_without_admin(
-        database: &PgPool,
-        #[case] uuid: Uuid,
-        #[case] name: &str,
-        #[case] description: &str,
-    ) -> EmResult<()> {
-        let service = PgRoleService::new(database);
-        let request = create_role_request(uuid, name, description);
-        let cleanup = async move {
-            sqlx::query("delete from users.roles where name = $1")
-                .bind(name)
-                .execute(database)
-                .await
-        };
-
-        let action = service.create_role(&request).await;
-        cleanup.await?;
-
-        let role = action?;
-
-        assert_eq!(role.name, name);
-        assert_eq!(role.description, description);
-
-        Ok(())
-    }
-
-    #[rstest]
-    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "admin", "This is a role that should not succeed")]
+    #[case(uuid!("bca9ff0f-06f8-40bb-9373-7ca0e10ed8ca"), "admin", "This is a role that should not succeed")]
     #[tokio::test]
     async fn create_role_should_fail_when_role_name_already_exists(
         database: &PgPool,
@@ -296,7 +267,7 @@ mod test {
     }
 
     #[rstest]
-    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "", "This is a role that should not succeed")]
+    #[case(uuid!("bca9ff0f-06f8-40bb-9373-7ca0e10ed8ca"), "", "This is a role that should not succeed")]
     #[tokio::test]
     async fn create_role_should_fail_when_name_is_empty(
         database: &PgPool,
@@ -314,7 +285,7 @@ mod test {
     }
 
     #[rstest]
-    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "description-empty", "")]
+    #[case(uuid!("bca9ff0f-06f8-40bb-9373-7ca0e10ed8ca"), "description-empty", "")]
     #[tokio::test]
     async fn create_role_should_fail_when_description_is_empty(
         database: &PgPool,
@@ -332,9 +303,9 @@ mod test {
     }
 
     #[rstest]
-    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "update-role-1", "update-role-1-1", "New Description")]
+    #[case(uuid!("bca9ff0f-06f8-40bb-9373-7ca0e10ed8ca"), "update-role-1", "update-role-1-1", "New Description")]
     #[tokio::test]
-    async fn update_role_should_succeed_when_valid_request_to_update_both_fields_as_admin(
+    async fn update_role_should_succeed_when_valid_request_to_update_both_fields(
         database: &PgPool,
         #[case] uuid: Uuid,
         #[case] name: &str,
@@ -369,9 +340,9 @@ mod test {
     }
 
     #[rstest]
-    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "update-role-2", "update-role-2-1", "")]
+    #[case(uuid!("bca9ff0f-06f8-40bb-9373-7ca0e10ed8ca"), "update-role-2", "update-role-2-1", "")]
     #[tokio::test]
-    async fn update_role_should_succeed_when_valid_request_to_update_name_only_as_admin(
+    async fn update_role_should_succeed_when_valid_request_to_update_name_only(
         database: &PgPool,
         #[case] uuid: Uuid,
         #[case] name: &str,
@@ -406,9 +377,9 @@ mod test {
     }
 
     #[rstest]
-    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "update-role-3", "", "New Description")]
+    #[case(uuid!("bca9ff0f-06f8-40bb-9373-7ca0e10ed8ca"), "update-role-3", "", "New Description")]
     #[tokio::test]
-    async fn update_role_should_succeed_when_valid_request_to_update_description_only_as_admin(
+    async fn update_role_should_succeed_when_valid_request_to_update_description(
         database: &PgPool,
         #[case] uuid: Uuid,
         #[case] name: &str,
@@ -443,7 +414,7 @@ mod test {
     }
 
     #[rstest]
-    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "update-role-4", "", "")]
+    #[case(uuid!("bca9ff0f-06f8-40bb-9373-7ca0e10ed8ca"), "update-role-4", "", "")]
     #[tokio::test]
     async fn update_role_should_not_alter_role_when_request_to_update_nothing(
         database: &PgPool,
