@@ -43,7 +43,7 @@ declare
     ];
     v_em_uids bigint[];
 begin
-	truncate users.user_roles, users.roles, users.users;
+	truncate users.user_roles, users.roles, users.users restart identity;
     -- Create base roles
     insert into users.roles(name, description)
     select r.name, r.description
