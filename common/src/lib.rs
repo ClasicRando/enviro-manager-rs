@@ -16,7 +16,7 @@ pub mod error;
 
 /// Returns a [PathBuf] pointing to the directory of the current package. Utilizes the
 /// 'CARGO_MANIFEST_DIR' cargo environment variable.
-fn package_dir() -> PathBuf {
+pub fn package_dir() -> PathBuf {
     Path::new(&std::env::var("CARGO_MANIFEST_DIR").unwrap()).to_path_buf()
 }
 
