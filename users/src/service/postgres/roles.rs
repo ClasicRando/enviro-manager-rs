@@ -259,6 +259,23 @@ mod test {
         Ok(())
     }
 
+    async fn cleanup_role_update(name: &str, result_name: &str, result_description: &str, pool: &PgPool) -> EmResult<()> {
+        sqlx::query(
+            r#"
+            update users.roles
+            set
+                name = $1,
+                description = $2
+            where name = $3"#,
+        )
+        .bind(name)
+        .bind(result_description)
+        .bind(result_name)
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+
     #[rstest]
     #[case::valid_request_to_update_both_fields(uuid!("bca9ff0f-06f8-40bb-9373-7ca0e10ed8ca"), "update-role-1", "update-role-1-1", "New Description")]
     #[case::valid_request_to_update_name_only(uuid!("bca9ff0f-06f8-40bb-9373-7ca0e10ed8ca"), "update-role-2", "update-role-2-1", "")]
@@ -280,24 +297,9 @@ mod test {
         } else {
             new_description
         };
-        let cleanup = async move {
-            sqlx::query(
-                r#"
-                update users.roles
-                set
-                    name = $1,
-                    description = $2
-                where name = $3"#,
-            )
-            .bind(name)
-            .bind(result_description)
-            .bind(result_name)
-            .execute(&database)
-            .await
-        };
 
         let action = service.update_role(&request).await;
-        cleanup.await?;
+        cleanup_role_update(name, result_name, result_description, &database).await?;
         let role = action?;
 
         assert_eq!(role.name, result_name);
