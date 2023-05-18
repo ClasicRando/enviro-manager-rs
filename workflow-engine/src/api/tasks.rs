@@ -3,7 +3,7 @@ use log::error;
 
 use crate::services::tasks::{Task, TaskId, TaskRequest, TasksService};
 
-// API endpoint to fetch all tasks. Return an array of [Task] entries
+/// API endpoint to fetch all tasks. Return an array of [Task] entries
 pub async fn tasks<T>(service: actix_web::web::Data<T>) -> ApiResponse<Vec<Task>>
 where
     T: TasksService,

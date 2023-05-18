@@ -17,7 +17,7 @@ where
     }
 }
 
-// /// API endpoint to fetch the [Job] details of a cron job specified by `job_id`
+/// API endpoint to fetch the [Job] details of a cron job specified by `job_id`
 pub async fn job<J>(
     job_id: actix_web::web::Path<JobId>,
     service: actix_web::web::Data<J>,

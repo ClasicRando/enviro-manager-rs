@@ -3,7 +3,7 @@ use log::error;
 
 use crate::services::task_queue::{TaskQueueRequest, TaskQueueService};
 
-// API endpoint to retry the task queue entry specified by `request`
+/// API endpoint to retry the task queue entry specified by `request`
 pub async fn task_queue_retry<T>(
     data: actix_web::web::Bytes,
     service: actix_web::web::Data<T>,
@@ -29,7 +29,7 @@ where
     }
 }
 
-// API endpoint complete the task queue entry specified by `request`
+/// API endpoint complete the task queue entry specified by `request`
 pub async fn task_queue_complete<T>(
     data: actix_web::web::Bytes,
     service: actix_web::web::Data<T>,
