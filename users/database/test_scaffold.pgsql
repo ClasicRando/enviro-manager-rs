@@ -23,12 +23,16 @@ declare
         'update-role-2',
         'Test role to update'
     )::users.roles;
-    v_update_role_test4 users.roles := row(
+    v_update_role_test3 users.roles := row(
         'update-role-3',
         'Test role to update'
     )::users.roles;
-    v_update_role_test3 users.roles := row(
+    v_update_role_test4 users.roles := row(
         'update-role-4',
+        'Test role to update'
+    )::users.roles;
+    v_update_role_test5 users.roles := row(
+        'update-role-5',
         'Test role to update'
     )::users.roles;
     v_roles users.roles[] := array[
@@ -39,7 +43,8 @@ declare
         v_update_role_test1,
         v_update_role_test2,
         v_update_role_test3,
-        v_update_role_test4
+        v_update_role_test4,
+        v_update_role_test5
     ];
     v_em_uids bigint[];
 begin

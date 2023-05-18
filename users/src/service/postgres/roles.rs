@@ -307,4 +307,30 @@ mod test {
 
         Ok(())
     }
+    
+    #[rstest]
+    #[case::action_user_missing_privilege(uuid!("1cc58326-84aa-4c08-bb91-8c4536797e8c"), "update-role-5", "", "")]
+    #[tokio::test]
+    async fn update_role_should_fail_when(
+        database: PgPool,
+        #[case] uuid: Uuid,
+        #[case] name: &str,
+        #[case] new_name: &str,
+        #[case] new_description: &str,
+    ) -> EmResult<()> {
+        let service = PgRoleService::new(&database);
+        let request = update_role_request(uuid, name, new_name, new_description);
+        let result_name = if new_name.is_empty() { name } else { new_name };
+        let result_description = if new_description.is_empty() {
+            "Test role to update"
+        } else {
+            new_description
+        };
+
+        let action = service.update_role(&request).await;
+        cleanup_role_update(name, result_name, result_description, &database).await?;
+
+        assert!(action.is_err());
+        Ok(())
+    }
 }
