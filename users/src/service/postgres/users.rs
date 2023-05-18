@@ -183,7 +183,7 @@ mod test {
     #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "Mr", "Test", "test", "Test1!", vec!["admin"])]
     #[tokio::test]
     async fn create_user_should_succeed_when_valid_request(
-        database: &PgPool,
+        database: PgPool,
         #[case] uuid: Uuid,
         #[case] first_name: &str,
         #[case] last_name: &str,
@@ -191,13 +191,13 @@ mod test {
         #[case] password: &str,
         #[case] roles: Vec<&str>,
     ) -> EmResult<()> {
-        let service = PgUserService::new(database);
+        let service = PgUserService::new(&database);
         let user_request =
             create_user_request(uuid, first_name, last_name, username, password, &roles);
         let cleanup = async move {
             sqlx::query("delete from users.users where username = $1")
                 .bind(username)
-                .execute(database)
+                .execute(&database)
                 .await
         };
 
