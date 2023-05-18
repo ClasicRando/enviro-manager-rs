@@ -259,7 +259,12 @@ mod test {
         Ok(())
     }
 
-    async fn cleanup_role_update(name: &str, result_name: &str, result_description: &str, pool: &PgPool) -> EmResult<()> {
+    async fn cleanup_role_update(
+        name: &str,
+        result_name: &str,
+        result_description: &str,
+        pool: &PgPool,
+    ) -> EmResult<()> {
         sqlx::query(
             r#"
             update users.roles
@@ -307,7 +312,7 @@ mod test {
 
         Ok(())
     }
-    
+
     #[rstest]
     #[case::action_user_missing_privilege(uuid!("1cc58326-84aa-4c08-bb91-8c4536797e8c"), "update-role-5", "", "")]
     #[tokio::test]
