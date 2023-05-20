@@ -74,7 +74,7 @@ impl PgHasArrayType for Role {
 pub struct PgRoleService {
     /// Postgres database connection pool used by this service
     pool: PgPool,
-    ///
+    /// Postgres [UserService] to allow for this service to fetch user data
     user_service: PgUserService,
 }
 
@@ -82,7 +82,7 @@ impl RoleService for PgRoleService {
     type Database = Postgres;
     type UserService = PgUserService;
 
-    fn new(pool: &Pool<Self::Database>, user_service: &PgUserService) -> Self {
+    fn new(pool: &Pool<Self::Database>, user_service: &Self::UserService) -> Self {
         Self {
             pool: pool.clone(),
             user_service: user_service.clone(),
