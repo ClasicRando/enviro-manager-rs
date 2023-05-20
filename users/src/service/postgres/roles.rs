@@ -1,4 +1,7 @@
-use common::error::EmResult;
+use common::{
+    database::get_connection_with_em_uid,
+    error::{EmError, EmResult},
+};
 use sqlx::{
     decode::Decode,
     encode::{Encode, IsNull},
@@ -9,7 +12,11 @@ use sqlx::{
     PgPool, Pool, Postgres, Type,
 };
 
-use crate::service::roles::{CreateRoleRequest, Role, RoleService, UpdateRoleRequest};
+use crate::service::{
+    postgres::users::PgUserService,
+    roles::{CreateRoleRequest, Role, RoleName, RoleService, UpdateRoleRequest},
+    users::UserService,
+};
 
 impl Encode<'_, Postgres> for Role
 where
@@ -65,14 +72,21 @@ impl PgHasArrayType for Role {
 /// Postgresql implementation of [RoleService]
 #[derive(Clone)]
 pub struct PgRoleService {
+    /// Postgres database connection pool used by this service
     pool: PgPool,
+    ///
+    user_service: PgUserService,
 }
 
 impl RoleService for PgRoleService {
     type Database = Postgres;
+    type UserService = PgUserService;
 
-    fn new(pool: &Pool<Self::Database>) -> Self {
-        Self { pool: pool.clone() }
+    fn new(pool: &Pool<Self::Database>, user_service: &PgUserService) -> Self {
+        Self {
+            pool: pool.clone(),
+            user_service: user_service.clone(),
+        }
     }
 
     async fn read_many(&self) -> EmResult<Vec<Role>> {
@@ -87,24 +101,49 @@ impl RoleService for PgRoleService {
     }
 
     async fn create_role(&self, request: &CreateRoleRequest) -> EmResult<Role> {
-        let role = sqlx::query_as("call users.create_role($1, $2, $3, null, null)")
-            .bind(request.current_uid)
-            .bind(&request.name)
-            .bind(&request.description)
-            .fetch_one(&self.pool)
-            .await?;
-        Ok(role)
+        let user = self.user_service.get_user(request.current_uid).await?;
+        user.check_role(RoleName::CreateRole)?;
+
+        let mut connection = get_connection_with_em_uid(request.current_uid, &self.pool).await?;
+        let role_option = sqlx::query_as(
+            r#"
+            select r.name, r.description
+            from users.create_role($1, $2) r"#,
+        )
+        .bind(&request.name)
+        .bind(&request.description)
+        .fetch_optional(&mut connection)
+        .await?;
+        match role_option {
+            Some(role) => Ok(role),
+            None => Err(EmError::MissingRecord {
+                pk: format!("{}", request.name),
+            }),
+        }
     }
 
     async fn update_role(&self, request: &UpdateRoleRequest) -> EmResult<Role> {
-        let role = sqlx::query_as("call users.update_role($1, $2, $3, $4, null, null)")
-            .bind(request.current_uid)
-            .bind(&request.name)
-            .bind(&request.new_name)
-            .bind(&request.new_description)
-            .fetch_one(&self.pool)
-            .await?;
-        Ok(role)
+        let user = self.user_service.get_user(request.current_uid).await?;
+        user.check_role(RoleName::CreateRole)?;
+
+        let mut connection = get_connection_with_em_uid(request.current_uid, &self.pool).await?;
+        user.check_role(RoleName::CreateRole)?;
+        let role_option = sqlx::query_as(
+            r#"
+            select r.name, r.description
+            from users.update_role($1, $2, $3) r"#,
+        )
+        .bind(&request.name)
+        .bind(&request.new_name)
+        .bind(&request.new_description)
+        .fetch_optional(&mut connection)
+        .await?;
+        match role_option {
+            Some(role) => Ok(role),
+            None => Err(EmError::MissingRecord {
+                pk: format!("{}", request.name),
+            }),
+        }
     }
 }
 
@@ -117,8 +156,9 @@ mod test {
 
     use super::PgRoleService;
     use crate::service::{
-        postgres::test::database,
+        postgres::{test::database, users::PgUserService},
         roles::{CreateRoleRequest, RoleService, UpdateRoleRequest},
+        users::UserService,
     };
 
     fn create_role_request(uuid: Uuid, name: &str, description: &str) -> CreateRoleRequest {
@@ -154,7 +194,7 @@ mod test {
     #[rstest]
     #[tokio::test]
     async fn read_many_should_return_base_roles(database: PgPool) -> EmResult<()> {
-        let service = PgRoleService::new(&database);
+        let service = PgRoleService::new(&database, &PgUserService::new(&database));
 
         let roles = service.read_many().await?;
 
@@ -210,7 +250,7 @@ mod test {
         #[case] name: &str,
         #[case] description: &str,
     ) -> EmResult<()> {
-        let service = PgRoleService::new(&database);
+        let service = PgRoleService::new(&database, &PgUserService::new(&database));
         let request = create_role_request(uuid, name, description);
         let cleanup = async move {
             sqlx::query("delete from users.roles where name = $1")
@@ -242,7 +282,7 @@ mod test {
         #[case] name: &str,
         #[case] description: &str,
     ) -> EmResult<()> {
-        let service = PgRoleService::new(&database);
+        let service = PgRoleService::new(&database, &PgUserService::new(&database));
         let request = create_role_request(uuid, name, description);
         let cleanup = async move {
             sqlx::query("delete from users.roles where name = $1 and description = $2")
@@ -294,7 +334,7 @@ mod test {
         #[case] new_name: &str,
         #[case] new_description: &str,
     ) -> EmResult<()> {
-        let service = PgRoleService::new(&database);
+        let service = PgRoleService::new(&database, &PgUserService::new(&database));
         let request = update_role_request(uuid, name, new_name, new_description);
         let result_name = if new_name.is_empty() { name } else { new_name };
         let result_description = if new_description.is_empty() {
@@ -323,7 +363,7 @@ mod test {
         #[case] new_name: &str,
         #[case] new_description: &str,
     ) -> EmResult<()> {
-        let service = PgRoleService::new(&database);
+        let service = PgRoleService::new(&database, &PgUserService::new(&database));
         let request = update_role_request(uuid, name, new_name, new_description);
         let result_name = if new_name.is_empty() { name } else { new_name };
         let result_description = if new_description.is_empty() {

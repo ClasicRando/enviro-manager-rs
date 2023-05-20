@@ -2,6 +2,7 @@ use chrono::NaiveDateTime;
 use lettre::{
     address::AddressError, error::Error as EmailError, transport::smtp::Error as StmpError,
 };
+use sqlx::types::Uuid;
 use thiserror::Error;
 
 /// All possible error types that may occur during workflow engine operations
@@ -46,9 +47,11 @@ pub enum EmError {
     #[error("Invalid User")]
     InvalidUser,
     #[error("User missing privilege. UID = {uid}, role = {role}")]
-    MissingPrivilege { uid: i64, role: String },
+    MissingPrivilege { uid: Uuid, role: String },
     #[error("Password is not valid. {reason}")]
     InvalidPassword { reason: String },
+    #[error("Record cannot be found for `{pk}`")]
+    MissingRecord { pk: String }
 }
 
 /// Generic [Result] type where the error is always [Error]

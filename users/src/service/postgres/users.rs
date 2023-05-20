@@ -1,5 +1,6 @@
 use common::error::{EmError, EmResult};
 use sqlx::{PgPool, Pool, Postgres};
+use uuid::Uuid;
 
 use crate::service::users::{
     CreateUserRequest, ModifyUserRoleRequest, UpdateUserRequest, UpdateUserType, User, UserService,
@@ -9,10 +10,12 @@ use crate::service::users::{
 /// Postgresql implementation of [UserService]
 #[derive(Clone)]
 pub struct PgUserService {
+    /// Postgres database connection pool used by this service
     pool: PgPool,
 }
 
 impl PgUserService {
+    /// Update the full name of a user specified by `username` and `password`
     async fn update_full_name(
         &self,
         username: &str,
@@ -30,6 +33,7 @@ impl PgUserService {
         Ok(user)
     }
 
+    /// Update the username of a user specified by `username` and `password`
     async fn update_username(
         &self,
         username: &str,
@@ -45,6 +49,7 @@ impl PgUserService {
         Ok(user)
     }
 
+    /// Update the password of a user specified by `username` and `password`
     async fn reset_password(
         &self,
         username: &str,
@@ -88,6 +93,19 @@ impl UserService for PgUserService {
                 .fetch_one(&self.pool)
                 .await?;
         Ok(result)
+    }
+
+    async fn get_user(&self, uuid: Uuid) -> EmResult<User> {
+        let user = sqlx::query_as(
+            r#"
+            select u.uid, u.full_name, u.roles
+            from users.v_users u
+            where u.uid = $1"#,
+        )
+        .bind(uuid)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(user)
     }
 
     async fn update(&self, request: &UpdateUserRequest) -> EmResult<User> {
@@ -161,6 +179,7 @@ mod test {
         users::{CreateUserRequest, UserService},
     };
 
+    /// Utility method for creating a new [CreateUserRequest]
     fn create_user_request(
         uuid: Uuid,
         first_name: &str,
@@ -179,6 +198,15 @@ mod test {
         }
     }
 
+    /// Cleanup function for users that are created during tests
+    async fn cleanup_user_create(username: &str, pool: &PgPool) -> EmResult<()> {
+        sqlx::query("delete from users.users where username = $1")
+            .bind(username)
+            .execute(pool)
+            .await?;
+        Ok(())
+    }
+
     #[rstest]
     #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "Mr", "Test", "test", "Test1!", vec!["admin"])]
     #[tokio::test]
@@ -194,15 +222,9 @@ mod test {
         let service = PgUserService::new(&database);
         let user_request =
             create_user_request(uuid, first_name, last_name, username, password, &roles);
-        let cleanup = async move {
-            sqlx::query("delete from users.users where username = $1")
-                .bind(username)
-                .execute(&database)
-                .await
-        };
 
         let action = service.create_user(&user_request).await;
-        cleanup.await?;
+        cleanup_user_create(username, &database).await?;
 
         let user = action?;
         let user_roles: Vec<&str> = user.roles.iter().map(|r| r.name.as_str()).collect();

@@ -20,12 +20,12 @@ where
     A: ToSocketAddrs,
     C: ConnectionBuilder<D>,
     D: Database,
-    R: RoleService<Database = D> + Send + Sync + 'static,
+    R: RoleService<Database = D, UserService=U> + Send + Sync + 'static,
     U: UserService<Database = D> + Send + Sync + 'static,
 {
     let pool = C::create_pool(options, 20, 10).await?;
-    let roles_service: Data<R> = Data::new(R::new(&pool));
     let users_service: Data<U> = Data::new(U::new(&pool));
+    let roles_service: Data<R> = Data::new(R::new(&pool, users_service.get_ref()));
     HttpServer::new(move || {
         App::new().service(
             actix_web::web::scope("/api/v1")

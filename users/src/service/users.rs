@@ -1,7 +1,8 @@
-use common::error::EmResult;
+use common::error::{EmError, EmResult};
 use serde::{Deserialize, Serialize};
 use sqlx::{Database, Pool};
 use uuid::Uuid;
+use crate::service::roles::RoleName;
 
 use super::roles::Role;
 
@@ -11,6 +12,18 @@ pub struct User {
     pub(crate) uid: Uuid,
     pub(crate) full_name: String,
     pub(crate) roles: Vec<Role>,
+}
+
+impl User {
+    /// Checks the current roles of the [User] against the `role` name provided. If any of the roles
+    /// match or the user is an admin, return [Ok]. Otherwise, return an [EmError::MissingPrivilege]
+    /// error.
+    pub fn check_role(&self, role: RoleName) -> EmResult<()> {
+        if self.roles.iter().any(|r| r.name == role.as_str() || r.name == "admin") {
+            return Ok(())
+        }
+        Err(EmError::MissingPrivilege { role: role.as_str().to_string(), uid: self.uid })
+    }
 }
 
 ///
@@ -78,6 +91,8 @@ pub trait UserService: Clone + Send + Sync {
     fn new(pool: &Pool<Self::Database>) -> Self;
     ///
     async fn create_user(&self, request: &CreateUserRequest) -> EmResult<User>;
+    ///
+    async fn get_user(&self, uuid: Uuid) -> EmResult<User>;
     ///
     async fn update(&self, request: &UpdateUserRequest) -> EmResult<User>;
     ///

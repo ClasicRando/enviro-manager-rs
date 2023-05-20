@@ -55,8 +55,7 @@ impl ConnectionBuilder<Postgres> for PgConnectionBuilder {
 }
 
 /// Acquire new pool connection and set the 'em.uid' parameter to the specified [Uuid]
-#[allow(unused)]
-async fn get_connection_with_em_uid<D>(em_uid: Uuid, pool: &Pool<D>) -> EmResult<PoolConnection<D>>
+pub async fn get_connection_with_em_uid<D>(em_uid: Uuid, pool: &Pool<D>) -> EmResult<PoolConnection<D>>
 where
     D: Database,
     for<'q> Uuid: Encode<'q, D> + Type<D>,
@@ -64,7 +63,7 @@ where
     for<'q> <D as HasArguments<'q>>::Arguments: IntoArguments<'q, D>,
 {
     let mut connection = pool.acquire().await?;
-    sqlx::query("perform set_config('em.uid',$1::text,false)")
+    sqlx::query("select set_config('em.uid',$1::text,false)")
         .bind(em_uid)
         .execute(&mut connection)
         .await?;

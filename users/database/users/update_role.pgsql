@@ -1,28 +1,25 @@
-create or replace procedure users.update_role(
-    in_action_uid uuid,
+create or replace function users.update_role(
     in_name text,
     in_new_name text,
     in_new_description text,
     out name text,
     out description text
 )
-language plpgsql
+returns record
+volatile
+language sql
 as $$
-begin
-    perform set_config('em.uid',$1::text,false);
-    call users.check_user_role($1, 'create-role');
-    update users.roles r
-    set
-        name = coalesce(nullif(trim($3),''), r.name),
-        description = coalesce(nullif(trim($4),''), r.description)
-    where r.name = $2
-    returning r.name, r.description into $5, $6;
-end;
+update users.roles r
+set
+    name = coalesce(nullif(trim($2),''), r.name),
+    description = coalesce(nullif(trim($3),''), r.description)
+where r.name = $1
+returning r.name, r.description
 $$;
 
-grant execute on procedure users.update_role to users_web;
+grant execute on function users.update_role to users_web;
 
-comment on procedure users.update_role IS $$
+comment on function users.update_role IS $$
 Update the name and/or the description of a role specified by the name parameter. If either new
 value is null then the original value is kept.
 
