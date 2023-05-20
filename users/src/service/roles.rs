@@ -14,11 +14,10 @@ pub struct Role {
     pub(crate) description: String,
 }
 
-/// All role names that exist as
+/// All role names that exist as their common name
 #[derive(Serialize)]
 pub enum RoleName {
     Admin,
-    CreateUser,
     CreateRole,
     AddRole,
 }
@@ -28,7 +27,6 @@ impl RoleName {
     pub const fn as_str(&self) -> &'static str {
         match self {
             RoleName::Admin => "admin",
-            RoleName::CreateUser => "create-user",
             RoleName::CreateRole => "create-role",
             RoleName::AddRole => "add-role",
         }
@@ -61,7 +59,9 @@ pub struct UpdateRoleRequest {
     pub(crate) new_description: Option<String>,
 }
 
-///
+/// Service for interacting with the role system. Allows for reading all roles as well as creating
+/// new and modifying existing roles. Requires the [UserService] as an associated type to fetch
+/// user data to confirm the roles of a user before creating/modifying roles.
 pub trait RoleService
 where
     Self: Clone + Send + Sync,
@@ -69,12 +69,15 @@ where
     type Database: Database;
     type UserService: UserService<Database = Self::Database>;
 
-    ///
+    /// Create new instance of a [RoleService]. Both parameters are references to allow for cloning
+    /// of the value.
     fn new(pool: &Pool<Self::Database>, user_service: &Self::UserService) -> Self;
-    ///
+    /// Read all roles found in the database
     async fn read_many(&self) -> EmResult<Vec<Role>>;
-    ///
+    /// Create a new role in the database. The user specified in `request` must have the
+    /// 'create-role' role to perform this action.
     async fn create_role(&self, request: &CreateRoleRequest) -> EmResult<Role>;
-    ///
+    /// Update an existing role in the database. The user specified in `request` must have the
+    /// 'create-role' role to perform this action.
     async fn update_role(&self, request: &UpdateRoleRequest) -> EmResult<Role>;
 }
