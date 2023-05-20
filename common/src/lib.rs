@@ -1,5 +1,7 @@
 #![allow(incomplete_features)]
 #![feature(async_fn_in_trait)]
+#![warn(clippy::missing_docs_in_private_items)]
+#![warn(clippy::missing_const_for_fn)]
 
 use std::path::{Path, PathBuf};
 
@@ -39,6 +41,7 @@ pub async fn read_file(path: &PathBuf) -> Result<String, Box<dyn std::error::Err
 }
 
 lazy_static! {
+    ///
     static ref TYPE_REGEX: Regex = Regex::new(
         r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+)\s+as(?P<definition>[^;]+);"
     )
@@ -89,7 +92,9 @@ pub async fn execute_anonymous_block(block: &str, pool: &PgPool) -> Result<(), s
 /// of sql code with a rolled back transaction.
 #[derive(Default)]
 pub struct RolledBackTransactionResult {
+    /// Error within the original sql block executed
     block_error: Option<sqlx::Error>,
+    /// Error during the transaction rollback
     transaction_error: Option<sqlx::Error>,
 }
 

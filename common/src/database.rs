@@ -1,10 +1,14 @@
 use sqlx::{
+    database::HasArguments,
+    pool::PoolConnection,
     postgres::{PgConnectOptions, PgPoolOptions},
-    Connection, Database, PgPool, Pool, Postgres,
+    types::Uuid,
+    Connection, Database, Encode, Executor, IntoArguments, PgPool, Pool, Postgres, Type,
 };
 
 use crate::error::EmResult;
 
+/// Implementors are able to provide connection pools specific to the specified [Database] type
 pub trait ConnectionBuilder<D: Database> {
     /// Return a new pool of database connections. Requires the connection `options` and min/max
     /// number of connections to hold.
@@ -13,7 +17,7 @@ pub trait ConnectionBuilder<D: Database> {
         max_connections: u32,
         min_connection: u32,
     ) -> EmResult<Pool<D>>;
-    /// Return a new pool of database connection with no actual connections made. Requires the
+    /// Return a new pool of database connection with connections not explicitly created. Requires the
     /// connection `options` and min/max number of connections to hold.
     fn create_pool_lazy(
         options: PgConnectOptions,
@@ -48,4 +52,21 @@ impl ConnectionBuilder<Postgres> for PgConnectionBuilder {
             .max_connections(max_connections)
             .connect_lazy_with(options)
     }
+}
+
+/// Acquire new pool connection and set the 'em.uid' parameter to the specified [Uuid]
+#[allow(unused)]
+async fn get_connection_with_em_uid<D>(em_uid: Uuid, pool: &Pool<D>) -> EmResult<PoolConnection<D>>
+where
+    D: Database,
+    for<'q> Uuid: Encode<'q, D> + Type<D>,
+    for<'c> &'c mut PoolConnection<D>: Executor<'c, Database = D>,
+    for<'q> <D as HasArguments<'q>>::Arguments: IntoArguments<'q, D>,
+{
+    let mut connection = pool.acquire().await?;
+    sqlx::query("perform set_config('em.uid',$1::text,false)")
+        .bind(em_uid)
+        .execute(&mut connection)
+        .await?;
+    Ok(connection)
 }

@@ -6,23 +6,25 @@ use tokio::{fs::File, io::AsyncReadExt};
 
 use crate::{execute_anonymous_block, package_dir, read_file, workspace_dir};
 
-/// Database builder object defining the common database dependencies and the schema entires
+/// Database builder object defining the common database dependencies and the schema entries
 /// required.
 ///
 /// Common dependencies are found within the `common-database` folder within the root workspace and
 /// each entry in the vector specifies a name of the common schema required.
 ///
-/// Entires are files within the package's database directory (or sub directories). Files can be a
+/// Entries are files within the package's database directory (or sub directories). Files can be a
 /// single object, multiple linked objects (e.g. a table and it's indexes) or a standalone script
 /// that must run.
 #[derive(Debug, Deserialize)]
 pub(crate) struct DbBuild {
+    /// Common database schema dependencies as the names of the common schemas
     pub(crate) common_dependencies: Vec<String>,
+    /// List of [DbBuildEntry] items for building the database
     pub(crate) entries: Vec<DbBuildEntry>,
 }
 
 impl DbBuild {
-    /// Returns the `entires` wrapped in a custom [Iterator] that orders the results by the next
+    /// Returns the `entries` wrapped in a custom [Iterator] that orders the results by the next
     /// available entry that can be built. This ensures that an entry is only built once all
     /// dependencies are met.
     fn entries_ordered(&self) -> OrderIter<'_> {
@@ -48,7 +50,9 @@ impl DbBuild {
 /// been created.
 #[derive(Debug, Deserialize)]
 pub(crate) struct DbBuildEntry {
+    /// Name of the build entry
     pub(crate) name: String,
+    /// List of build entry items that are required before creating this entry
     dependencies: Vec<String>,
 }
 
@@ -81,13 +85,16 @@ impl DbBuildEntry {
 /// Contains the original vector of entries to be created as well as the name and indexes of the
 /// completed entries.
 struct OrderIter<'e> {
+    /// Slice of [DbBuildEntry] items that this [Iterator] will will yield
     entries: &'e [DbBuildEntry],
+    /// Indexes of [DbBuildEntry] items that have already been returned
     returned: HashSet<usize>,
+    /// Names of the complete [DbBuildEntry] items
     completed: HashSet<&'e str>,
 }
 
 impl<'e> OrderIter<'e> {
-    /// Create a new [OrderIter] with build `entires` provided.
+    /// Create a new [OrderIter] with build `entries` provided.
     fn new(entries: &'e [DbBuildEntry]) -> Self {
         Self {
             entries,

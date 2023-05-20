@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use actix_web::Responder;
 use log::{error, warn};
 use serde::Serialize;
@@ -44,12 +46,12 @@ where
 
 impl<T: Serialize> ApiResponse<T> {
     /// Generate an [ApiResponse] wrapping a [Response::Success]`
-    pub fn success(data: T) -> Self {
+    pub const fn success(data: T) -> Self {
         Self::Success(data)
     }
 
     /// Generate an [ApiResponse] wrapping a [Response::Message]
-    pub fn message(message: String) -> Self {
+    pub const fn message(message: String) -> Self {
         Self::Message(message)
     }
 
@@ -62,7 +64,7 @@ impl<T: Serialize> ApiResponse<T> {
 
     /// Generate an [ApiResponse] wrapping a [Response::Error]. This is intended for errors that
     /// are returned from fallible operations.
-    pub fn error<E: std::error::Error>(error: E) -> Self {
+    pub fn error<E: Error>(error: E) -> Self {
         error!("{}", error);
         Self::Error(format!("{}", error))
     }

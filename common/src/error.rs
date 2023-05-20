@@ -51,5 +51,5 @@ pub enum EmError {
     InvalidPassword { reason: String },
 }
 
-/// Generic [Result][std::result::Result] type where the error is always [Error]
-pub type EmResult<T> = std::result::Result<T, EmError>;
+/// Generic [Result] type where the error is always [Error]
+pub type EmResult<T> = Result<T, EmError>;

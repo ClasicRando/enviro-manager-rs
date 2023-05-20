@@ -19,7 +19,9 @@ use crate::{
 /// `rollback` tells the test runner to execute the file within a rolled back transaction.
 #[derive(Deserialize)]
 struct TestListEntry {
+    /// Name of the test script file to run
     name: String,
+    /// Flag indicating if the test should be executed in a rolled back transaction
     rollback: bool,
 }
 
