@@ -11,7 +11,8 @@ use serde::Serialize;
 pub enum ApiResponse<T: Serialize> {
     Success(T),
     Message(String),
-    Error(String),
+    Failure(String),
+    Error(&'static str),
 }
 
 impl<T> Responder for ApiResponse<T>
@@ -59,13 +60,13 @@ impl<T: Serialize> ApiResponse<T> {
     /// are not runtime errors but rather user input issues.
     pub fn failure(message: String) -> Self {
         warn!("{}", message);
-        Self::Error(message)
+        Self::Failure(message)
     }
 
     /// Generate an [ApiResponse] wrapping a [Response::Error]. This is intended for errors that
     /// are returned from fallible operations.
     pub fn error<E: Error>(error: E) -> Self {
         error!("{}", error);
-        Self::Error(format!("{}", error))
+        Self::Error("Could not perform the required action due to an internal error")
     }
 }
