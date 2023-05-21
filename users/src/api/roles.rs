@@ -38,7 +38,7 @@ where
     }
 }
 
-/// API endpoint to create a new role
+/// API endpoint to update an existing role
 pub async fn update_role<R>(
     data: actix_web::web::Bytes,
     service: actix_web::web::Data<R>,

@@ -3,6 +3,8 @@
 #![warn(clippy::missing_docs_in_private_items)]
 #![warn(clippy::missing_const_for_fn)]
 
+//! Users component of the EnivroManager application suite
+
 pub mod api;
 pub mod database;
 pub mod service;

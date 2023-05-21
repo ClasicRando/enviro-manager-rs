@@ -12,6 +12,10 @@ pub mod users;
 
 use crate::service::{roles::RoleService, users::UserService};
 
+/// Run generic API server. Creates all the required endpoints and resources. To run the api server,
+/// you must have created a [ConnectionBuilder], [RoleService] and [UserService] for your desired
+/// [Database] implementation. Each component depends of a [Database] type so the system cannot
+/// contain disjointed service implementations to operate.
 pub async fn spawn_api_server<A, C, D, R, U>(
     address: A,
     options: <D::Connection as Connection>::Options,

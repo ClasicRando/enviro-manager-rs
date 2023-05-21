@@ -3,6 +3,8 @@
 #![warn(clippy::missing_docs_in_private_items)]
 #![warn(clippy::missing_const_for_fn)]
 
+//! Common components of the EnivroManager application suite
+
 use std::path::{Path, PathBuf};
 
 use lazy_static::lazy_static;
