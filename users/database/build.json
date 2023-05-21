@@ -88,13 +88,6 @@
             ]
         },
         {
-            "name": "users/check_user_role.pgsql",
-            "dependencies": [
-                "schema.pgsql",
-                "users/user_roles.pgsql"
-            ]
-        },
-        {
             "name": "users/create_role.pgsql",
             "dependencies": [
                 "schema.pgsql",
