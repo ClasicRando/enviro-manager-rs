@@ -73,7 +73,7 @@ where
     /// of the value.
     fn new(pool: &Pool<Self::Database>, user_service: &Self::UserService) -> Self;
     /// Read all roles found in the database
-    async fn read_many(&self) -> EmResult<Vec<Role>>;
+    async fn read_all(&self) -> EmResult<Vec<Role>>;
     /// Create a new role in the database. The user specified in `request` must have the
     /// 'create-role' role to perform this action.
     async fn create_role(&self, request: &CreateRoleRequest) -> EmResult<Role>;

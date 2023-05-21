@@ -3,10 +3,11 @@ use sqlx::{
     pool::PoolConnection,
     postgres::{PgConnectOptions, PgPoolOptions},
     types::Uuid,
-    Connection, Database, Encode, Executor, IntoArguments, PgPool, Pool, Postgres, Type,
+    Connection, Database, Encode, Executor, IntoArguments, PgPool, Pool, Postgres, Transaction,
+    Type,
 };
 
-use crate::error::EmResult;
+use crate::error::{EmError, EmResult};
 
 /// Implementors are able to provide connection pools specific to the specified [Database] type
 pub trait ConnectionBuilder<D: Database> {
@@ -17,8 +18,8 @@ pub trait ConnectionBuilder<D: Database> {
         max_connections: u32,
         min_connection: u32,
     ) -> EmResult<Pool<D>>;
-    /// Return a new pool of database connection with connections not explicitly created. Requires the
-    /// connection `options` and min/max number of connections to hold.
+    /// Return a new pool of database connection with connections not explicitly created. Requires
+    /// the connection `options` and min/max number of connections to hold.
     fn create_pool_lazy(
         options: PgConnectOptions,
         max_connections: u32,
@@ -55,7 +56,10 @@ impl ConnectionBuilder<Postgres> for PgConnectionBuilder {
 }
 
 /// Acquire new pool connection and set the 'em.uid' parameter to the specified [Uuid]
-pub async fn get_connection_with_em_uid<D>(em_uid: Uuid, pool: &Pool<D>) -> EmResult<PoolConnection<D>>
+pub async fn get_connection_with_em_uid<D>(
+    uid: &Uuid,
+    pool: &Pool<D>,
+) -> EmResult<PoolConnection<D>>
 where
     D: Database,
     for<'q> Uuid: Encode<'q, D> + Type<D>,
@@ -64,8 +68,37 @@ where
 {
     let mut connection = pool.acquire().await?;
     sqlx::query("select set_config('em.uid',$1::text,false)")
-        .bind(em_uid)
+        .bind(uid)
         .execute(&mut connection)
         .await?;
     Ok(connection)
+}
+
+/// Finish a transaction block by calling `COMMIT` if the `result` is [Ok] and `Rollback` if the
+/// `result` is [Err]. If during the transaction `COMMIT` or `ROLLBACK` an error occurs, a
+/// [EmError::CommitError] or [EmError::RollbackError] will be returned (respectively).
+pub async fn finalize_transaction<T, D>(
+    result: Result<T, sqlx::Error>,
+    transaction: Transaction<'_, D>,
+) -> EmResult<T>
+where
+    D: Database,
+{
+    match result {
+        Ok(inner) => {
+            if let Err(error) = transaction.commit().await {
+                return Err(EmError::CommitError(error));
+            }
+            Ok(inner)
+        }
+        Err(error) => {
+            if let Err(rollback_error) = transaction.rollback().await {
+                return Err(EmError::RollbackError {
+                    orig: error,
+                    new: rollback_error,
+                });
+            }
+            Err(error.into())
+        }
+    }
 }

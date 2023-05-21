@@ -45,12 +45,6 @@
             ]
         },
         {
-            "name": "users/validate_password.pgsql",
-            "dependencies": [
-                "schema.pgsql"
-            ]
-        },
-        {
             "name": "users/validate_user.pgsql",
             "dependencies": [
                 "schema.pgsql",
@@ -62,41 +56,34 @@
             "name": "users/create_user.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "users/users.pgsql",
-                "users/user_roles.pgsql",
-                "users/validate_password.pgsql",
-                "users/check_user_role.pgsql"
+                "users/users.pgsql"
             ]
         },
         {
             "name": "users/reset_password.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "users/users.pgsql",
-                "users/validate_user.pgsql"
+                "users/users.pgsql"
             ]
         },
         {
             "name": "users/update_full_name.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "users/users.pgsql",
-                "users/validate_user.pgsql"
+                "users/users.pgsql"
             ]
         },
         {
             "name": "users/update_username.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "users/users.pgsql",
-                "users/validate_user.pgsql"
+                "users/users.pgsql"
             ]
         },
         {
             "name": "users/add_user_role.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "users/check_user_role.pgsql",
                 "users/user_roles.pgsql"
             ]
         },
@@ -111,7 +98,6 @@
             "name": "users/create_role.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "users/check_user_role.pgsql",
                 "users/roles.pgsql"
             ]
         },
@@ -119,8 +105,14 @@
             "name": "users/update_role.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "users/check_user_role.pgsql",
                 "users/roles.pgsql"
+            ]
+        },
+        {
+            "name": "users/add_user_roles.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "users/user_roles.pgsql"
             ]
         }
     ]

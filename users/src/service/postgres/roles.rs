@@ -89,7 +89,7 @@ impl RoleService for PgRoleService {
         }
     }
 
-    async fn read_many(&self) -> EmResult<Vec<Role>> {
+    async fn read_all(&self) -> EmResult<Vec<Role>> {
         let result = sqlx::query_as(
             r#"
             select name, description
@@ -101,17 +101,22 @@ impl RoleService for PgRoleService {
     }
 
     async fn create_role(&self, request: &CreateRoleRequest) -> EmResult<Role> {
-        let user = self.user_service.get_user(request.current_uid).await?;
+        let CreateRoleRequest {
+            current_uid,
+            name,
+            description,
+        } = request;
+        let user = self.user_service.read_one(current_uid).await?;
         user.check_role(RoleName::CreateRole)?;
 
-        let mut connection = get_connection_with_em_uid(request.current_uid, &self.pool).await?;
+        let mut connection = get_connection_with_em_uid(current_uid, &self.pool).await?;
         let role_option = sqlx::query_as(
             r#"
             select r.name, r.description
             from users.create_role($1, $2) r"#,
         )
-        .bind(&request.name)
-        .bind(&request.description)
+        .bind(name)
+        .bind(description)
         .fetch_optional(&mut connection)
         .await?;
         match role_option {
@@ -123,25 +128,31 @@ impl RoleService for PgRoleService {
     }
 
     async fn update_role(&self, request: &UpdateRoleRequest) -> EmResult<Role> {
-        let user = self.user_service.get_user(request.current_uid).await?;
+        let UpdateRoleRequest {
+            current_uid,
+            name,
+            new_name,
+            new_description,
+        } = request;
+        let user = self.user_service.read_one(current_uid).await?;
         user.check_role(RoleName::CreateRole)?;
 
-        let mut connection = get_connection_with_em_uid(request.current_uid, &self.pool).await?;
+        let mut connection = get_connection_with_em_uid(current_uid, &self.pool).await?;
         user.check_role(RoleName::CreateRole)?;
         let role_option = sqlx::query_as(
             r#"
             select r.name, r.description
             from users.update_role($1, $2, $3) r"#,
         )
-        .bind(&request.name)
-        .bind(&request.new_name)
-        .bind(&request.new_description)
+        .bind(name)
+        .bind(new_name)
+        .bind(new_description)
         .fetch_optional(&mut connection)
         .await?;
         match role_option {
             Some(role) => Ok(role),
             None => Err(EmError::MissingRecord {
-                pk: format!("{}", request.name),
+                pk: format!("{}", name),
             }),
         }
     }
@@ -196,7 +207,7 @@ mod test {
     async fn read_many_should_return_base_roles(database: PgPool) -> EmResult<()> {
         let service = PgRoleService::new(&database, &PgUserService::new(&database));
 
-        let roles = service.read_many().await?;
+        let roles = service.read_all().await?;
 
         let admin_role = roles
             .iter()
@@ -206,16 +217,6 @@ mod test {
         assert_eq!(
             admin_role.description,
             "Role with full access to all other roles"
-        );
-
-        let create_user_role = roles
-            .iter()
-            .find(|r| r.name == "create-user")
-            .expect("Could not find an `create-user` role");
-
-        assert_eq!(
-            create_user_role.description,
-            "Provides a user with the ability to create other users"
         );
 
         let create_role_role = roles
@@ -302,7 +303,6 @@ mod test {
     async fn cleanup_role_update(
         name: &str,
         result_name: &str,
-        result_description: &str,
         pool: &PgPool,
     ) -> EmResult<()> {
         sqlx::query(
@@ -310,11 +310,10 @@ mod test {
             update users.roles
             set
                 name = $1,
-                description = $2
-            where name = $3"#,
+                description = 'Test role to update'
+            where name = $2"#,
         )
         .bind(name)
-        .bind(result_description)
         .bind(result_name)
         .execute(pool)
         .await?;
@@ -344,7 +343,7 @@ mod test {
         };
 
         let action = service.update_role(&request).await;
-        cleanup_role_update(name, result_name, result_description, &database).await?;
+        cleanup_role_update(name, result_name, &database).await?;
         let role = action?;
 
         assert_eq!(role.name, result_name);
@@ -366,14 +365,9 @@ mod test {
         let service = PgRoleService::new(&database, &PgUserService::new(&database));
         let request = update_role_request(uuid, name, new_name, new_description);
         let result_name = if new_name.is_empty() { name } else { new_name };
-        let result_description = if new_description.is_empty() {
-            "Test role to update"
-        } else {
-            new_description
-        };
 
         let action = service.update_role(&request).await;
-        cleanup_role_update(name, result_name, result_description, &database).await?;
+        cleanup_role_update(name, result_name, &database).await?;
 
         assert!(action.is_err());
         Ok(())

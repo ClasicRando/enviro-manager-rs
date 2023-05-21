@@ -1,10 +1,17 @@
-use common::error::{EmError, EmResult};
-use sqlx::{PgPool, Pool, Postgres};
+use common::{
+    database::{finalize_transaction, get_connection_with_em_uid},
+    error::{EmError, EmResult},
+};
+use lazy_regex::regex;
+use sqlx::{Connection, PgPool, Pool, Postgres};
 use uuid::Uuid;
 
-use crate::service::users::{
-    CreateUserRequest, ModifyUserRoleRequest, UpdateUserRequest, UpdateUserType, User, UserService,
-    ValidateUserRequest,
+use crate::service::{
+    roles::RoleName,
+    users::{
+        CreateUserRequest, ModifyUserRoleRequest, UpdateUserRequest, UpdateUserType, User,
+        UserService, ValidateUserRequest,
+    },
 };
 
 /// Postgresql implementation of [UserService]
@@ -15,54 +22,68 @@ pub struct PgUserService {
 }
 
 impl PgUserService {
-    /// Update the full name of a user specified by `username` and `password`
+    /// Update the full name of a user with the `uid` specified
     async fn update_full_name(
         &self,
-        username: &str,
-        password: &str,
+        uid: &Uuid,
         new_first_name: &str,
         new_last_name: &str,
-    ) -> EmResult<User> {
-        let user = sqlx::query_as("call users.update_full_name($1, $2, $3, $4)")
-            .bind(username)
-            .bind(password)
+    ) -> EmResult<()> {
+        let mut connection = get_connection_with_em_uid(uid, &self.pool).await?;
+        sqlx::query("call users.update_full_name($1, $2, $3)")
+            .bind(uid)
             .bind(new_first_name)
             .bind(new_last_name)
-            .fetch_one(&self.pool)
+            .execute(&mut connection)
             .await?;
-        Ok(user)
+        Ok(())
     }
 
-    /// Update the username of a user specified by `username` and `password`
-    async fn update_username(
-        &self,
-        username: &str,
-        password: &str,
-        new_username: &str,
-    ) -> EmResult<User> {
-        let user = sqlx::query_as("call users.update_username($1, $2, $3)")
-            .bind(username)
-            .bind(password)
+    /// Update the username of a user with the `uid` specified
+    async fn update_username(&self, uid: &Uuid, new_username: &str) -> EmResult<()> {
+        let mut connection = get_connection_with_em_uid(uid, &self.pool).await?;
+        sqlx::query("call users.update_username($1, $2)")
+            .bind(uid)
             .bind(new_username)
-            .fetch_one(&self.pool)
+            .execute(&mut connection)
             .await?;
-        Ok(user)
+        Ok(())
     }
 
-    /// Update the password of a user specified by `username` and `password`
-    async fn reset_password(
-        &self,
-        username: &str,
-        password: &str,
-        new_password: &str,
-    ) -> EmResult<User> {
-        let user = sqlx::query_as("call users.reset_password($1, $2, $3)")
-            .bind(username)
-            .bind(password)
+    /// Update the password of a user with the `uid` specified
+    async fn reset_password(&self, uid: &Uuid, new_password: &str) -> EmResult<()> {
+        let mut connection = get_connection_with_em_uid(uid, &self.pool).await?;
+        sqlx::query("call users.reset_password($1, $2)")
+            .bind(uid)
             .bind(new_password)
-            .fetch_one(&self.pool)
+            .execute(&mut connection)
             .await?;
-        Ok(user)
+        Ok(())
+    }
+
+    /// Validate that the provided `password` meets the rules prescribed for password
+    fn validate_password(&self, password: &str) -> EmResult<()> {
+        if password.is_empty() {
+            return Err(EmError::InvalidPassword {
+                reason: "Must not be null or an empty string",
+            });
+        }
+        if !regex!("[A-Z]").is_match(password) {
+            return Err(EmError::InvalidPassword {
+                reason: "Must contain at least 1 uppercase character",
+            });
+        }
+        if !regex!(r"\d").is_match(password) {
+            return Err(EmError::InvalidPassword {
+                reason: "Must contain at least 1 digit character",
+            });
+        }
+        if !regex!(r"\W").is_match(password) {
+            return Err(EmError::InvalidPassword {
+                reason: "Must contain at least 1 non-alphanumeric character",
+            });
+        }
+        Ok(())
     }
 }
 
@@ -82,20 +103,48 @@ impl UserService for PgUserService {
             password,
             roles,
         } = request;
-        let result =
-            sqlx::query_as("call users.create_user($1, $2, $3, $4, $5, $6, null, null, null)")
-                .bind(current_uid)
-                .bind(first_name)
-                .bind(last_name)
-                .bind(username)
-                .bind(password)
-                .bind(roles)
-                .fetch_one(&self.pool)
-                .await?;
-        Ok(result)
+        let user = self.read_one(current_uid).await?;
+
+        user.check_role(RoleName::Admin)?;
+        self.validate_password(password)?;
+
+        let mut connection = get_connection_with_em_uid(current_uid, &self.pool).await?;
+        let mut transaction = connection.begin().await?;
+        let uid: Uuid = sqlx::query_scalar("select users.create_user($1, $2, $3, $4)")
+            .bind(first_name)
+            .bind(last_name)
+            .bind(username)
+            .bind(password)
+            .fetch_one(&mut transaction)
+            .await?;
+
+        let role_add_result = sqlx::query("call users.add_user_roles($1, $2)")
+            .bind(uid)
+            .bind(roles)
+            .execute(&mut transaction)
+            .await;
+        finalize_transaction(role_add_result, transaction).await?;
+        // Drop connection to clean up the resource after the transaction is finished
+        drop(connection);
+
+        self.read_one(&uid).await
     }
 
-    async fn get_user(&self, uuid: Uuid) -> EmResult<User> {
+    async fn read_all(&self, current_uid: &Uuid) -> EmResult<Vec<User>> {
+        let user = self.read_one(current_uid).await?;
+        user.check_role(RoleName::Admin)?;
+
+        let users = sqlx::query_as(
+            r#"
+            select u.uid, u.full_name, u.roles
+            from users.v_users u"#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(users)
+    }
+
+    async fn read_one(&self, uuid: &Uuid) -> EmResult<User> {
         let user = sqlx::query_as(
             r#"
             select u.uid, u.full_name, u.roles
@@ -110,34 +159,40 @@ impl UserService for PgUserService {
 
     async fn update(&self, request: &UpdateUserRequest) -> EmResult<User> {
         let UpdateUserRequest {
-            username,
-            password,
+            validate_user,
             update_type,
         } = request;
+        let user = self.validate_user(validate_user).await?;
         match update_type {
             UpdateUserType::Username { new_username } => {
-                self.update_username(username, password, new_username).await
+                self.update_username(&user.uid, new_username).await?
             }
             UpdateUserType::FullName {
                 new_first_name,
                 new_last_name,
             } => {
-                self.update_full_name(username, password, new_first_name, new_last_name)
-                    .await
+                self.update_full_name(&user.uid, new_first_name, new_last_name)
+                    .await?
             }
             UpdateUserType::ResetPassword { new_password } => {
-                self.reset_password(username, password, new_password).await
+                self.validate_password(new_password)?;
+                self.reset_password(&user.uid, new_password).await?
             }
         }
+        self.read_one(&user.uid).await
     }
 
     async fn validate_user(&self, request: &ValidateUserRequest) -> EmResult<User> {
         let ValidateUserRequest { username, password } = request;
-        let result = sqlx::query_as("select users.validate_user($1, $2)")
-            .bind(username)
-            .bind(password)
-            .fetch_optional(&self.pool)
-            .await?;
+        let result = sqlx::query_as(
+            r#"
+            select v.uid, v.full_name, v.role
+            from users.validate_user($1, $2) v"#,
+        )
+        .bind(username)
+        .bind(password)
+        .fetch_optional(&self.pool)
+        .await?;
         match result {
             Some(user) => Ok(user),
             None => Err(EmError::InvalidUser),
@@ -151,18 +206,21 @@ impl UserService for PgUserService {
             role,
             add,
         } = request;
+
+        let user = self.read_one(current_uid).await?;
+        user.check_role(RoleName::AddRole)?;
+
         let query = if *add {
-            "call users.add_user_role($1, $2, $3)"
+            "call users.add_user_role($1, $2)"
         } else {
-            "call users.revoke_user_role($1, $2, $3)"
+            "call users.revoke_user_role($1, $2)"
         };
-        let user = sqlx::query_as(query)
-            .bind(current_uid)
+        sqlx::query(query)
             .bind(uid)
             .bind(role)
-            .fetch_one(&self.pool)
+            .execute(&self.pool)
             .await?;
-        Ok(user)
+        self.read_one(uid).await
     }
 }
 

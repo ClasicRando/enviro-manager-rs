@@ -49,7 +49,7 @@ pub enum EmError {
     #[error("User missing privilege. UID = {uid}, role = {role}")]
     MissingPrivilege { uid: Uuid, role: String },
     #[error("Password is not valid. {reason}")]
-    InvalidPassword { reason: String },
+    InvalidPassword { reason: &'static str },
     #[error("Record cannot be found for `{pk}`")]
     MissingRecord { pk: String }
 }
