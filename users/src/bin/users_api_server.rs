@@ -1,4 +1,4 @@
-use common::{database::PgConnectionBuilder, error::EmResult};
+use common::{database::connection::PgConnectionBuilder, error::EmResult};
 use sqlx::Postgres;
 use users::{
     api,

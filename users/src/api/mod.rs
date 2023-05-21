@@ -4,7 +4,7 @@ use actix_web::{
     web::{get, patch, post, Data},
     App, HttpServer,
 };
-use common::{database::ConnectionBuilder, error::EmResult};
+use common::{database::connection::ConnectionBuilder, error::EmResult};
 use sqlx::{Connection, Database};
 
 pub mod roles;

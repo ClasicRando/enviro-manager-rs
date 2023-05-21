@@ -1,5 +1,5 @@
 use common::{
-    database::get_connection_with_em_uid,
+    database::connection::get_connection_with_em_uid,
     error::{EmError, EmResult},
 };
 use sqlx::{

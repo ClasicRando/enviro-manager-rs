@@ -62,9 +62,9 @@ impl DbBuildEntry {
     fn dependencies_met<'e>(&self, completed: &'e HashSet<&'e str>) -> bool {
         self.dependencies.is_empty()
             || self
-                .dependencies
-                .iter()
-                .all(|d| completed.contains(d.as_str()))
+            .dependencies
+            .iter()
+            .all(|d| completed.contains(d.as_str()))
     }
 
     /// Run the build entry by fetching the entries file contents (relative path to the

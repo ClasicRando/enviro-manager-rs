@@ -3,7 +3,7 @@ pub mod users;
 
 #[cfg(test)]
 mod test {
-    use common::database::{ConnectionBuilder, PgConnectionBuilder};
+    use common::database::connection::{ConnectionBuilder, PgConnectionBuilder};
     use rstest::fixture;
     use sqlx::PgPool;
 

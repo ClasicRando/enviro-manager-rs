@@ -1,5 +1,5 @@
 use common::{
-    database::{finalize_transaction, get_connection_with_em_uid},
+    database::connection::{finalize_transaction, get_connection_with_em_uid},
     error::{EmError, EmResult},
 };
 use lazy_regex::regex;

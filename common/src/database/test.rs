@@ -10,8 +10,8 @@ use tokio::{
 };
 
 use crate::{
-    db_build::db_build, execute_anonymous_block, execute_anonymous_block_transaction, package_dir,
-    read_file, workspace_dir,
+    database::build::db_build, execute_anonymous_block, execute_anonymous_block_transaction,
+    package_dir, read_file, workspace_dir,
 };
 
 /// Represents a single entry in the list of test directory entries. Deserialized from a

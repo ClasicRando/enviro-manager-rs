@@ -14,8 +14,6 @@ use tokio::{fs::File, io::AsyncReadExt};
 
 pub mod api;
 pub mod database;
-pub mod db_build;
-pub mod db_test;
 pub mod error;
 
 /// Returns a [PathBuf] pointing to the directory of the current package. Utilizes the
