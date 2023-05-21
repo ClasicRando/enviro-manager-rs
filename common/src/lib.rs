@@ -12,6 +12,8 @@ use regex::Regex;
 use sqlx::PgPool;
 use tokio::{fs::File, io::AsyncReadExt};
 
+use crate::error::EmResult;
+
 pub mod api;
 pub mod database;
 pub mod error;
@@ -30,7 +32,8 @@ fn workspace_dir() -> PathBuf {
 
 /// Read the specified file using the `path` provided, returning the contents as a single [String]
 /// buffer.
-pub async fn read_file(path: &PathBuf) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn read_file(path: impl AsRef<Path>) -> EmResult<String> {
+    let path = path.as_ref();
     let mut file = match File::open(path).await {
         Ok(inner) => inner,
         Err(error) => return Err(format!("Could not open file, {:?}. {}", path, error).into()),
@@ -82,7 +85,7 @@ fn format_anonymous_block(block: &str) -> String {
 /// Execute the provided `block` of Postgresql code against the `pool`. If the block does not match
 /// the required formatting to be an anonymous block, the code is wrapped in the required code to
 /// ensure the execution can be completed.
-pub async fn execute_anonymous_block(block: &str, pool: &PgPool) -> Result<(), sqlx::Error> {
+pub async fn execute_anonymous_block(block: &str, pool: &PgPool) -> EmResult<()> {
     let block = format_anonymous_block(block);
     sqlx::query(&block).execute(pool).await?;
     Ok(())

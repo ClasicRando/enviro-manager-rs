@@ -4,6 +4,8 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use tokio::{fs::File, io::AsyncReadExt};
 
+use crate::error::EmResult;
+
 use crate::{execute_anonymous_block, package_dir, read_file, workspace_dir};
 
 /// Database builder object defining the common database dependencies and the schema entries
@@ -33,7 +35,7 @@ impl DbBuild {
 
     /// Run the database build operations by building the common schema requirements then
     /// proceeding to run each [DbBuildEntry] to completion.
-    async fn run(&self, directory: &Path, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
+    async fn run(&self, directory: &Path, pool: &PgPool) -> EmResult<()> {
         for dep in &self.common_dependencies {
             build_common_schema(dep, pool).await?
         }
@@ -70,7 +72,7 @@ impl DbBuildEntry {
     /// Run the build entry by fetching the entries file contents (relative path to the
     /// `directory` passed) and executing the entry's contents as an anonymous block against the
     /// `pool`.
-    async fn run(&self, directory: &Path, pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
+    async fn run(&self, directory: &Path, pool: &PgPool) -> EmResult<()> {
         let path = directory.join(&self.name);
         let block = read_file(&path).await?;
         if let Err(error) = execute_anonymous_block(&block, pool).await {
@@ -134,7 +136,7 @@ impl<'e> Iterator for OrderIter<'e> {
 /// Extract a [DbBuild] instance using the `directory` provided. The `directory` should point to a
 /// directory that contains a "build.json" file that can be deserializable into the [DbBuild]
 /// struct.
-pub(crate) async fn db_build(directory: &Path) -> Result<DbBuild, Box<dyn std::error::Error>> {
+pub(crate) async fn db_build(directory: &Path) -> EmResult<DbBuild> {
     let path = directory.join("build.json");
     let mut file = File::open(&path).await?;
     let mut contents = String::new();
@@ -148,7 +150,7 @@ pub(crate) async fn db_build(directory: &Path) -> Result<DbBuild, Box<dyn std::e
 async fn build_common_schema(
     schema: &str,
     pool: &PgPool,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> EmResult<()> {
     let schema_directory = workspace_dir().join("common-database").join(schema);
     let db_build = db_build(&schema_directory).await?;
 
@@ -161,7 +163,7 @@ async fn build_common_schema(
 /// Build the database as specified by the `database` directory of the current package. Build order
 /// and units are found using the 'build.json' file in the `database` directory. See [DbBuild] for
 /// expected JSON structure.
-pub async fn build_database(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn build_database(pool: &PgPool) -> EmResult<()> {
     let database_directory = package_dir().join("database");
     let db_build = db_build(&database_directory).await?;
 

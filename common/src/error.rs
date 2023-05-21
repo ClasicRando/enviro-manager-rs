@@ -24,6 +24,8 @@ pub enum EmError {
     RmpEncode(#[from] rmp_serde::encode::Error),
     #[error("MessagePack decode error\n{0}")]
     RmpDecode(#[from] rmp_serde::decode::Error),
+    #[error("Json serde error\n{0}")]
+    SerdeJson(#[from] serde_json::Error),
     #[error("Reqwest Error\n{0}")]
     Reqwest(#[from] reqwest::Error),
     #[error("Generic error\n{0}")]
@@ -52,6 +54,18 @@ pub enum EmError {
     InvalidPassword { reason: &'static str },
     #[error("Record cannot be found for `{pk}`")]
     MissingRecord { pk: String },
+}
+
+impl From<&str> for EmError {
+    fn from(value: &str) -> Self {
+        Self::Generic(value.to_string())
+    }
+}
+
+impl From<String> for EmError {
+    fn from(value: String) -> Self {
+        Self::Generic(value)
+    }
 }
 
 /// Generic [Result] type where the error is always [Error]
