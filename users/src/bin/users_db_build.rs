@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use common::{
     database::{ConnectionBuilder, PgConnectionBuilder},
     db_build::build_database,
+    error::EmResult,
 };
 use log::{error, info, warn};
 use sqlx::{postgres::PgConnectOptions, PgPool};
@@ -10,9 +11,7 @@ use users::database::{db_options, test_db_options};
 
 /// Drop the current test database and create a new version to be populated by the [build_database]
 /// method.
-async fn refresh_test_database(
-    options: PgConnectOptions,
-) -> Result<PgPool, Box<dyn std::error::Error>> {
+async fn refresh_test_database(options: PgConnectOptions) -> EmResult<PgPool> {
     let admin_pool: PgPool = PgConnectionBuilder::create_pool(db_options()?, 1, 1).await?;
     sqlx::query("drop database if exists em_user_test")
         .execute(&admin_pool)
