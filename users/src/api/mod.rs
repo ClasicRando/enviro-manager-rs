@@ -20,7 +20,7 @@ where
     A: ToSocketAddrs,
     C: ConnectionBuilder<D>,
     D: Database,
-    R: RoleService<Database = D, UserService=U> + Send + Sync + 'static,
+    R: RoleService<Database = D, UserService = U> + Send + Sync + 'static,
     U: UserService<Database = D> + Send + Sync + 'static,
 {
     let pool = C::create_pool(options, 20, 10).await?;

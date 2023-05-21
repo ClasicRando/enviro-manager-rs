@@ -300,11 +300,7 @@ mod test {
         Ok(())
     }
 
-    async fn cleanup_role_update(
-        name: &str,
-        result_name: &str,
-        pool: &PgPool,
-    ) -> EmResult<()> {
+    async fn cleanup_role_update(name: &str, result_name: &str, pool: &PgPool) -> EmResult<()> {
         sqlx::query(
             r#"
             update users.roles

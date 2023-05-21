@@ -51,7 +51,7 @@ pub enum EmError {
     #[error("Password is not valid. {reason}")]
     InvalidPassword { reason: &'static str },
     #[error("Record cannot be found for `{pk}`")]
-    MissingRecord { pk: String }
+    MissingRecord { pk: String },
 }
 
 /// Generic [Result] type where the error is always [Error]
