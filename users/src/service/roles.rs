@@ -59,6 +59,15 @@ pub struct UpdateRoleRequest {
     pub(crate) new_description: Option<String>,
 }
 
+/// Request object to update an existing role. Deserialized from an API request
+#[derive(Deserialize)]
+pub struct DeleteRoleRequest {
+    /// UID of the user attempting to create a new role
+    pub(crate) current_uid: Uuid,
+    /// Name of the existing role
+    pub(crate) name: String,
+}
+
 /// Service for interacting with the role system. Allows for reading all roles as well as creating
 /// new and modifying existing roles. Requires the [UserService] as an associated type to fetch
 /// user data to confirm the roles of a user before creating/modifying roles.
@@ -72,12 +81,15 @@ where
     /// Create new instance of a [RoleService]. Both parameters are references to allow for cloning
     /// of the value.
     fn new(pool: &Pool<Self::Database>, user_service: &Self::UserService) -> Self;
-    /// Read all roles found in the database
-    async fn read_all(&self) -> EmResult<Vec<Role>>;
     /// Create a new role in the database. The user specified in `request` must have the
     /// 'create-role' role to perform this action.
     async fn create_role(&self, request: &CreateRoleRequest) -> EmResult<Role>;
+    /// Read all roles found in the database
+    async fn read_all(&self) -> EmResult<Vec<Role>>;
     /// Update an existing role in the database. The user specified in `request` must have the
     /// 'create-role' role to perform this action.
     async fn update_role(&self, request: &UpdateRoleRequest) -> EmResult<Role>;
+    /// Delete an existing role in the database. The user specified in `request` must have the
+    /// 'create-role' role to perform this action.
+    async fn delete_role(&self, request: &DeleteRoleRequest) -> EmResult<()>;
 }

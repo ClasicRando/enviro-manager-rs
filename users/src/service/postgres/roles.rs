@@ -14,7 +14,7 @@ use sqlx::{
 
 use crate::service::{
     postgres::users::PgUserService,
-    roles::{CreateRoleRequest, Role, RoleName, RoleService, UpdateRoleRequest},
+    roles::{CreateRoleRequest, DeleteRoleRequest, Role, RoleName, RoleService, UpdateRoleRequest},
     users::UserService,
 };
 
@@ -89,17 +89,6 @@ impl RoleService for PgRoleService {
         }
     }
 
-    async fn read_all(&self) -> EmResult<Vec<Role>> {
-        let result = sqlx::query_as(
-            r#"
-            select name, description
-            from users.v_roles"#,
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(result)
-    }
-
     async fn create_role(&self, request: &CreateRoleRequest) -> EmResult<Role> {
         let CreateRoleRequest {
             current_uid,
@@ -127,6 +116,17 @@ impl RoleService for PgRoleService {
         }
     }
 
+    async fn read_all(&self) -> EmResult<Vec<Role>> {
+        let result = sqlx::query_as(
+            r#"
+            select name, description
+            from users.v_roles"#,
+        )
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(result)
+    }
+
     async fn update_role(&self, request: &UpdateRoleRequest) -> EmResult<Role> {
         let UpdateRoleRequest {
             current_uid,
@@ -138,7 +138,6 @@ impl RoleService for PgRoleService {
         user.check_role(RoleName::CreateRole)?;
 
         let mut connection = get_connection_with_em_uid(current_uid, &self.pool).await?;
-        user.check_role(RoleName::CreateRole)?;
         let role_option = sqlx::query_as(
             r#"
             select r.name, r.description
@@ -155,6 +154,19 @@ impl RoleService for PgRoleService {
                 pk: format!("{}", name),
             }),
         }
+    }
+
+    async fn delete_role(&self, request: &DeleteRoleRequest) -> EmResult<()> {
+        let DeleteRoleRequest { current_uid, name } = request;
+        let user = self.user_service.read_one(current_uid).await?;
+        user.check_role(RoleName::CreateRole)?;
+
+        let mut connection = get_connection_with_em_uid(current_uid, &self.pool).await?;
+        sqlx::query("call users.delete_role($1)")
+            .bind(name)
+            .execute(&mut connection)
+            .await?;
+        Ok(())
     }
 }
 
@@ -204,7 +216,7 @@ mod test {
 
     #[rstest]
     #[tokio::test]
-    async fn read_many_should_return_base_roles(database: PgPool) -> EmResult<()> {
+    async fn read_all_should_return_base_roles(database: PgPool) -> EmResult<()> {
         let service = PgRoleService::new(&database, &PgUserService::new(&database));
 
         let roles = service.read_all().await?;
