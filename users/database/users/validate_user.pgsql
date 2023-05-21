@@ -23,6 +23,7 @@ where
     )
 $$;
 
+revoke all on function users.validate_user from public;
 grant execute on function users.validate_user to users_web;
 
 comment on function users.validate_user IS $$

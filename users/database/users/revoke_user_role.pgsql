@@ -10,6 +10,7 @@ where
     and ur.role = $2;
 $$;
 
+revoke all on procedure users.revoke_user_role from public;
 grant execute on procedure users.revoke_user_role to users_web;
 
 comment on procedure users.revoke_user_role IS $$

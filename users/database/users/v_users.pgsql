@@ -11,4 +11,5 @@ create or replace view users.v_users as
     join user_roles ur
     on u.em_uid = ur.em_uid;
 
+revoke all on users.v_users from public;
 grant select on users.v_users to users_web;

@@ -11,6 +11,7 @@ where u.uid = $1
 on conflict (em_uid, role) do nothing;
 $$;
 
+revoke all on procedure users.add_user_role from public;
 grant execute on procedure users.add_user_role to users_web;
 
 comment on procedure users.add_user_role IS $$

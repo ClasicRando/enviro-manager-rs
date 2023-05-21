@@ -12,6 +12,7 @@ set
 where u.uid = $1
 $$;
 
+revoke all on procedure users.update_full_name from public;
 grant execute on procedure users.update_full_name to users_web;
 
 comment on procedure users.update_full_name IS $$

@@ -17,6 +17,7 @@ where r.name = $1
 returning r.name, r.description
 $$;
 
+revoke all on function users.update_role from public;
 grant execute on function users.update_role to users_web;
 
 comment on function users.update_role IS $$

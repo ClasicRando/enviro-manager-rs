@@ -14,6 +14,7 @@ values($1,$2)
 returning r.name, r.description;
 $$;
 
+revoke all on function users.create_role from public;
 grant execute on function users.create_role to users_web;
 
 comment on function users.create_role IS $$

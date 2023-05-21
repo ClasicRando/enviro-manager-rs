@@ -9,6 +9,7 @@ set username = $2
 where u.uid = $1
 $$;
 
+revoke all on procedure users.update_username from public;
 grant execute on procedure users.update_username to users_web;
 
 comment on procedure users.update_username IS $$

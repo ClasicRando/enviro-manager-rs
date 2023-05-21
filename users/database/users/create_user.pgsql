@@ -12,6 +12,7 @@ values($1,$2,$3,crypt($4, gen_salt('bf')))
 returning u.uid
 $$;
 
+revoke all on function users.create_user from public;
 grant execute on function users.create_user to users_web;
 
 comment on function users.create_user IS $$

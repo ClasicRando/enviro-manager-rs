@@ -9,6 +9,7 @@ set password = crypt($2, gen_salt('bf'))
 where u.uid = $1
 $$;
 
+revoke all on procedure users.reset_password from public;
 grant execute on procedure users.reset_password to users_web;
 
 comment on procedure users.reset_password IS $$
