@@ -1,4 +1,8 @@
-use common::error::{EmError, EmResult};
+use lazy_regex::regex;
+use common::{
+    api::ApiRequest,
+    error::{EmError, EmResult},
+};
 use serde::{Deserialize, Serialize};
 use sqlx::{Database, Pool};
 use uuid::Uuid;
@@ -25,19 +29,44 @@ impl User {
         if self
             .roles
             .iter()
-            .any(|r| r.name == role.as_str() || r.name == "admin")
+            .any(|r| r.name == role || r.name == RoleName::Admin)
         {
             return Ok(());
         }
         Err(EmError::MissingPrivilege {
-            role: role.as_str().to_string(),
+            role: role.into(),
             uid: self.uid,
         })
     }
 }
 
+/// Validate that the provided `password` meets the rules prescribed for password
+fn validate_password(password: &str) -> EmResult<()> {
+    if password.is_empty() {
+        return Err(EmError::InvalidPassword {
+            reason: "Must not be null or an empty string",
+        });
+    }
+    if !regex!("[A-Z]").is_match(password) {
+        return Err(EmError::InvalidPassword {
+            reason: "Must contain at least 1 uppercase character",
+        });
+    }
+    if !regex!(r"\d").is_match(password) {
+        return Err(EmError::InvalidPassword {
+            reason: "Must contain at least 1 digit character",
+        });
+    }
+    if !regex!(r"\W").is_match(password) {
+        return Err(EmError::InvalidPassword {
+            reason: "Must contain at least 1 non-alphanumeric character",
+        });
+    }
+    Ok(())
+}
+
 /// Request object for creating a new user
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct CreateUserRequest {
     /// uuid of the user attempting to perform the action
     pub(crate) current_uid: Uuid,
@@ -51,6 +80,28 @@ pub struct CreateUserRequest {
     pub(crate) password: String,
     /// Roles of the user to be created
     pub(crate) roles: Vec<String>,
+}
+
+impl ApiRequest for CreateUserRequest {
+    fn validate(&self) -> EmResult<()> {
+        if self.first_name.trim().is_empty() {
+            return Err((self, "first_name cannot be empty or whitespace".to_string()).into());
+        }
+        if self.last_name.trim().is_empty() {
+            return Err((self, "last_name cannot be empty or whitespace".to_string()).into());
+        }
+        if self.username.trim().is_empty() {
+            return Err((self, "username cannot be empty or whitespace".to_string()).into());
+        }
+        if self.password.trim().is_empty() {
+            return Err((self, "password cannot be empty or whitespace".to_string()).into());
+        }
+        if self.roles.iter().any(|r| r.trim().is_empty()) {
+            return Err((self, "roles cannot be empty or whitespace".to_string()).into());
+        }
+        validate_password(&self.password)?;
+        Ok(())
+    }
 }
 
 /// Request object for updating an existing user

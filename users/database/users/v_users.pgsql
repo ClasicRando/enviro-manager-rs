@@ -1,15 +1,15 @@
 create or replace view users.v_users as
     with user_roles as (
-        select ur.em_uid, array_agg(r.*)::users.roles[] roles
+        select ur.uid, array_agg(ur.role)::text[] roles
         from users.user_roles ur
-        join users.roles r
-        on ur.role = r.name
-        group by ur.em_uid
+        group by ur.uid
     )
-    select ur.em_uid, u.uid, trim(u.first_name) || ' ' || trim(u.last_name) full_name, ur.roles
+    select
+        u.uid, trim(u.first_name) || ' ' || trim(u.last_name) full_name,
+        coalesce(ur.roles,'{}'::text[]) roles
     from users.users u
-    join user_roles ur
-    on u.em_uid = ur.em_uid;
+    left join user_roles ur
+    on u.uid = ur.uid;
 
 revoke all on users.v_users from public;
 grant select on users.v_users to users_web;

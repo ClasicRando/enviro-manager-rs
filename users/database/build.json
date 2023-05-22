@@ -15,17 +15,10 @@
             ]
         },
         {
-            "name": "users/roles.pgsql",
-            "dependencies": [
-                "schema.pgsql"
-            ]
-        },
-        {
             "name": "users/user_roles.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "users/users.pgsql",
-                "users/roles.pgsql"
+                "users/users.pgsql"
             ]
         },
         {
@@ -33,15 +26,7 @@
             "dependencies": [
                 "schema.pgsql",
                 "users/users.pgsql",
-                "users/roles.pgsql",
                 "users/user_roles.pgsql"
-            ]
-        },
-        {
-            "name": "users/v_roles.pgsql",
-            "dependencies": [
-                "schema.pgsql",
-                "users/roles.pgsql"
             ]
         },
         {
@@ -85,20 +70,6 @@
             "dependencies": [
                 "schema.pgsql",
                 "users/user_roles.pgsql"
-            ]
-        },
-        {
-            "name": "users/create_role.pgsql",
-            "dependencies": [
-                "schema.pgsql",
-                "users/roles.pgsql"
-            ]
-        },
-        {
-            "name": "users/update_role.pgsql",
-            "dependencies": [
-                "schema.pgsql",
-                "users/roles.pgsql"
             ]
         },
         {

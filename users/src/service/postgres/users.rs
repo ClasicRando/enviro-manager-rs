@@ -1,8 +1,8 @@
 use common::{
+    api::ApiRequest,
     database::connection::{finalize_transaction, get_connection_with_em_uid},
     error::{EmError, EmResult},
 };
-use lazy_regex::regex;
 use sqlx::{Connection, PgPool, Pool, Postgres};
 use uuid::Uuid;
 
@@ -60,31 +60,6 @@ impl PgUserService {
             .await?;
         Ok(())
     }
-
-    /// Validate that the provided `password` meets the rules prescribed for password
-    fn validate_password(&self, password: &str) -> EmResult<()> {
-        if password.is_empty() {
-            return Err(EmError::InvalidPassword {
-                reason: "Must not be null or an empty string",
-            });
-        }
-        if !regex!("[A-Z]").is_match(password) {
-            return Err(EmError::InvalidPassword {
-                reason: "Must contain at least 1 uppercase character",
-            });
-        }
-        if !regex!(r"\d").is_match(password) {
-            return Err(EmError::InvalidPassword {
-                reason: "Must contain at least 1 digit character",
-            });
-        }
-        if !regex!(r"\W").is_match(password) {
-            return Err(EmError::InvalidPassword {
-                reason: "Must contain at least 1 non-alphanumeric character",
-            });
-        }
-        Ok(())
-    }
 }
 
 impl UserService for PgUserService {
@@ -95,6 +70,7 @@ impl UserService for PgUserService {
     }
 
     async fn create_user(&self, request: &CreateUserRequest) -> EmResult<User> {
+        request.validate()?;
         let CreateUserRequest {
             current_uid,
             first_name,
@@ -104,9 +80,7 @@ impl UserService for PgUserService {
             roles,
         } = request;
         let user = self.read_one(current_uid).await?;
-
         user.check_role(RoleName::Admin)?;
-        self.validate_password(password)?;
 
         let mut connection = get_connection_with_em_uid(current_uid, &self.pool).await?;
         let mut transaction = connection.begin().await?;
@@ -175,7 +149,6 @@ impl UserService for PgUserService {
                     .await?
             }
             UpdateUserType::ResetPassword { new_password } => {
-                self.validate_password(new_password)?;
                 self.reset_password(&user.uid, new_password).await?
             }
         }
@@ -285,9 +258,37 @@ mod test {
         cleanup_user_create(username, &database).await?;
 
         let user = action?;
-        let user_roles: Vec<&str> = user.roles.iter().map(|r| r.name.as_str()).collect();
+        let user_roles: Vec<&str> = user.roles.iter().map(|r| r.name.as_ref()).collect();
 
         assert_eq!(user.full_name, format!("{} {}", first_name, last_name));
+        assert_eq!(user_roles, roles);
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::admin(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "Admin This is", vec!["admin"])]
+    #[case::add_role(uuid!("728ac060-9d38-47e9-b2fa-66d2954110e3"), "Add-Role This is", vec!["add-role"])]
+    #[case::add_role(uuid!("be4c1ef7-771a-4580-b0dd-ff137c64ab48"), "None This is", vec![])]
+    #[tokio::test]
+    async fn read_all_should_contain(
+        database: PgPool,
+        #[case] uuid: Uuid,
+        #[case] full_name: &str,
+        #[case] roles: Vec<&str>,
+    ) -> EmResult<()> {
+        let service = PgUserService::new(&database);
+
+        let users = service
+            .read_all(&uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"))
+            .await?;
+
+        let user = users
+            .iter()
+            .find(|u| u.uid == uuid)
+            .expect("Could not find admin user");
+        let user_roles: Vec<&str> = user.roles.iter().map(|r| r.name.as_ref()).collect();
+        assert_eq!(user.full_name, full_name);
         assert_eq!(user_roles, roles);
 
         Ok(())

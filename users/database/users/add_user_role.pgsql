@@ -4,11 +4,11 @@ create or replace procedure users.add_user_role(
 )
 language sql
 as $$
-insert into users.user_roles(em_uid, role)
-select u.em_uid, $2 role
+insert into users.user_roles(uid, role)
+select u.uid, $2 role
 from users.users u
 where u.uid = $1
-on conflict (em_uid, role) do nothing;
+on conflict (uid, role) do nothing;
 $$;
 
 revoke all on procedure users.add_user_role from public;

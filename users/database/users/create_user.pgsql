@@ -16,7 +16,7 @@ revoke all on function users.create_user from public;
 grant execute on function users.create_user to users_web;
 
 comment on function users.create_user IS $$
-Create a new user with the provided details, returning the new user em_uid if successful.
+Create a new user with the provided details, returning the new user uid if successful.
 
 Arguments:
 first_name:

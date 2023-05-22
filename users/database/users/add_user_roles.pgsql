@@ -4,12 +4,12 @@ create or replace procedure users.add_user_roles(
 )
 language sql
 as $$
-insert into users.user_roles(em_uid, role)
-select u.em_uid, r.description
+insert into users.user_roles(uid, role)
+select u.uid, r.description
 from users.users u
 cross join unnest($2) r(description)
 where u.uid = $1
-on conflict (em_uid, role) do nothing;
+on conflict (uid, role) do nothing;
 $$;
 
 revoke all on procedure users.add_user_roles from public;

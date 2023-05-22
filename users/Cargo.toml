@@ -23,4 +23,5 @@ actix-web = { workspace = true }
 lazy-regex = { workspace = true }
 uuid = { workspace = true }
 rstest = { workspace = true }
+strum = { version = "0.24.1", features = ["derive"] }
 common = { path = "../common" }

@@ -1,21 +1,20 @@
 create or replace function users.validate_user(
     username text,
     password text,
-    out em_uid bigint,
     out uid uuid,
     out full_name text,
-    out roles users.roles[]
+    out roles text[]
 )
 returns record
 returns null on null input
 immutable
 language sql
 as $$
-select u.em_uid, u.uid, u.full_name, u.roles
+select u.uid, u.full_name, u.roles
 from users.v_users u
 where
-    u.em_uid in (
-        select u2.em_uid
+    u.uid in (
+        select u2.uid
         from users.users u2
         where
             u2.username = $1

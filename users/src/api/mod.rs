@@ -24,20 +24,18 @@ where
     A: ToSocketAddrs,
     C: ConnectionBuilder<D>,
     D: Database,
-    R: RoleService<Database = D, UserService = U> + Send + Sync + 'static,
+    R: RoleService<UserService = U> + Send + Sync + 'static,
     U: UserService<Database = D> + Send + Sync + 'static,
 {
     let pool = C::create_pool(options, 20, 10).await?;
     let users_service: Data<U> = Data::new(U::new(&pool));
-    let roles_service: Data<R> = Data::new(R::new(&pool, users_service.get_ref()));
+    let roles_service: Data<R> = Data::new(R::new(users_service.get_ref()));
     HttpServer::new(move || {
         App::new().service(
             actix_web::web::scope("/api/v1")
                 .app_data(roles_service.clone())
                 .app_data(users_service.clone())
                 .route("/roles", get().to(roles::roles::<R>))
-                .route("/roles", post().to(roles::create_role::<R>))
-                .route("/roles", patch().to(roles::update_role::<R>))
                 .route("/users", post().to(users::create_user::<U>))
                 .route("/users/username", patch().to(users::update_user::<U>))
                 .route("/users/validate", patch().to(users::validate_user::<U>))

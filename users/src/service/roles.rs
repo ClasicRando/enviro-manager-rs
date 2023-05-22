@@ -1,71 +1,65 @@
 use common::error::EmResult;
 use serde::{Deserialize, Serialize};
-use sqlx::{Database, Pool};
+use sqlx::{Encode, Postgres};
+use sqlx::database::HasArguments;
+use sqlx::encode::IsNull;
+use strum::{AsRefStr, EnumIter, EnumString, IntoStaticStr};
 use uuid::Uuid;
 
 use crate::service::users::UserService;
 
-/// EnviroManager user role as a database entity
-#[derive(Serialize, sqlx::FromRow)]
+/// EnviroManager user role
+#[derive(Serialize)]
 pub struct Role {
     /// Name of the role. Unique within all roles
-    pub(crate) name: String,
+    pub(crate) name: RoleName,
     /// Short description of the role
-    pub(crate) description: String,
+    pub(crate) description: &'static str,
+}
+
+impl<'q> Encode<'q, Postgres> for Role
+    where
+        &'q str: Encode<'q, Postgres>,
+{
+    fn encode_by_ref(&self, buf: &mut <Postgres as HasArguments<'q>>::ArgumentBuffer) -> IsNull {
+        let val = match self.name {
+            RoleName::Admin => "admin",
+            RoleName::AddRole => "add-role",
+        };
+        <&str as Encode<'q, Postgres>>::encode(val, buf)
+    }
+
+    fn size_hint(&self) -> usize {
+        let val = match self.name {
+            RoleName::Admin => "admin",
+            RoleName::AddRole => "add-role",
+        };
+        <&str as Encode<'q, Postgres>>::size_hint(&val)
+    }
 }
 
 /// All role names that exist as their common name
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, EnumIter, EnumString, IntoStaticStr, AsRefStr, PartialEq)]
 pub enum RoleName {
+    #[serde(rename = "admin")]
+    #[strum(serialize = "admin")]
     Admin,
-    CreateRole,
+    #[serde(rename = "add-role")]
+    #[strum(serialize = "add-role")]
     AddRole,
 }
 
 impl RoleName {
     /// Gets the string representation of the [RoleName] as seen in the database
-    pub const fn as_str(&self) -> &'static str {
+    pub const fn description(&self) -> &'static str {
         match self {
-            RoleName::Admin => "admin",
-            RoleName::CreateRole => "create-role",
-            RoleName::AddRole => "add-role",
+            RoleName::Admin => "Role with full access to all other roles",
+            RoleName::AddRole => {
+                "Provides a user with the ability to add/remove roles from a user. However, this \
+                 is limited to the roles of the current user."
+            }
         }
     }
-}
-
-/// Request object to create a new role. Deserialized from an API request
-#[derive(Deserialize)]
-pub struct CreateRoleRequest {
-    /// UID of the user attempting to create a new role
-    pub(crate) current_uid: Uuid,
-    /// Name of the new role
-    pub(crate) name: String,
-    /// Description of the new role
-    pub(crate) description: String,
-}
-
-/// Request object to update an existing role. Deserialized from an API request
-#[derive(Deserialize)]
-pub struct UpdateRoleRequest {
-    /// UID of the user attempting to create a new role
-    pub(crate) current_uid: Uuid,
-    /// Name of the existing role
-    pub(crate) name: String,
-    /// New name for the role. If [None] role name will not change
-    #[serde(default)]
-    pub(crate) new_name: Option<String>,
-    /// New description for the role. If [None] role description will not change
-    #[serde(default)]
-    pub(crate) new_description: Option<String>,
-}
-
-/// Request object to update an existing role. Deserialized from an API request
-#[derive(Deserialize)]
-pub struct DeleteRoleRequest {
-    /// UID of the user attempting to create a new role
-    pub(crate) current_uid: Uuid,
-    /// Name of the existing role
-    pub(crate) name: String,
 }
 
 /// Service for interacting with the role system. Allows for reading all roles as well as creating
@@ -75,21 +69,11 @@ pub trait RoleService
 where
     Self: Clone + Send + Sync,
 {
-    type Database: Database;
-    type UserService: UserService<Database = Self::Database>;
+    type UserService: UserService;
 
     /// Create new instance of a [RoleService]. Both parameters are references to allow for cloning
     /// of the value.
-    fn new(pool: &Pool<Self::Database>, user_service: &Self::UserService) -> Self;
-    /// Create a new role in the database. The user specified in `request` must have the
-    /// 'create-role' role to perform this action.
-    async fn create_role(&self, request: &CreateRoleRequest) -> EmResult<Role>;
-    /// Read all roles found in the database
-    async fn read_all(&self) -> EmResult<Vec<Role>>;
-    /// Update an existing role in the database. The user specified in `request` must have the
-    /// 'create-role' role to perform this action.
-    async fn update_role(&self, request: &UpdateRoleRequest) -> EmResult<Role>;
-    /// Delete an existing role in the database. The user specified in `request` must have the
-    /// 'create-role' role to perform this action.
-    async fn delete_role(&self, request: &DeleteRoleRequest) -> EmResult<()>;
+    fn new(user_service: &Self::UserService) -> Self;
+    /// Read all roles found in the database. Must be an admin user to access roles
+    async fn read_all(&self, current_uid: &Uuid) -> EmResult<Vec<Role>>;
 }

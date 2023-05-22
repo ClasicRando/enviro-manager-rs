@@ -5,6 +5,8 @@ use lettre::{
 use sqlx::types::Uuid;
 use thiserror::Error;
 
+use crate::api::ApiRequest;
+
 /// All possible error types that may occur during workflow engine operations
 #[derive(Error, Debug)]
 pub enum EmError {
@@ -49,11 +51,13 @@ pub enum EmError {
     #[error("Invalid User")]
     InvalidUser,
     #[error("User missing privilege. UID = {uid}, role = {role}")]
-    MissingPrivilege { uid: Uuid, role: String },
+    MissingPrivilege { uid: Uuid, role: &'static str },
     #[error("Password is not valid. {reason}")]
     InvalidPassword { reason: &'static str },
     #[error("Record cannot be found for `{pk}`")]
     MissingRecord { pk: String },
+    #[error("Contents of request '{request}' were not valid.\nReason: {reason}")]
+    InvalidRequest { request: String, reason: String },
 }
 
 impl From<&str> for EmError {
@@ -65,6 +69,18 @@ impl From<&str> for EmError {
 impl From<String> for EmError {
     fn from(value: String) -> Self {
         Self::Generic(value)
+    }
+}
+
+impl<R> From<(&R, String)> for EmError
+where
+    R: ApiRequest,
+{
+    fn from(value: (&R, String)) -> Self {
+        Self::InvalidRequest {
+            request: format!("{:?}", value.0),
+            reason: value.1,
+        }
     }
 }
 
