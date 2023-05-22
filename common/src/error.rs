@@ -87,5 +87,5 @@ where
     }
 }
 
-/// Generic [Result] type where the error is always [Error]
+/// Generic [Result] type where the error is always [EmError]
 pub type EmResult<T> = Result<T, EmError>;
