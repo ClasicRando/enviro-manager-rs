@@ -42,9 +42,9 @@ impl User {
 
 /// Validate that the provided `password` meets the rules prescribed for password
 fn validate_password(password: &str) -> EmResult<()> {
-    if password.is_empty() {
+    if password.trim().is_empty() {
         return Err(EmError::InvalidPassword {
-            reason: "Must not be null or an empty string",
+            reason: "Must not be an empty string or whitespace",
         });
     }
     if !regex!("[A-Z]").is_match(password) {
