@@ -213,3 +213,33 @@ where
     /// themselves
     async fn modify_user_role(&self, request: &ModifyUserRoleRequest) -> EmResult<User>;
 }
+
+#[cfg(test)]
+mod test {
+    use rstest::rstest;
+
+    use super::{CreateUserRequest, ModifyUserRoleRequest, UpdateUserRequest, validate_password};
+
+    #[rstest]
+    #[case::valid_password("Va1idPa$$word")]
+    fn validate_password_should_succeed_when(#[case] password: &str) {
+        let result = validate_password(password);
+
+        assert!(result.is_ok())
+    }
+
+    #[rstest]
+    #[case::empty("")]
+    #[case::whitespace1(" ")]
+    #[case::whitespace2("\t ")]
+    #[case::whitespace3(" \n ")]
+    #[case::whitespace4("\t \n ")]
+    #[case::missing_uppercase("test")]
+    #[case::missing_digit("Test")]
+    #[case::missing_non_alphanumeric("Test1")]
+    fn validate_password_should_fail_when(#[case] password: &str) {
+        let result = validate_password(password);
+
+        assert!(result.is_err())
+    }
+}
