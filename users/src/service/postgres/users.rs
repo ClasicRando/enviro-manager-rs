@@ -162,7 +162,7 @@ impl UserService for PgUserService {
         let ValidateUserRequest { username, password } = request;
         let result = sqlx::query_as(
             r#"
-            select v.uid, v.full_name, v.role
+            select v.uid, v.full_name, v.roles
             from users.validate_user($1, $2) v"#,
         )
         .bind(username)
@@ -211,8 +211,13 @@ mod test {
     use super::PgUserService;
     use crate::service::{
         postgres::test::database,
-        users::{test::create_user_request, UserService},
+        roles::RoleName,
+        users::{
+            test::{create_user_request, validate_user_request},
+            CreateUserRequest, UserService,
+        },
     };
+    use crate::service::users::ValidateUserRequest;
 
     /// Cleanup function for users that are created during tests
     async fn cleanup_user_create(username: &str, pool: &PgPool) -> EmResult<()> {
@@ -224,29 +229,46 @@ mod test {
     }
 
     #[rstest]
-    #[case(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "Mr", "Test", "test", "Test1!", vec!["admin"])]
+    #[case::valid_request(create_user_request(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "Mr", "Test", "test", "Test1!", &["admin"]))]
     #[tokio::test]
-    async fn create_user_should_succeed_when_valid_request(
+    async fn create_user_should_succeed_when(
         database: PgPool,
-        #[case] uuid: Uuid,
-        #[case] first_name: &str,
-        #[case] last_name: &str,
-        #[case] username: &str,
-        #[case] password: &str,
-        #[case] roles: Vec<&str>,
+        #[case] user_request: CreateUserRequest,
     ) -> EmResult<()> {
         let service = PgUserService::new(&database);
-        let user_request =
-            create_user_request(uuid, first_name, last_name, username, password, &roles);
 
         let action = service.create_user(&user_request).await;
-        cleanup_user_create(username, &database).await?;
+        cleanup_user_create(&user_request.username, &database).await?;
 
         let user = action?;
-        let user_roles: Vec<&str> = user.roles.iter().map(|r| r.name.as_ref()).collect();
+        let user_roles: Vec<RoleName> = user.roles.iter().map(|r| r.name).collect();
 
-        assert_eq!(user.full_name, format!("{} {}", first_name, last_name));
-        assert_eq!(user_roles, roles);
+        assert_eq!(
+            user.full_name,
+            format!("{} {}", user_request.first_name, user_request.last_name)
+        );
+        assert_eq!(user_roles, user_request.roles);
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::user_does_not_exist(create_user_request(Uuid::new_v4(), "Mr", "Test2", "test2", "Test1!", &["admin"]))]
+    #[case::missing_privilege(create_user_request(uuid!("728ac060-9d38-47e9-b2fa-66d2954110e3"), "Mr", "Test3", "test3", "Test1!", &["admin"]))]
+    #[case::username_exists(create_user_request(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "Mr", "Test4", "none", "Test1!", &["admin"]))]
+    #[tokio::test]
+    async fn create_user_should_fail_when(
+        database: PgPool,
+        #[case] user_request: CreateUserRequest,
+    ) -> EmResult<()> {
+        let service = PgUserService::new(&database);
+
+        let action = service.create_user(&user_request).await;
+        if user_request.username != "none" {
+            cleanup_user_create(&user_request.username, &database).await?;
+        }
+
+        assert!(action.is_err());
 
         Ok(())
     }
@@ -275,6 +297,40 @@ mod test {
         let user_roles: Vec<&str> = user.roles.iter().map(|r| r.name.as_ref()).collect();
         assert_eq!(user.full_name, full_name);
         assert_eq!(user_roles, roles);
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::valid_request(validate_user_request("admin", "admin"), uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"))]
+    #[tokio::test]
+    async fn validate_user_should_succeed_when(
+        database: PgPool,
+        #[case] validate_user_request: ValidateUserRequest,
+        #[case] uuid: Uuid,
+    ) -> EmResult<()> {
+        let service = PgUserService::new(&database);
+
+        let user = service.validate_user(&validate_user_request).await?;
+
+        assert_eq!(user.uid, uuid);
+
+        Ok(())
+    }
+
+    #[rstest]
+    #[case::invalid_username(validate_user_request("test", "admin"))]
+    #[case::invalid_password(validate_user_request("admin", "test"))]
+    #[tokio::test]
+    async fn validate_user_should_fail_when(
+        database: PgPool,
+        #[case] validate_user_request: ValidateUserRequest,
+    ) -> EmResult<()> {
+        let service = PgUserService::new(&database);
+
+        let action = service.validate_user(&validate_user_request).await;
+
+        assert!(action.is_err());
 
         Ok(())
     }

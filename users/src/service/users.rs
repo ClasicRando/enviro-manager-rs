@@ -264,6 +264,14 @@ pub(crate) mod test {
         }
     }
 
+    /// Utility method for creating a new [ValidateUserRequest]
+    pub(crate) fn validate_user_request(username: &str, password: &str) -> ValidateUserRequest {
+        ValidateUserRequest {
+            username: username.to_string(),
+            password: password.to_string(),
+        }
+    }
+
     /// Utility method for creating a new [UpdateUserRequest]
     pub(crate) fn update_user_request(
         username: &str,
@@ -271,10 +279,7 @@ pub(crate) mod test {
         update_type: UpdateUserType,
     ) -> UpdateUserRequest {
         UpdateUserRequest {
-            validate_user: ValidateUserRequest {
-                username: username.to_string(),
-                password: password.to_string(),
-            },
+            validate_user: validate_user_request(username, password),
             update_type,
         }
     }
