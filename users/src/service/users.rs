@@ -8,7 +8,7 @@ use sqlx::{Database, Pool};
 use uuid::Uuid;
 
 use super::roles::Role;
-use crate::{api::users::validate_user, service::roles::RoleName};
+use crate::service::roles::RoleName;
 
 /// User entity as the uuid of the user, their full name and all roles possessed by the user.
 #[derive(Serialize, sqlx::FromRow)]
