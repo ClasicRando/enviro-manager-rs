@@ -1,5 +1,5 @@
 use common::{
-    api::ApiRequest,
+    api::ApiRequestValidator,
     database::connection::{finalize_transaction, get_connection_with_em_uid},
     error::{EmError, EmResult},
 };
@@ -9,8 +9,8 @@ use uuid::Uuid;
 use crate::service::{
     roles::RoleName,
     users::{
-        CreateUserRequest, ModifyUserRoleRequest, UpdateUserRequest, UpdateUserType, User,
-        UserService, ValidateUserRequest,
+        CreateUserRequest, CreateUserRequestValidator, ModifyUserRoleRequest, UpdateUserRequest,
+        UpdateUserRequestValidator, UpdateUserType, User, UserService, ValidateUserRequest,
     },
 };
 
@@ -63,14 +63,16 @@ impl PgUserService {
 }
 
 impl UserService for PgUserService {
+    type CreateRequestValidator = CreateUserRequestValidator;
     type Database = Postgres;
+    type UpdateRequestValidator = UpdateUserRequestValidator;
 
     fn new(pool: &Pool<Self::Database>) -> Self {
         Self { pool: pool.clone() }
     }
 
     async fn create_user(&self, request: &CreateUserRequest) -> EmResult<User> {
-        request.validate()?;
+        Self::CreateRequestValidator::validate(request)?;
         let CreateUserRequest {
             current_uid,
             first_name,
@@ -132,7 +134,7 @@ impl UserService for PgUserService {
     }
 
     async fn update(&self, request: &UpdateUserRequest) -> EmResult<User> {
-        request.validate()?;
+        Self::UpdateRequestValidator::validate(request)?;
         let UpdateUserRequest {
             validate_user,
             update_type,
@@ -200,7 +202,7 @@ impl UserService for PgUserService {
 
 #[cfg(test)]
 mod test {
-    use std::str::FromStr;
+
     use common::error::EmResult;
     use rstest::rstest;
     use sqlx::PgPool;
@@ -209,28 +211,8 @@ mod test {
     use super::PgUserService;
     use crate::service::{
         postgres::test::database,
-        users::{CreateUserRequest, UserService},
+        users::{test::create_user_request, UserService},
     };
-    use crate::service::roles::RoleName;
-
-    /// Utility method for creating a new [CreateUserRequest]
-    fn create_user_request(
-        uuid: Uuid,
-        first_name: &str,
-        last_name: &str,
-        username: &str,
-        password: &str,
-        roles: &[&str],
-    ) -> CreateUserRequest {
-        CreateUserRequest {
-            current_uid: uuid,
-            first_name: first_name.to_string(),
-            last_name: last_name.to_string(),
-            username: username.to_string(),
-            password: password.to_string(),
-            roles: roles.iter().map(|r| RoleName::from_str(r).unwrap()).collect(),
-        }
-    }
 
     /// Cleanup function for users that are created during tests
     async fn cleanup_user_create(username: &str, pool: &PgPool) -> EmResult<()> {

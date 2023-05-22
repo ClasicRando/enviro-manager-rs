@@ -83,13 +83,13 @@ impl<T: Serialize> ApiResponse<T> {
     }
 }
 
-/// Defines behaviour that an api request must have
-pub trait ApiRequest
-where
-    Self: Debug,
-{
-    /// Perform checks against the request to confirm it meets specified requirements. Returns an
+/// Validator for api requests that should have the request data verified
+pub trait ApiRequestValidator {
+    /// Type of request this validator is processing. Must implement debug to convert into an
+    /// [EmError] type.
+    type Request: Debug;
+    /// Perform checks against the `request` to confirm it meets specified requirements. Returns an
     /// [Err] of [EmError][crate::error::EmError] if the request is not valid. Otherwise [Ok] is
     /// returned.
-    fn validate(&self) -> EmResult<()>;
+    fn validate(request: &Self::Request) -> EmResult<()>;
 }

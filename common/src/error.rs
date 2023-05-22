@@ -1,11 +1,11 @@
+use std::fmt::Debug;
+
 use chrono::NaiveDateTime;
 use lettre::{
     address::AddressError, error::Error as EmailError, transport::smtp::Error as StmpError,
 };
 use sqlx::types::Uuid;
 use thiserror::Error;
-
-use crate::api::ApiRequest;
 
 /// All possible error types that may occur during workflow engine operations
 #[derive(Error, Debug)]
@@ -75,11 +75,11 @@ impl From<String> for EmError {
     }
 }
 
-impl<R> From<(&R, &'static str)> for EmError
+impl<D> From<(&D, &'static str)> for EmError
 where
-    R: ApiRequest,
+    D: Debug,
 {
-    fn from(value: (&R, &'static str)) -> Self {
+    fn from(value: (&D, &'static str)) -> Self {
         Self::InvalidRequest {
             request: format!("{:?}", value.0),
             reason: value.1,
