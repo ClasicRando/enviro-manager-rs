@@ -1,8 +1,6 @@
 use common::error::EmResult;
 use serde::{Deserialize, Serialize};
-use sqlx::{Encode, Postgres};
-use sqlx::database::HasArguments;
-use sqlx::encode::IsNull;
+use sqlx::{database::HasArguments, encode::IsNull, Encode, Postgres};
 use strum::{AsRefStr, EnumIter, EnumString, IntoStaticStr};
 use uuid::Uuid;
 
@@ -18,8 +16,8 @@ pub struct Role {
 }
 
 impl<'q> Encode<'q, Postgres> for Role
-    where
-        &'q str: Encode<'q, Postgres>,
+where
+    &'q str: Encode<'q, Postgres>,
 {
     fn encode_by_ref(&self, buf: &mut <Postgres as HasArguments<'q>>::ArgumentBuffer) -> IsNull {
         let val = match self.name {
@@ -39,7 +37,9 @@ impl<'q> Encode<'q, Postgres> for Role
 }
 
 /// All role names that exist as their common name
-#[derive(Serialize, Deserialize, EnumIter, EnumString, IntoStaticStr, AsRefStr, PartialEq, Debug)]
+#[derive(
+    Serialize, Deserialize, EnumIter, EnumString, IntoStaticStr, AsRefStr, PartialEq, Debug,
+)]
 pub enum RoleName {
     #[serde(rename = "admin")]
     #[strum(serialize = "admin")]

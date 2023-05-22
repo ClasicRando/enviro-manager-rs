@@ -57,7 +57,10 @@ pub enum EmError {
     #[error("Record cannot be found for `{pk}`")]
     MissingRecord { pk: String },
     #[error("Contents of request '{request}' were not valid.\nReason: {reason}")]
-    InvalidRequest { request: String, reason: String },
+    InvalidRequest {
+        request: String,
+        reason: &'static str,
+    },
 }
 
 impl From<&str> for EmError {
@@ -72,11 +75,11 @@ impl From<String> for EmError {
     }
 }
 
-impl<R> From<(&R, String)> for EmError
+impl<R> From<(&R, &str)> for EmError
 where
     R: ApiRequest,
 {
-    fn from(value: (&R, String)) -> Self {
+    fn from(value: (&R, &str)) -> Self {
         Self::InvalidRequest {
             request: format!("{:?}", value.0),
             reason: value.1,

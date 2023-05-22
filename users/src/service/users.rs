@@ -1,14 +1,14 @@
-use lazy_regex::regex;
 use common::{
     api::ApiRequest,
     error::{EmError, EmResult},
 };
+use lazy_regex::regex;
 use serde::{Deserialize, Serialize};
 use sqlx::{Database, Pool};
 use uuid::Uuid;
 
 use super::roles::Role;
-use crate::service::roles::RoleName;
+use crate::{api::users::validate_user, service::roles::RoleName};
 
 /// User entity as the uuid of the user, their full name and all roles possessed by the user.
 #[derive(Serialize, sqlx::FromRow)]
@@ -79,25 +79,22 @@ pub struct CreateUserRequest {
     /// Password of the user to be created. Must follow rules specified here
     pub(crate) password: String,
     /// Roles of the user to be created
-    pub(crate) roles: Vec<String>,
+    pub(crate) roles: Vec<RoleName>,
 }
 
 impl ApiRequest for CreateUserRequest {
     fn validate(&self) -> EmResult<()> {
         if self.first_name.trim().is_empty() {
-            return Err((self, "first_name cannot be empty or whitespace".to_string()).into());
+            return Err((self, "first_name cannot be empty or whitespace").into());
         }
         if self.last_name.trim().is_empty() {
-            return Err((self, "last_name cannot be empty or whitespace".to_string()).into());
+            return Err((self, "last_name cannot be empty or whitespace").into());
         }
         if self.username.trim().is_empty() {
-            return Err((self, "username cannot be empty or whitespace".to_string()).into());
+            return Err((self, "username cannot be empty or whitespace").into());
         }
         if self.password.trim().is_empty() {
-            return Err((self, "password cannot be empty or whitespace".to_string()).into());
-        }
-        if self.roles.iter().any(|r| r.trim().is_empty()) {
-            return Err((self, "roles cannot be empty or whitespace".to_string()).into());
+            return Err((self, "password cannot be empty or whitespace").into());
         }
         validate_password(&self.password)?;
         Ok(())
@@ -105,7 +102,7 @@ impl ApiRequest for CreateUserRequest {
 }
 
 /// Request object for updating an existing user
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct UpdateUserRequest {
     /// Username of the user to updated. Required to verify user before updating.
     #[serde(flatten)]
@@ -113,6 +110,35 @@ pub struct UpdateUserRequest {
     /// Update variation the is required to be performed
     #[serde(flatten)]
     pub(crate) update_type: UpdateUserType,
+}
+
+impl ApiRequest for UpdateUserRequest {
+    fn validate(&self) -> EmResult<()> {
+        match &self.update_type {
+            UpdateUserType::Username { new_username } => {
+                if new_username.trim().is_empty() {
+                    return Err((self, "new_username cannot be empty or whitespace").into());
+                }
+            }
+            UpdateUserType::FullName {
+                new_first_name,
+                new_last_name,
+            } => {
+                if new_first_name.trim().is_empty() {
+                    return Err((self, "new_first_name cannot be empty or whitespace").into());
+                }
+                if new_last_name.trim().is_empty() {
+                    return Err((self, "new_last_name cannot be empty or whitespace").into());
+                }
+            }
+            UpdateUserType::ResetPassword { new_password } => {
+                if new_password.trim().is_empty() {
+                    return Err((self, "new_password cannot be empty or whitespace").into());
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 impl UpdateUserRequest {
@@ -123,7 +149,7 @@ impl UpdateUserRequest {
 }
 
 /// User update type variations
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(untagged)]
 pub enum UpdateUserType {
     /// User is attempting to update the user's username to a new value
@@ -138,7 +164,7 @@ pub enum UpdateUserType {
 }
 
 /// Request object to validate the user given their username and password
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct ValidateUserRequest {
     /// Username of the user to verify it's credentials
     pub(crate) username: String,
@@ -147,14 +173,14 @@ pub struct ValidateUserRequest {
 }
 
 /// Request object to allow an admin user to add or revoke another users role
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct ModifyUserRoleRequest {
     /// uuid of the user attempting to perform the action
     pub(crate) current_uid: Uuid,
     /// uuid of the user to perform the action on
     pub(crate) uid: Uuid,
     /// Name of the role to modify for the specified `uid`
-    pub(crate) role: String,
+    pub(crate) role: RoleName,
     /// Flag indicating if the role should be added or revoked for the specified `uid`
     pub(crate) add: bool,
 }

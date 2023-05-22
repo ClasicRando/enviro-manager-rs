@@ -132,6 +132,7 @@ impl UserService for PgUserService {
     }
 
     async fn update(&self, request: &UpdateUserRequest) -> EmResult<User> {
+        request.validate()?;
         let UpdateUserRequest {
             validate_user,
             update_type,
