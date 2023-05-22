@@ -75,11 +75,11 @@ impl From<String> for EmError {
     }
 }
 
-impl<R> From<(&R, &str)> for EmError
+impl<R> From<(&R, &'static str)> for EmError
 where
     R: ApiRequest,
 {
-    fn from(value: (&R, &str)) -> Self {
+    fn from(value: (&R, &'static str)) -> Self {
         Self::InvalidRequest {
             request: format!("{:?}", value.0),
             reason: value.1,

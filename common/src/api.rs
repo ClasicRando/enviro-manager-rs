@@ -60,9 +60,9 @@ impl<T: Serialize> ApiResponse<T> {
 
     /// Generate an [ApiResponse] wrapping a [Response::Error]. This is intended for errors that
     /// are not runtime errors but rather user input issues.
-    pub fn failure(message: String) -> Self {
-        warn!("{}", message);
-        Self::Failure(message)
+    pub fn failure<S: AsRef<str>>(message: S) -> Self {
+        warn!("{}", message.as_ref());
+        Self::Failure(message.as_ref().to_string())
     }
 
     /// Generate an [ApiResponse] wrapping a [Response::Error]. This is intended for errors that
