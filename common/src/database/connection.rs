@@ -60,11 +60,11 @@ pub async fn get_connection_with_em_uid<D>(
     uid: &Uuid,
     pool: &Pool<D>,
 ) -> EmResult<PoolConnection<D>>
-    where
-        D: Database,
-        for<'q> Uuid: Encode<'q, D> + Type<D>,
-        for<'c> &'c mut PoolConnection<D>: Executor<'c, Database = D>,
-        for<'q> <D as HasArguments<'q>>::Arguments: IntoArguments<'q, D>,
+where
+    D: Database,
+    for<'q> Uuid: Encode<'q, D> + Type<D>,
+    for<'c> &'c mut PoolConnection<D>: Executor<'c, Database = D>,
+    for<'q> <D as HasArguments<'q>>::Arguments: IntoArguments<'q, D>,
 {
     let mut connection = pool.acquire().await?;
     sqlx::query("select set_config('em.uid',$1::text,false)")
@@ -81,8 +81,8 @@ pub async fn finalize_transaction<T, D>(
     result: Result<T, sqlx::Error>,
     transaction: Transaction<'_, D>,
 ) -> EmResult<T>
-    where
-        D: Database,
+where
+    D: Database,
 {
     match result {
         Ok(inner) => {

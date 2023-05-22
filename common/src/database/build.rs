@@ -4,9 +4,7 @@ use serde::Deserialize;
 use sqlx::PgPool;
 use tokio::{fs::File, io::AsyncReadExt};
 
-use crate::error::EmResult;
-
-use crate::{execute_anonymous_block, package_dir, read_file, workspace_dir};
+use crate::{error::EmResult, execute_anonymous_block, package_dir, read_file, workspace_dir};
 
 /// Database builder object defining the common database dependencies and the schema entries
 /// required.
@@ -64,9 +62,9 @@ impl DbBuildEntry {
     fn dependencies_met<'e>(&self, completed: &'e HashSet<&'e str>) -> bool {
         self.dependencies.is_empty()
             || self
-            .dependencies
-            .iter()
-            .all(|d| completed.contains(d.as_str()))
+                .dependencies
+                .iter()
+                .all(|d| completed.contains(d.as_str()))
     }
 
     /// Run the build entry by fetching the entries file contents (relative path to the
@@ -147,10 +145,7 @@ pub(crate) async fn db_build(directory: &Path) -> EmResult<DbBuild> {
 
 /// Build the common `schema` by name. Extracts a [DbBuild] instance from the specified `schema`
 /// directory, building each entry in order as required by dependency hierarchy.
-async fn build_common_schema(
-    schema: &str,
-    pool: &PgPool,
-) -> EmResult<()> {
+async fn build_common_schema(schema: &str, pool: &PgPool) -> EmResult<()> {
     let schema_directory = workspace_dir().join("common-database").join(schema);
     let db_build = db_build(&schema_directory).await?;
 

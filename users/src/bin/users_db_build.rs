@@ -1,7 +1,10 @@
 use std::path::PathBuf;
 
 use common::{
-    database::{connection::{ConnectionBuilder, PgConnectionBuilder}, build::build_database},
+    database::{
+        build::build_database,
+        connection::{ConnectionBuilder, PgConnectionBuilder},
+    },
     error::EmResult,
 };
 use log::{error, info, warn};
