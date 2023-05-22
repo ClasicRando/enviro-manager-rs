@@ -2,7 +2,6 @@ use std::{collections::HashSet, path::Path};
 
 use serde::Deserialize;
 use sqlx::PgPool;
-use tokio::{fs::File, io::AsyncReadExt};
 
 use crate::{error::EmResult, execute_anonymous_block, package_dir, read_file, workspace_dir};
 
@@ -24,6 +23,16 @@ pub(crate) struct DbBuild {
 }
 
 impl DbBuild {
+    /// Extract a [DbBuild] instance using the `directory` provided. The `directory` should point to
+    /// a directory that contains a "build.json" file that can be deserializable into the [DbBuild]
+    /// struct.
+    pub(crate) async fn new<P: AsRef<Path>>(path: P) -> EmResult<Self> {
+        let path = path.as_ref().join("build.json");
+        let contents = read_file(path).await?;
+        let db_build: DbBuild = serde_json::from_str(&contents)?;
+        Ok(db_build)
+    }
+
     /// Returns the `entries` wrapped in a custom [Iterator] that orders the results by the next
     /// available entry that can be built. This ensures that an entry is only built once all
     /// dependencies are met.
@@ -33,13 +42,13 @@ impl DbBuild {
 
     /// Run the database build operations by building the common schema requirements then
     /// proceeding to run each [DbBuildEntry] to completion.
-    async fn run(&self, directory: &Path, pool: &PgPool) -> EmResult<()> {
+    async fn run<P: AsRef<Path>>(&self, directory: P, pool: &PgPool) -> EmResult<()> {
         for dep in &self.common_dependencies {
             build_common_schema(dep, pool).await?
         }
 
         for entry in self.entries_ordered() {
-            entry.run(directory, pool).await?;
+            entry.run(directory.as_ref(), pool).await?;
         }
         Ok(())
     }
@@ -131,23 +140,11 @@ impl<'e> Iterator for OrderIter<'e> {
     }
 }
 
-/// Extract a [DbBuild] instance using the `directory` provided. The `directory` should point to a
-/// directory that contains a "build.json" file that can be deserializable into the [DbBuild]
-/// struct.
-pub(crate) async fn db_build(directory: &Path) -> EmResult<DbBuild> {
-    let path = directory.join("build.json");
-    let mut file = File::open(&path).await?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents).await?;
-    let db_build: DbBuild = serde_json::from_str(&contents)?;
-    Ok(db_build)
-}
-
 /// Build the common `schema` by name. Extracts a [DbBuild] instance from the specified `schema`
 /// directory, building each entry in order as required by dependency hierarchy.
 async fn build_common_schema(schema: &str, pool: &PgPool) -> EmResult<()> {
     let schema_directory = workspace_dir().join("common-database").join(schema);
-    let db_build = db_build(&schema_directory).await?;
+    let db_build = DbBuild::new(&schema_directory).await?;
 
     for entry in db_build.entries_ordered() {
         entry.run(&schema_directory, pool).await?;
@@ -160,7 +157,7 @@ async fn build_common_schema(schema: &str, pool: &PgPool) -> EmResult<()> {
 /// expected JSON structure.
 pub async fn build_database(pool: &PgPool) -> EmResult<()> {
     let database_directory = package_dir().join("database");
-    let db_build = db_build(&database_directory).await?;
+    let db_build = DbBuild::new(&database_directory).await?;
 
     db_build.run(&database_directory, pool).await?;
     Ok(())

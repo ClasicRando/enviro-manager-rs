@@ -10,7 +10,7 @@ use tokio::{
 };
 
 use crate::{
-    database::build::db_build, execute_anonymous_block, execute_anonymous_block_transaction,
+    database::build::DbBuild, execute_anonymous_block, execute_anonymous_block_transaction,
     package_dir, read_file, workspace_dir,
 };
 
@@ -219,7 +219,7 @@ pub async fn run_db_tests(pool: &PgPool) -> Result<(), Box<dyn std::error::Error
     }
 
     let schema_directory = package_dir.join("database");
-    let db_build = db_build(&schema_directory).await?;
+    let db_build = DbBuild::new(&schema_directory).await?;
 
     for common_schema in &db_build.common_dependencies {
         run_common_db_tests(pool, common_schema).await?;
