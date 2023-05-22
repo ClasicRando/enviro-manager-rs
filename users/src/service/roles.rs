@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::service::users::UserService;
 
 /// EnviroManager user role
-#[derive(Serialize)]
+#[derive(Serialize, PartialEq, Debug)]
 pub struct Role {
     /// Name of the role. Unique within all roles
     pub(crate) name: RoleName,
@@ -39,7 +39,7 @@ impl<'q> Encode<'q, Postgres> for Role
 }
 
 /// All role names that exist as their common name
-#[derive(Serialize, Deserialize, EnumIter, EnumString, IntoStaticStr, AsRefStr, PartialEq)]
+#[derive(Serialize, Deserialize, EnumIter, EnumString, IntoStaticStr, AsRefStr, PartialEq, Debug)]
 pub enum RoleName {
     #[serde(rename = "admin")]
     #[strum(serialize = "admin")]

@@ -84,7 +84,7 @@ mod test {
     use super::PgRoleService;
     use crate::service::{
         postgres::{test::database, users::PgUserService},
-        roles::{RoleName, RoleService},
+        roles::{Role, RoleName, RoleService},
         users::UserService,
     };
 
@@ -93,11 +93,17 @@ mod test {
     #[tokio::test]
     async fn read_all_should_succeed_when(database: PgPool, #[case] uuid: Uuid) -> EmResult<()> {
         let service = PgRoleService::new(&PgUserService::new(&database));
-        let role_count = RoleName::iter().count();
+        let static_roles: Vec<Role> = RoleName::iter()
+            .map(|name| {
+                let description = name.description();
+                Role { name, description }
+            })
+            .collect();
 
         let roles = service.read_all(&uuid).await?;
 
-        assert_eq!(roles.len(), role_count);
+        assert_eq!(roles.len(), static_roles.len());
+        assert_eq!(roles, static_roles);
 
         Ok(())
     }
