@@ -63,8 +63,8 @@ impl PgUserService {
 }
 
 impl UserService for PgUserService {
-    type CreateRequestValidator = CreateUserRequestValidator;
     type Database = Postgres;
+    type CreateRequestValidator = CreateUserRequestValidator;
     type UpdateRequestValidator = UpdateUserRequestValidator;
 
     fn new(pool: &Pool<Self::Database>) -> Self {
