@@ -1,8 +1,10 @@
 use common::error::EmResult;
 use sqlx::{
+    database::HasArguments,
     decode::Decode,
+    encode::IsNull,
     postgres::{PgHasArrayType, PgTypeInfo, PgValueRef},
-    Postgres, Type,
+    Encode, Postgres, Type,
 };
 use strum::IntoEnumIterator;
 use uuid::Uuid;
@@ -28,6 +30,32 @@ impl<'r> Decode<'r, Postgres> for Role {
     }
 }
 
+impl<'q> Encode<'q, Postgres> for Role
+where
+    RoleName: Encode<'q, Postgres>,
+{
+    fn encode_by_ref(&self, buf: &mut <Postgres as HasArguments<'q>>::ArgumentBuffer) -> IsNull {
+        <RoleName as Encode<'q, Postgres>>::encode(self.name, buf)
+    }
+
+    fn size_hint(&self) -> usize {
+        <RoleName as Encode<'q, Postgres>>::size_hint(&self.name)
+    }
+}
+
+impl<'q> Encode<'q, Postgres> for RoleName
+where
+    &'q str: Encode<'q, Postgres>,
+{
+    fn encode_by_ref(&self, buf: &mut <Postgres as HasArguments<'q>>::ArgumentBuffer) -> IsNull {
+        <&str as Encode<'q, Postgres>>::encode(self.into(), buf)
+    }
+
+    fn size_hint(&self) -> usize {
+        <&str as Encode<'q, Postgres>>::size_hint(&self.into())
+    }
+}
+
 impl Type<Postgres> for Role {
     fn type_info() -> PgTypeInfo {
         PgTypeInfo::with_name("text")
@@ -35,6 +63,18 @@ impl Type<Postgres> for Role {
 }
 
 impl PgHasArrayType for Role {
+    fn array_type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("_text")
+    }
+}
+
+impl Type<Postgres> for RoleName {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("text")
+    }
+}
+
+impl PgHasArrayType for RoleName {
     fn array_type_info() -> PgTypeInfo {
         PgTypeInfo::with_name("_text")
     }

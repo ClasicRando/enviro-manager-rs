@@ -200,6 +200,7 @@ impl UserService for PgUserService {
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
     use common::error::EmResult;
     use rstest::rstest;
     use sqlx::PgPool;
@@ -210,6 +211,7 @@ mod test {
         postgres::test::database,
         users::{CreateUserRequest, UserService},
     };
+    use crate::service::roles::RoleName;
 
     /// Utility method for creating a new [CreateUserRequest]
     fn create_user_request(
@@ -226,7 +228,7 @@ mod test {
             last_name: last_name.to_string(),
             username: username.to_string(),
             password: password.to_string(),
-            roles: roles.iter().map(|r| r.to_string()).collect(),
+            roles: roles.iter().map(|r| RoleName::from_str(r).unwrap()).collect(),
         }
     }
 
