@@ -56,6 +56,9 @@ impl ConnectionBuilder<Postgres> for PgConnectionBuilder {
 }
 
 /// Acquire new pool connection and set the 'em.uid' parameter to the specified [Uuid]
+/// # Errors
+/// This function will return an error when an [Err] is returned from [Pool::acquire] or the SQL
+/// call to set a config parameter.
 pub async fn get_connection_with_em_uid<D>(
     uid: &Uuid,
     pool: &Pool<D>,
@@ -77,7 +80,10 @@ where
 /// Finish a transaction block by calling `COMMIT` if the `result` is [Ok] and `Rollback` if the
 /// `result` is [Err]. If during the transaction `COMMIT` or `ROLLBACK` an error occurs, a
 /// [EmError::CommitError] or [EmError::RollbackError] will be returned (respectively).
-pub async fn finalize_transaction<T, D>(
+/// # Errors
+/// This function will return an error if the original `result` is [Err] or an error is returned
+/// when the transaction runs `COMMIT` or `ROLLBACK`.
+pub async fn finalize_transaction<T: Send, D>(
     result: Result<T, sqlx::Error>,
     transaction: Transaction<'_, D>,
 ) -> EmResult<T>

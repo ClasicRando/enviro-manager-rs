@@ -1,7 +1,6 @@
 use std::path::Path;
+use lazy_regex::{Lazy, regex, Regex};
 
-use lazy_static::lazy_static;
-use regex::Regex;
 use serde::Deserialize;
 use sqlx::PgPool;
 use tokio::{
@@ -117,23 +116,17 @@ async fn run_common_db_tests(
     pool: &PgPool,
     common_db_name: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let tests = workspace_dir()
+    let tests = workspace_dir()?
         .join("common-database")
         .join(common_db_name)
         .join("tests");
     run_tests(&tests, pool).await
 }
 
-lazy_static! {
-    static ref ENUM_REGEX: Regex = Regex::new(
-        r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+)\s+as\s+enum\s*\((?P<labels>[^;]+)\s*\);"
-    )
-    .unwrap();
-    static ref COMPOSITE_REGEX: Regex = Regex::new(
-        r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+?)\s+as\s*\((?P<attributes>[^;]+)\);"
-    )
-    .unwrap();
-}
+static ENUM_REGEX: &Lazy<Regex, fn() -> Regex> =
+    regex!(r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+)\s+as\s+enum\s*\((?P<labels>[^;]+)\s*\);");
+static COMPOSITE_REGEX: &Lazy<Regex, fn() -> Regex> =
+    regex!(r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+?)\s+as\s*\((?P<attributes>[^;]+)\);");
 
 /// Check a database build unit to see if it defines an enum creation. If it does, it checks to see
 /// if all it's specified labels can be found within the database's definition of the enum. If the
@@ -209,8 +202,10 @@ async fn check_for_composite(block: &str, pool: &PgPool) -> Result<(), Box<dyn s
 /// either type definition might not make it to the database and since Postgresql does not support
 /// any replace or update DDL statements for either type definition. In those cases a full refresh
 /// of the database might be required or manual alter statements must be created.
+/// # Errors
+/// TODO
 pub async fn run_db_tests(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
-    let package_dir = package_dir();
+    let package_dir = package_dir()?;
 
     let test_refresh_script = package_dir.join("database").join("test_data.pgsql");
     if test_refresh_script.exists() {

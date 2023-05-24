@@ -1,8 +1,10 @@
 use std::fmt::Debug;
+use actix_session::Session;
 
 use actix_web::Responder;
 use log::{error, warn};
 use serde::Serialize;
+use uuid::Uuid;
 
 use crate::error::{EmError, EmResult};
 
@@ -43,7 +45,7 @@ where
             .content_type(actix_web::http::header::ContentType(
                 mime::APPLICATION_MSGPACK,
             ))
-            .body(actix_web::web::Bytes::from_iter(bytes.into_iter()))
+            .body(bytes.into_iter().collect::<actix_web::web::Bytes>())
     }
 }
 
@@ -62,7 +64,7 @@ impl<T: Serialize> ApiResponse<T> {
     /// are not runtime errors but rather user input issues.
     pub fn failure<S: AsRef<str>>(message: S) -> Self {
         warn!("{}", message.as_ref());
-        Self::Failure(message.as_ref().to_string())
+        Self::Failure(message.as_ref().to_owned())
     }
 
     /// Generate an [ApiResponse] wrapping a [Response::Error]. This is intended for errors that
@@ -73,10 +75,10 @@ impl<T: Serialize> ApiResponse<T> {
             EmError::Generic(message) => Self::failure(message),
             EmError::InvalidRequest { reason, .. } => Self::failure(reason),
             EmError::InvalidPassword { reason } => Self::Error(reason),
-            EmError::InvalidUser => Self::failure(format!("{}", error)),
+            EmError::InvalidUser => Self::failure(format!("{error}")),
             EmError::MissingRecord { .. } => Self::Error("Requested record cannot be found"),
             EmError::RmpDecode(_) => {
-                Self::Failure("Could not decode the request object".to_string())
+                Self::Failure("Could not decode the request object".to_owned())
             }
             _ => Self::Error("Could not perform the required action due to an internal error"),
         }
@@ -91,5 +93,20 @@ pub trait ApiRequestValidator {
     /// Perform checks against the `request` to confirm it meets specified requirements. Returns an
     /// [Err] of [EmError][crate::error::EmError] if the request is not valid. Otherwise [Ok] is
     /// returned.
+    /// # Errors
+    ///
     fn validate(request: &Self::Request) -> EmResult<()>;
+}
+
+/// Validate that a `session` object contains the required data. Returns the users [Uuid] if the
+/// session contains the key 'em_uid'. Otherwise, an [ApiResponse::Failure] is returned and should
+/// be sent as the response to the request.
+/// # Errors
+/// This function will return an error if the `session` does not contain the key 'em_uid'.
+pub fn validate_session<T: Serialize>(session: &Session) -> Result<Uuid, ApiResponse<T>> {
+    let Some(uid) = session.get("em_uid").unwrap_or(None) else {
+        return Err(ApiResponse::failure("Invalid or missing session ID"))
+    };
+    session.renew();
+    Ok(uid)
 }

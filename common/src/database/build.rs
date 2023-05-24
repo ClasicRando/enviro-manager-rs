@@ -26,10 +26,10 @@ impl DbBuild {
     /// Extract a [DbBuild] instance using the `directory` provided. The `directory` should point to
     /// a directory that contains a "build.json" file that can be deserializable into the [DbBuild]
     /// struct.
-    pub(crate) async fn new<P: AsRef<Path>>(path: P) -> EmResult<Self> {
+    pub(crate) async fn new<P: AsRef<Path> + Send>(path: P) -> EmResult<Self> {
         let path = path.as_ref().join("build.json");
         let contents = read_file(path).await?;
-        let db_build: DbBuild = serde_json::from_str(&contents)?;
+        let db_build: Self = serde_json::from_str(&contents)?;
         Ok(db_build)
     }
 
@@ -42,7 +42,7 @@ impl DbBuild {
 
     /// Run the database build operations by building the common schema requirements then
     /// proceeding to run each [DbBuildEntry] to completion.
-    async fn run<P: AsRef<Path>>(&self, directory: P, pool: &PgPool) -> EmResult<()> {
+    async fn run<P: AsRef<Path> + Send>(&self, directory: P, pool: &PgPool) -> EmResult<()> {
         for dep in &self.common_dependencies {
             build_common_schema(dep, pool).await?
         }
@@ -131,7 +131,7 @@ impl<'e> Iterator for OrderIter<'e> {
             }
         }
         if self.returned.len() != self.entries.len() {
-            panic!(
+            log::error!(
                 "Exited iterator with remaining objects to create but not all dependencies \
                  resolved"
             )
@@ -143,7 +143,7 @@ impl<'e> Iterator for OrderIter<'e> {
 /// Build the common `schema` by name. Extracts a [DbBuild] instance from the specified `schema`
 /// directory, building each entry in order as required by dependency hierarchy.
 async fn build_common_schema(schema: &str, pool: &PgPool) -> EmResult<()> {
-    let schema_directory = workspace_dir().join("common-database").join(schema);
+    let schema_directory = workspace_dir()?.join("common-database").join(schema);
     let db_build = DbBuild::new(&schema_directory).await?;
 
     for entry in db_build.entries_ordered() {
@@ -155,8 +155,13 @@ async fn build_common_schema(schema: &str, pool: &PgPool) -> EmResult<()> {
 /// Build the database as specified by the `database` directory of the current package. Build order
 /// and units are found using the 'build.json' file in the `database` directory. See [DbBuild] for
 /// expected JSON structure.
+/// # Errors
+/// This function returns an error when:
+/// - the package directory cannot be found
+/// - an error occurs reading the 'build.json' file
+/// - an error occurs during the database build
 pub async fn build_database(pool: &PgPool) -> EmResult<()> {
-    let database_directory = package_dir().join("database");
+    let database_directory = package_dir()?.join("database");
     let db_build = DbBuild::new(&database_directory).await?;
 
     db_build.run(&database_directory, pool).await?;
