@@ -1,3 +1,4 @@
+use actix_web::cookie::Key;
 use common::{database::connection::PgConnectionBuilder, error::EmResult};
 use sqlx::Postgres;
 use users::{
@@ -9,10 +10,14 @@ use users::{
 #[tokio::main]
 async fn main() -> EmResult<()> {
     log4rs::init_file("users/users_api_server_log.yml", Default::default()).unwrap();
-    api::spawn_api_server::<(&str, u16), PgConnectionBuilder, Postgres, PgRoleService, PgUserService>(
-        ("127.0.0.1", 8080),
-        db_web_options()?,
-    )
+    let signing_key = Key::generate();
+    api::spawn_api_server::<
+        (&str, u16),
+        PgConnectionBuilder,
+        Postgres,
+        PgRoleService,
+        PgUserService,
+    >(("127.0.0.1", 8080), db_web_options()?, signing_key)
     .await?;
     Ok(())
 }

@@ -2,8 +2,8 @@ use std::net::ToSocketAddrs;
 
 use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
 use actix_web::{
-    middleware::Logger,
     cookie::{Key, SameSite},
+    middleware::Logger,
     web::{get, patch, post, Data},
     App, HttpServer,
 };
@@ -22,6 +22,7 @@ use crate::service::{roles::RoleService, users::UserService};
 pub async fn spawn_api_server<A, C, D, R, U>(
     address: A,
     options: <D::Connection as Connection>::Options,
+    signing_key: Key,
 ) -> EmResult<()>
 where
     A: ToSocketAddrs,
@@ -33,14 +34,14 @@ where
     let pool = C::create_pool(options, 20, 10).await?;
     let users_service: Data<U> = Data::new(U::create(&pool));
     let roles_service: Data<R> = Data::new(R::create(users_service.get_ref()));
-    let signing_key = Key::generate();
+    let redis_connection_string = std::env::var("REDIS_CONNECTION")?;
     HttpServer::new(move || {
         App::new().service(
             actix_web::web::scope("/api/v1")
                 .wrap(Logger::default())
                 .wrap(
                     SessionMiddleware::builder(
-                        RedisActorSessionStore::new("10.0.0.218:9874"),
+                        RedisActorSessionStore::new(&redis_connection_string),
                         signing_key.clone(),
                     )
                     .cookie_http_only(false)
