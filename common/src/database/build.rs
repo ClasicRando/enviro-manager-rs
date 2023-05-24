@@ -42,7 +42,7 @@ impl DbBuild {
 
     /// Run the database build operations by building the common schema requirements then
     /// proceeding to run each [DbBuildEntry] to completion.
-    async fn run<P: AsRef<Path> + Send>(&self, directory: P, pool: &PgPool) -> EmResult<()> {
+    async fn run<P: AsRef<Path> + Send + Sync>(&self, directory: P, pool: &PgPool) -> EmResult<()> {
         for dep in &self.common_dependencies {
             build_common_schema(dep, pool).await?
         }

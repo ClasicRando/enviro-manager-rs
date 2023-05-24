@@ -65,7 +65,7 @@ pub enum EmError {
 
 impl From<&str> for EmError {
     fn from(value: &str) -> Self {
-        Self::Generic(value.to_string())
+        Self::Generic(value.to_owned())
     }
 }
 
