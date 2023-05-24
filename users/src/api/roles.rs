@@ -1,15 +1,19 @@
-use common::api::ApiResponse;
-use uuid::uuid;
+use actix_session::Session;
+use common::api::{ApiResponse, validate_session};
 
 use crate::service::roles::{Role, RoleService};
 
 /// API endpoint to fetch all roles
-pub async fn roles<R>(service: actix_web::web::Data<R>) -> ApiResponse<Vec<Role>>
+pub async fn roles<R>(session: Session, service: actix_web::web::Data<R>) -> ApiResponse<Vec<Role>>
 where
     R: RoleService,
 {
+    let uuid = match validate_session(&session) {
+        Ok(inner) => inner,
+        Err(response) => return response,
+    };
     match service
-        .read_all(&uuid!("be4c1ef7-771a-4580-b0dd-ff137c64ab48"))
+        .read_all(&uuid)
         .await
     {
         Ok(roles) => ApiResponse::success(roles),
