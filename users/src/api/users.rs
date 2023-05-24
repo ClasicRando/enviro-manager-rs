@@ -75,7 +75,7 @@ where
     match service.validate_user(&user_request).await {
         Ok(user) => ApiResponse::success(user),
         Err(error) if matches!(error, EmError::InvalidUser) => {
-            ApiResponse::failure("Invalid user credentials".to_string())
+            ApiResponse::failure("Invalid user credentials")
         }
         Err(error) => ApiResponse::error(error),
     }
