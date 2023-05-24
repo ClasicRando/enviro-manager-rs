@@ -28,8 +28,8 @@ where
     U: UserService<Database = D> + Send + Sync + 'static,
 {
     let pool = C::create_pool(options, 20, 10).await?;
-    let users_service: Data<U> = Data::new(U::new(&pool));
-    let roles_service: Data<R> = Data::new(R::new(users_service.get_ref()));
+    let users_service: Data<U> = Data::new(U::create(&pool));
+    let roles_service: Data<R> = Data::new(R::create(users_service.get_ref()));
     HttpServer::new(move || {
         App::new().service(
             actix_web::web::scope("/api/v1")

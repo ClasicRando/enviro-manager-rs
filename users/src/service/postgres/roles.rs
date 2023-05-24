@@ -90,7 +90,7 @@ pub struct PgRoleService {
 impl RoleService for PgRoleService {
     type UserService = PgUserService;
 
-    fn new(user_service: &Self::UserService) -> Self {
+    fn create(user_service: &Self::UserService) -> Self {
         Self {
             user_service: user_service.clone(),
         }
@@ -132,7 +132,7 @@ mod test {
     #[case::privileged_user(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"))]
     #[tokio::test]
     async fn read_all_should_succeed_when(database: PgPool, #[case] uuid: Uuid) -> EmResult<()> {
-        let service = PgRoleService::new(&PgUserService::new(&database));
+        let service = PgRoleService::create(&PgUserService::create(&database));
         let static_roles: Vec<Role> = RoleName::iter()
             .map(|name| {
                 let description = name.description();
@@ -152,7 +152,7 @@ mod test {
     #[case::non_privileged_user(uuid!("be4c1ef7-771a-4580-b0dd-ff137c64ab48"))]
     #[tokio::test]
     async fn read_all_should_fail_when(database: PgPool, #[case] uuid: Uuid) -> EmResult<()> {
-        let service = PgRoleService::new(&PgUserService::new(&database));
+        let service = PgRoleService::create(&PgUserService::create(&database));
 
         let result = service.read_all(&uuid).await;
 

@@ -67,7 +67,7 @@ impl UserService for PgUserService {
     type CreateRequestValidator = CreateUserRequestValidator;
     type UpdateRequestValidator = UpdateUserRequestValidator;
 
-    fn new(pool: &Pool<Self::Database>) -> Self {
+    fn create(pool: &Pool<Self::Database>) -> Self {
         Self { pool: pool.clone() }
     }
 
@@ -235,7 +235,7 @@ mod test {
         database: PgPool,
         #[case] user_request: CreateUserRequest,
     ) -> EmResult<()> {
-        let service = PgUserService::new(&database);
+        let service = PgUserService::create(&database);
 
         let action = service.create_user(&user_request).await;
         cleanup_user_create(&user_request.username, &database).await?;
@@ -261,7 +261,7 @@ mod test {
         database: PgPool,
         #[case] user_request: CreateUserRequest,
     ) -> EmResult<()> {
-        let service = PgUserService::new(&database);
+        let service = PgUserService::create(&database);
 
         let action = service.create_user(&user_request).await;
         if user_request.username != "none" {
@@ -284,7 +284,7 @@ mod test {
         #[case] full_name: &str,
         #[case] roles: Vec<&str>,
     ) -> EmResult<()> {
-        let service = PgUserService::new(&database);
+        let service = PgUserService::create(&database);
 
         let users = service
             .read_all(&uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"))
@@ -309,7 +309,7 @@ mod test {
         #[case] validate_user_request: ValidateUserRequest,
         #[case] uuid: Uuid,
     ) -> EmResult<()> {
-        let service = PgUserService::new(&database);
+        let service = PgUserService::create(&database);
 
         let user = service.validate_user(&validate_user_request).await?;
 
@@ -326,7 +326,7 @@ mod test {
         database: PgPool,
         #[case] validate_user_request: ValidateUserRequest,
     ) -> EmResult<()> {
-        let service = PgUserService::new(&database);
+        let service = PgUserService::create(&database);
 
         let action = service.validate_user(&validate_user_request).await;
 

@@ -60,7 +60,7 @@ where
 
     /// Create new instance of a [RoleService]. Both parameters are references to allow for cloning
     /// of the value.
-    fn new(user_service: &Self::UserService) -> Self;
+    fn create(user_service: &Self::UserService) -> Self;
     /// Read all roles found in the database. Must be an admin user to access roles
     async fn read_all(&self, current_uid: &Uuid) -> EmResult<Vec<Role>>;
 }

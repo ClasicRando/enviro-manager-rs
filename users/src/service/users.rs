@@ -204,7 +204,7 @@ where
     type UpdateRequestValidator: ApiRequestValidator<Request = UpdateUserRequest>;
 
     /// Create new instance of a [UserService]
-    fn new(pool: &Pool<Self::Database>) -> Self;
+    fn create(pool: &Pool<Self::Database>) -> Self;
     /// Create a new [User]. The user specified in `request` must have the 'admin' role to perform
     /// this action. Returns the newly created [User]
     async fn create_user(&self, request: &CreateUserRequest) -> EmResult<User>;
