@@ -1,5 +1,7 @@
+use actix_session::Session;
 use common::{api::ApiResponse, error::EmError};
 use log::error;
+use common::api::validate_session;
 
 use crate::service::users::{
     CreateUserRequest, ModifyUserRoleRequest, UpdateUserRequest, User, UserService,
@@ -8,12 +10,17 @@ use crate::service::users::{
 
 /// API endpoint to create a new user
 pub async fn create_user<U>(
+    session: Session,
     data: actix_web::web::Bytes,
     service: actix_web::web::Data<U>,
 ) -> ApiResponse<User>
 where
     U: UserService,
 {
+    let uuid = match validate_session(&session) {
+        Ok(inner) => inner,
+        Err(response) => return response,
+    };
     let user_request: CreateUserRequest = match rmp_serde::from_slice(&data) {
         Ok(inner) => inner,
         Err(error) => {
@@ -24,7 +31,7 @@ where
             ));
         }
     };
-    match service.create_user(&user_request).await {
+    match service.create_user(&uuid, &user_request).await {
         Ok(user) => ApiResponse::success(user),
         Err(error) => ApiResponse::error(error),
     }
@@ -32,12 +39,17 @@ where
 
 /// API endpoint to update a user
 pub async fn update_user<U>(
+    session: Session,
     data: actix_web::web::Bytes,
     service: actix_web::web::Data<U>,
 ) -> ApiResponse<()>
 where
     U: UserService,
 {
+    let uuid = match validate_session(&session) {
+        Ok(inner) => inner,
+        Err(response) => return response,
+    };
     let user_request: UpdateUserRequest = match rmp_serde::from_slice(&data) {
         Ok(inner) => inner,
         Err(error) => {
@@ -48,7 +60,7 @@ where
             ));
         }
     };
-    match service.update(&user_request).await {
+    match service.update(&uuid, &user_request).await {
         Ok(_) => ApiResponse::message(format!("Updated username for {}", user_request.username())),
         Err(error) => ApiResponse::error(error),
     }
@@ -83,12 +95,17 @@ where
 
 /// API endpoint to add/remove a role for a specified user
 pub async fn modify_user_role<U>(
+    session: Session,
     data: actix_web::web::Bytes,
     service: actix_web::web::Data<U>,
 ) -> ApiResponse<User>
 where
     U: UserService,
 {
+    let uuid = match validate_session(&session) {
+        Ok(inner) => inner,
+        Err(response) => return response,
+    };
     let user_request: ModifyUserRoleRequest = match rmp_serde::from_slice(&data) {
         Ok(inner) => inner,
         Err(error) => {
@@ -99,7 +116,7 @@ where
             ));
         }
     };
-    match service.modify_user_role(&user_request).await {
+    match service.modify_user_role(&uuid, &user_request).await {
         Ok(user) => ApiResponse::success(user),
         Err(error) => ApiResponse::error(error),
     }
