@@ -3,14 +3,14 @@ use actix_session::Session;
 
 use actix_web::Responder;
 use log::{error, warn};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::error::{EmError, EmResult};
 
 /// Generic response object as an API response. A response is either a success containing data, a
 /// message to let the user know what happened or an error/failure message.
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 pub enum ApiResponse<T: Serialize> {
     Success(T),
