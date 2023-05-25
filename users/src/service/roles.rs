@@ -11,7 +11,7 @@ pub struct Role {
     /// Name of the role. Unique within all roles
     pub(crate) name: RoleName,
     /// Short description of the role
-    pub(crate) description: &'static str,
+    pub(crate) description: String,
 }
 
 /// All role names that exist as their common name
