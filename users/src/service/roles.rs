@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::service::users::UserService;
 
 /// EnviroManager user role
-#[derive(Serialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Role {
     /// Name of the role. Unique within all roles
     pub(crate) name: RoleName,
