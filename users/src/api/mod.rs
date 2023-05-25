@@ -1,6 +1,6 @@
 use std::net::ToSocketAddrs;
 
-use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
+use actix_session::{storage::SessionStore, SessionMiddleware};
 use actix_web::{
     cookie::{Key, SameSite},
     middleware::Logger,
@@ -19,9 +19,10 @@ use crate::service::{roles::RoleService, users::UserService};
 /// you must have created a [ConnectionBuilder], [RoleService] and [UserService] for your desired
 /// [Database] implementation. Each component depends of a [Database] type so the system cannot
 /// contain disjointed service implementations to operate.
-pub async fn spawn_api_server<A, C, D, R, U>(
+pub async fn spawn_api_server<A, C, D, R, S, U>(
     address: A,
     options: <D::Connection as Connection>::Options,
+    session_store: S,
     signing_key: Key,
 ) -> EmResult<()>
 where
@@ -29,24 +30,21 @@ where
     C: ConnectionBuilder<D>,
     D: Database,
     R: RoleService<UserService = U> + Send + Sync + 'static,
+    S: SessionStore + Send + Clone,
     U: UserService<Database = D> + Send + Sync + 'static,
 {
     let pool = C::create_pool(options, 20, 10).await?;
     let users_service: Data<U> = Data::new(U::create(&pool));
     let roles_service: Data<R> = Data::new(R::create(users_service.get_ref()));
-    let redis_connection_string = std::env::var("REDIS_CONNECTION")?;
     HttpServer::new(move || {
         App::new().service(
             actix_web::web::scope("/api/v1")
                 .wrap(Logger::default())
                 .wrap(
-                    SessionMiddleware::builder(
-                        RedisActorSessionStore::new(&redis_connection_string),
-                        signing_key.clone(),
-                    )
-                    .cookie_http_only(false)
-                    .cookie_same_site(SameSite::Strict)
-                    .build(),
+                    SessionMiddleware::builder(session_store.clone(), signing_key.clone())
+                        .cookie_http_only(false)
+                        .cookie_same_site(SameSite::Strict)
+                        .build(),
                 )
                 .app_data(roles_service.clone())
                 .app_data(users_service.clone())

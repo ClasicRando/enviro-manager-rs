@@ -16,7 +16,7 @@ thiserror = "1.0.38"
 indoc = "2"
 lettre = { version = "0.10.1", features = ["tokio1", "tokio1-native-tls"] }
 actix-web = { version = "4.3.1" }
-actix-session = { version = "0.7.2", features = ["redis-actor-session"] }
+actix-session = { version = "0.7.2", features = ["redis-rs-session"] }
 mime = "0.3.17"
 async-trait = "0.1.68"
 mockall = "0.11.4"
