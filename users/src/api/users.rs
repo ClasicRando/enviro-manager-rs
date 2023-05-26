@@ -1,7 +1,9 @@
 use actix_session::Session;
-use common::{api::ApiResponse, error::EmError};
+use common::{
+    api::{validate_session, ApiResponse},
+    error::EmError,
+};
 use log::error;
-use common::api::validate_session;
 
 use crate::service::users::{
     CreateUserRequest, ModifyUserRoleRequest, UpdateUserRequest, User, UserService,
@@ -61,13 +63,14 @@ where
         }
     };
     match service.update(&uuid, &user_request).await {
-        Ok(_) => ApiResponse::message(format!("Updated username for {}", user_request.username())),
+        Ok(user) => ApiResponse::message(format!("Updated user {}", user.uid)),
         Err(error) => ApiResponse::error(error),
     }
 }
 
 /// API endpoint to validate a users credentials. If successful, a [User] instance is returned
 pub async fn validate_user<U>(
+    session: Session,
     data: actix_web::web::Bytes,
     service: actix_web::web::Data<U>,
 ) -> ApiResponse<User>
@@ -85,11 +88,21 @@ where
         }
     };
     match service.validate_user(&user_request).await {
-        Ok(user) => ApiResponse::success(user),
+        Ok(user) => {
+            if let Err(error) = session.insert("em_uid", user.uid) {
+                error!("{error}");
+                return ApiResponse::error(error.into());
+            }
+            session.renew();
+            ApiResponse::success(user)
+        }
         Err(error) if matches!(error, EmError::InvalidUser) => {
             ApiResponse::failure("Invalid user credentials")
         }
-        Err(error) => ApiResponse::error(error),
+        Err(error) => {
+            error!("{error}");
+            ApiResponse::error(error)
+        }
     }
 }
 
