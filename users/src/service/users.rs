@@ -11,7 +11,7 @@ use super::roles::Role;
 use crate::service::roles::RoleName;
 
 /// User entity as the uuid of the user, their full name and all roles possessed by the user.
-#[derive(Serialize, sqlx::FromRow)]
+#[derive(Deserialize, Serialize, sqlx::FromRow, Debug)]
 pub struct User {
     /// Unique identifier of the user
     pub(crate) uid: Uuid,
@@ -104,7 +104,7 @@ impl ApiRequestValidator for CreateUserRequestValidator {
 }
 
 /// Request object for updating an existing user
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct UpdateUserRequest {
     /// Username of the user to updated. Required to verify user before updating.
     #[serde(flatten)]
@@ -112,6 +112,16 @@ pub struct UpdateUserRequest {
     /// Update variation the is required to be performed
     #[serde(flatten)]
     pub(crate) update_type: UpdateUserType,
+}
+
+impl UpdateUserRequest {
+    /// Create a new [UpdateUserRequest] as the 2 components of a request
+    pub const fn new(validate_user: ValidateUserRequest, update_type: UpdateUserType) -> Self {
+        Self {
+            validate_user,
+            update_type,
+        }
+    }
 }
 
 /// Default [ApiRequestValidator] for [UpdateUserRequest]
@@ -157,7 +167,7 @@ impl UpdateUserRequest {
 }
 
 /// User update type variations
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum UpdateUserType {
     /// User is attempting to update the user's username to a new value
@@ -172,12 +182,23 @@ pub enum UpdateUserType {
 }
 
 /// Request object to validate the user given their username and password
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct ValidateUserRequest {
     /// Username of the user to verify it's credentials
     pub(crate) username: String,
     /// Password of the user to verify it's credentials
     pub(crate) password: String,
+}
+
+impl ValidateUserRequest {
+    /// Create a new [ValidateUserRequest] as `username` and `password` values that can be converted
+    /// to strings
+    pub fn new<S: Into<String>>(username: S, password: S) -> Self {
+        Self {
+            username: username.into(),
+            password: password.into(),
+        }
+    }
 }
 
 /// Request object to allow an admin user to add or revoke another users role
