@@ -1,7 +1,7 @@
 use common::error::EmResult;
 use sqlx::Postgres;
 use workflow_engine::{
-    api, database::PostgresConnectionPool, PgExecutorsService, PgJobsService, PgTaskQueueService,
+    api, database::PostgresConnectionPool, PgExecutorService, PgJobsService, PgTaskQueueService,
     PgTasksService, PgWorkflowRunsService, PgWorkflowsService,
 };
 
@@ -12,7 +12,7 @@ async fn main() -> EmResult<()> {
         (&str, u16),
         PostgresConnectionPool,
         Postgres,
-        PgExecutorsService,
+        PgExecutorService,
         PgJobsService,
         PgTaskQueueService,
         PgWorkflowRunsService,

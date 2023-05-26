@@ -13,14 +13,15 @@ use self::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage};
 use crate::{
     database::{listener::ChangeListener, ConnectionPool, PostgresConnectionPool},
     services::{
-        create_executors_service, create_task_queue_service, create_workflow_runs_service,
-        executors::{ExecutorId, ExecutorStatus, ExecutorsService},
+        create_task_queue_service, create_workflow_runs_service,
+        executors::{ExecutorId, ExecutorStatus, ExecutorService},
+        postgres::executors::PgExecutorService,
         task_queue::TaskQueueService,
         workflow_runs::{
             ExecutorWorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunsService,
         },
     },
-    PgExecutorsService, PgTaskQueueService, PgWorkflowRunsService,
+    PgTaskQueueService, PgWorkflowRunsService,
 };
 
 /// Next operations available to an [Executor] after performing various checks on the status of
@@ -68,7 +69,7 @@ enum ExecutorNextOperation {
 /// avoid any issues with held services or workflow run handles.
 pub struct Executor<E, W, T>
 where
-    E: ExecutorsService,
+    E: ExecutorService,
     W: WorkflowRunsService,
     T: TaskQueueService,
 {
@@ -79,10 +80,10 @@ where
     wr_handles: HashMap<WorkflowRunId, WorkflowRunWorkerResult>,
 }
 
-impl Executor<PgExecutorsService, PgWorkflowRunsService, PgTaskQueueService> {
+impl Executor<PgExecutorService, PgWorkflowRunsService, PgTaskQueueService> {
     pub async fn new_postgres() -> EmResult<Self> {
         let pool = PostgresConnectionPool::create_db_pool().await?;
-        let executor_service: PgExecutorsService = create_executors_service(&pool)?;
+        let executor_service = PgExecutorService::create(&pool);
         let wr_service: PgWorkflowRunsService = create_workflow_runs_service(&pool)?;
         let tq_service: PgTaskQueueService = create_task_queue_service(&pool)?;
         Self::new(&executor_service, &wr_service, &tq_service).await
@@ -94,7 +95,7 @@ where
     U: ChangeListener<ExecutorStatusUpdate>,
     C: ChangeListener<WorkflowRunCancelMessage>,
     S: ChangeListener<WorkflowRunScheduledMessage>,
-    E: ExecutorsService<Listener = U>,
+    E: ExecutorService<Listener = U>,
     W: WorkflowRunsService<CancelListener = C, ScheduledListener = S>,
     T: TaskQueueService,
 {

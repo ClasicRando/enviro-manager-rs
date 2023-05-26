@@ -15,9 +15,9 @@ pub mod workflow_runs;
 pub mod workflows;
 
 use crate::{
-    create_executors_service, create_jobs_service, create_task_queue_service, create_tasks_service,
+    create_jobs_service, create_task_queue_service, create_tasks_service,
     create_workflow_runs_service, create_workflows_service, database::ConnectionPool,
-    ExecutorsService, JobsService, TaskQueueService, TasksService, WorkflowRunsService,
+    ExecutorService, JobsService, TaskQueueService, TasksService, WorkflowRunsService,
     WorkflowsService,
 };
 
@@ -26,7 +26,7 @@ where
     A: ToSocketAddrs,
     C: ConnectionPool<D>,
     D: Database,
-    E: ExecutorsService<Database = D> + Send + Sync + 'static,
+    E: ExecutorService<Database = D> + Send + Sync + 'static,
     J: JobsService<Database = D> + Send + Sync + 'static,
     Q: TaskQueueService<Database = D> + Send + Sync + 'static,
     R: WorkflowRunsService<Database = D> + Send + Sync + 'static,
@@ -34,7 +34,7 @@ where
     W: WorkflowsService<Database = D> + Send + Sync + 'static,
 {
     let pool = C::create_db_pool().await?;
-    let executors_service: Data<E> = Data::new(create_executors_service::<E, D>(&pool)?);
+    let executors_service: Data<E> = Data::new(E::create(&pool));
     let jobs_service: Data<J> = Data::new(create_jobs_service::<J, D>(&pool)?);
     let task_queue_service: Data<Q> = Data::new(create_task_queue_service::<Q, D>(&pool)?);
     let tasks_service: Data<T> = Data::new(create_tasks_service::<T, D>(&pool)?);

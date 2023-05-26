@@ -4,20 +4,15 @@ pub mod task_queue;
 pub mod tasks;
 pub mod workflow_runs;
 pub mod workflows;
+pub mod postgres;
 
 use common::error::EmResult;
 use sqlx::{Database, Pool};
 
 use self::{
-    executors::ExecutorsService, jobs::JobsService, task_queue::TaskQueueService,
+    executors::ExecutorService, jobs::JobsService, task_queue::TaskQueueService,
     tasks::TasksService, workflow_runs::WorkflowRunsService, workflows::WorkflowsService,
 };
-
-pub fn create_executors_service<E: ExecutorsService<Database = D>, D: Database>(
-    pool: &Pool<D>,
-) -> EmResult<E> {
-    Ok(E::new(pool))
-}
 
 pub fn create_workflow_runs_service<R: WorkflowRunsService<Database = D>, D: Database>(
     pool: &Pool<D>,

@@ -1,11 +1,11 @@
 use common::api::ApiResponse;
 
-use crate::services::executors::{Executor, ExecutorId, ExecutorsService};
+use crate::services::executors::{Executor, ExecutorId, ExecutorService};
 
 /// API endpoint to fetch all active executors
 pub async fn active_executors<E>(service: actix_web::web::Data<E>) -> ApiResponse<Vec<Executor>>
 where
-    E: ExecutorsService,
+    E: ExecutorService,
 {
     match service.read_active().await {
         Ok(executors) => ApiResponse::success(executors),
@@ -19,7 +19,7 @@ pub async fn shutdown_executor<E>(
     service: actix_web::web::Data<E>,
 ) -> ApiResponse<Executor>
 where
-    E: ExecutorsService,
+    E: ExecutorService,
 {
     match service.shutdown(&executor_id).await {
         Ok(Some(executor)) => ApiResponse::success(executor),
@@ -37,7 +37,7 @@ pub async fn cancel_executor<E>(
     service: actix_web::web::Data<E>,
 ) -> ApiResponse<Executor>
 where
-    E: ExecutorsService,
+    E: ExecutorService,
 {
     match service.cancel(&executor_id).await {
         Ok(Some(executor)) => ApiResponse::success(executor),
