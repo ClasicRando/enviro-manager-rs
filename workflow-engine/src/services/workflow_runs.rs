@@ -37,24 +37,24 @@ pub enum WorkflowRunStatus {
 /// Task information for entries under a [WorkflowRun]
 #[derive(Serialize)]
 pub struct WorkflowRunTask {
-    task_order: i32,
-    task_id: i64,
-    name: String,
-    description: String,
-    task_status: TaskStatus,
-    parameters: Option<Value>,
-    output: Option<String>,
-    rules: Option<Vec<TaskRule>>,
-    task_start: Option<NaiveDateTime>,
-    task_end: Option<NaiveDateTime>,
-    progress: Option<i16>,
+    pub(crate) task_order: i32,
+    pub(crate) task_id: i64,
+    pub(crate) name: String,
+    pub(crate) description: String,
+    pub(crate) task_status: TaskStatus,
+    pub(crate) parameters: Option<Value>,
+    pub(crate) output: Option<String>,
+    pub(crate) rules: Option<Vec<TaskRule>>,
+    pub(crate) task_start: Option<NaiveDateTime>,
+    pub(crate) task_end: Option<NaiveDateTime>,
+    pub(crate) progress: Option<i16>,
 }
 
 impl Encode<'_, Postgres> for WorkflowRunTask {
     fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> IsNull {
         let mut encoder = PgRecordEncoder::new(buf);
-        encoder.encode(self.task_order);
-        encoder.encode(self.task_id);
+        encoder.encode(&self.task_order);
+        encoder.encode(&self.task_id);
         encoder.encode(&self.name);
         encoder.encode(&self.description);
         encoder.encode(&self.task_status);
@@ -63,7 +63,7 @@ impl Encode<'_, Postgres> for WorkflowRunTask {
         encoder.encode(&self.rules);
         encoder.encode(self.task_start);
         encoder.encode(self.task_end);
-        encoder.encode(self.progress);
+        encoder.encode(&self.progress);
         encoder.finish();
         IsNull::No
     }
@@ -131,12 +131,12 @@ impl PgHasArrayType for WorkflowRunTask {
 /// Workflow run data as fetched from `workflow.v_workflow_runs`
 #[derive(sqlx::FromRow, Serialize)]
 pub struct WorkflowRun {
-    workflow_run_id: i64,
-    workflow_id: i64,
-    status: WorkflowRunStatus,
-    executor_id: Option<i64>,
-    progress: i16,
-    tasks: Vec<WorkflowRunTask>,
+    pub(crate) workflow_run_id: WorkflowRunId,
+    pub(crate) workflow_id: i64,
+    pub(crate) status: WorkflowRunStatus,
+    pub(crate) executor_id: Option<i64>,
+    pub(crate) progress: i16,
+    pub(crate) tasks: Vec<WorkflowRunTask>,
 }
 
 /// Workflow run data as fetched from the function `executor.all_executor_workflows`. Contains the
@@ -146,14 +146,14 @@ pub struct WorkflowRun {
 /// 'Complete'
 #[derive(sqlx::FromRow)]
 pub struct ExecutorWorkflowRun {
-    pub workflow_run_id: WorkflowRunId,
-    pub status: WorkflowRunStatus,
-    pub is_valid: bool,
+    pub(crate) workflow_run_id: WorkflowRunId,
+    pub(crate) status: WorkflowRunStatus,
+    pub(crate) is_valid: bool,
 }
 
 /// Wrapper for a `workflow_run_id` value. Made to ensure data passed as the id of a workflow run is
 /// correct and not just any i64 value.
-#[derive(sqlx::Type, Eq, PartialEq, Hash, Clone, Deserialize)]
+#[derive(sqlx::Type, Eq, PartialEq, Hash, Clone, Serialize, Deserialize)]
 #[sqlx(transparent)]
 pub struct WorkflowRunId(i64);
 
