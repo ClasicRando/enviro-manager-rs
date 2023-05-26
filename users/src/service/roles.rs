@@ -34,16 +34,45 @@ pub enum RoleName {
     #[serde(rename = "add-role")]
     #[strum(serialize = "add-role")]
     AddRole,
+    #[serde(rename = "check")]
+    #[strum(serialize = "check")]
+    Check,
+    #[serde(rename = "collection")]
+    #[strum(serialize = "collection")]
+    Collection,
+    #[serde(rename = "create-ls")]
+    #[strum(serialize = "create-ls")]
+    CreateLoadStatus,
+    #[serde(rename = "create-ds")]
+    #[strum(serialize = "create-ds")]
+    CreateDataSource,
+    #[serde(rename = "load")]
+    #[strum(serialize = "load")]
+    LoadData,
+    #[serde(rename = "qa")]
+    #[strum(serialize = "qa")]
+    DataQualityAssurance,
 }
 
 impl RoleName {
     /// Gets the string representation of the [RoleName] as seen in the database
     pub const fn description(&self) -> &'static str {
         match self {
-            RoleName::Admin => "Role with full access to all other roles",
-            RoleName::AddRole => {
+            Self::Admin => "Role with full access to all other roles",
+            Self::AddRole => {
                 "Provides a user with the ability to add/remove roles from a user. However, this \
                  is limited to the roles of the current user."
+            }
+            Self::Check => "Provides a user the ability to check a data load instance",
+            Self::Collection => {
+                "Provides a user the ability to collect for and set up a data source"
+            }
+            Self::CreateLoadStatus => "Provides a user the ability to create a new load instance",
+            Self::CreateDataSource => "Provides a user the ability to create a new data source",
+            Self::LoadData => "Provides a user the ability to process data loads",
+            Self::DataQualityAssurance => {
+                "Provides a user the ability to perform quality assurance checks on a data load \
+                 instance"
             }
         }
     }
