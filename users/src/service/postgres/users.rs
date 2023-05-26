@@ -187,6 +187,7 @@ impl UserService for PgUserService {
 
         let user = self.read_one(current_uid).await?;
         user.check_role(RoleName::AddRole)?;
+        user.check_role(*role)?;
 
         let query = if *add {
             "call users.add_user_role($1, $2)"
