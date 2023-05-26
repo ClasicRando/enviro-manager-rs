@@ -2,6 +2,7 @@ create or replace procedure users.add_user_roles(
     uid uuid,
     roles text[]
 )
+security definer
 language sql
 as $$
 insert into users.user_roles(uid, role)

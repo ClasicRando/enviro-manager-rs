@@ -3,6 +3,7 @@ create or replace procedure users.update_full_name(
     new_first_name text,
     new_last_name text
 )
+security definer
 language sql
 as $$
 update users.users u

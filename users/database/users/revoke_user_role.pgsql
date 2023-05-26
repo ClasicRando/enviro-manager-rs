@@ -2,6 +2,7 @@ create or replace procedure users.revoke_user_role(
     uid uuid,
     role text
 )
+security definer
 language sql
 as $$
 delete from users.user_roles ur

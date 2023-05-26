@@ -2,6 +2,7 @@ create or replace procedure users.update_username(
     uid uuid,
     new_username text
 )
+security definer
 language sql
 as $$
 update users.users u

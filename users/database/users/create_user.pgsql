@@ -4,6 +4,7 @@ create or replace function users.create_user(
     username text,
     password text
 )
+security definer
 returns uuid
 language sql
 as $$

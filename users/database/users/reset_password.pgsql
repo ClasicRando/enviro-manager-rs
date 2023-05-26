@@ -2,6 +2,7 @@ create or replace procedure users.reset_password(
     uid uuid,
     new_password text
 )
+security definer
 language sql
 as $$
 update users.users u

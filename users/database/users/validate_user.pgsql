@@ -8,6 +8,7 @@ create or replace function users.validate_user(
 returns record
 returns null on null input
 immutable
+security definer
 language sql
 as $$
 select u.uid, u.full_name, u.roles
