@@ -22,11 +22,7 @@ where
     E: ExecutorService,
 {
     match service.shutdown(&executor_id).await {
-        Ok(Some(executor)) => ApiResponse::success(executor),
-        Ok(None) => ApiResponse::failure(format!(
-            "Error while trying to shutdown executor_id = {}",
-            executor_id
-        )),
+        Ok(executor) => ApiResponse::success(executor),
         Err(error) => ApiResponse::error(error),
     }
 }
@@ -40,11 +36,7 @@ where
     E: ExecutorService,
 {
     match service.cancel(&executor_id).await {
-        Ok(Some(executor)) => ApiResponse::success(executor),
-        Ok(None) => ApiResponse::failure(format!(
-            "Error while trying to cancel executor_id = {}",
-            executor_id
-        )),
+        Ok(executor) => ApiResponse::success(executor),
         Err(error) => ApiResponse::error(error),
     }
 }

@@ -467,12 +467,10 @@
             ]
         },
         {
-            "name": "job/run_job.pgsql",
+            "name": "job/set_job_as_running.pgsql",
             "dependencies": [
                 "schema.pgsql",
                 "job/jobs.pgsql",
-                "workflow/initialize_workflow_run.pgsql",
-                "workflow/schedule_workflow_run.pgsql",
                 "job/job_type.pgsql"
             ]
         },
@@ -480,9 +478,7 @@
             "name": "job/complete_job.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "job/jobs.pgsql",
-                "workflow/workflow_run_status.pgsql",
-                "workflow/workflow_runs.pgsql"
+                "job/jobs.pgsql"
             ]
         },
         {

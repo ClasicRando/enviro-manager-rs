@@ -15,11 +15,7 @@ where
     R: WorkflowRunsService,
 {
     match service.read_one(&workflow_run_id).await {
-        Ok(Some(workflow_run)) => ApiResponse::success(workflow_run),
-        Ok(None) => ApiResponse::failure(format!(
-            "Could not find record for workflow_run_id = {}",
-            workflow_run_id
-        )),
+        Ok(workflow_run) => ApiResponse::success(workflow_run),
         Err(error) => ApiResponse::error(error),
     }
 }

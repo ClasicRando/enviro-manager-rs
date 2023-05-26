@@ -14,7 +14,7 @@ use tokio::{
 
 use crate::{
     database::listener::ChangeListener,
-    services::jobs::{Job, JobId, JobsService, PgJobsService},
+    services::jobs::{Job, JobId, JobsService},
 };
 
 /// Action to perform after receiving a job worker notification. Notification payload should be a
@@ -42,17 +42,20 @@ impl FromStr for NotificationAction {
 
 /// Main unit of the recurring job run process. An instance of the worker is meant to be created
 /// and run as the lifecycle of the instance (dropped at the end of the  method).
-pub struct JobWorker {
-    service: PgJobsService,
+pub struct JobWorker<J> {
+    service: J,
     jobs: HashMap<JobId, NaiveDateTime>,
     next_job: JobId,
     mailer: AsyncSmtpTransport<Tokio1Executor>,
 }
 
-impl JobWorker {
+impl<J> JobWorker<J>
+where
+    J: JobsService,
+{
     /// Create a new job worker, initializing with a reference to a [JobsService] and creating a
     /// mailer to send job related emails to maintainers.
-    pub async fn new(service: PgJobsService) -> EmResult<Self> {
+    pub async fn new(service: J) -> EmResult<Self> {
         let username = env::var("CLIPPY_USERNAME")?;
         let password = env::var("CLIPPY_PASSWORD")?;
         let relay = env::var("CLIPPY_RELAY")?;
@@ -175,15 +178,12 @@ impl JobWorker {
             );
             return Ok(());
         };
-        let Some(Job { maintainer, .. }) = self.service.read_one(job_id).await? else {
-            warn!("Could not find a job in the database for job_id = {}", job_id);
-            return Ok(())
-        };
+        let Job { maintainer, .. } = self.service.read_one(job_id).await?;
         info!("Completing run for job_id = {}", job_id);
-        let Err(EmError::Generic(error)) = self.service.complete_job(job_id).await else {
+        let Err(error) = self.service.complete_job(job_id).await else {
             return Ok(())
         };
-        self.send_error_email(maintainer, error).await?;
+        self.send_error_email(maintainer, format!("{error}")).await?;
         Ok(())
     }
 

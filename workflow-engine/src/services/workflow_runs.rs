@@ -190,7 +190,7 @@ pub trait WorkflowRunsService: Clone + Send + Sync + 'static {
     async fn initialize(&self, workflow_id: &WorkflowId) -> EmResult<WorkflowRun>;
     /// Read a single [WorkflowRun] record from `workflow.v_workflow_runs` for the specified
     /// `workflow_run_id`. Will return [None] when the id does not match a record.
-    async fn read_one(&self, workflow_run_id: &WorkflowRunId) -> EmResult<Option<WorkflowRun>>;
+    async fn read_one(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun>;
     /// Read all [WorkflowRun] records found from `workflow.v_workflow_runs`
     async fn read_many(&self) -> EmResult<Vec<WorkflowRun>>;
     /// Update the status of the workflow run to 'Canceled' and send a notification to the
@@ -262,14 +262,10 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             .bind(workflow_id)
             .fetch_one(&self.pool)
             .await?;
-        match self.read_one(&workflow_run_id).await {
-            Ok(Some(workflow_run)) => Ok(workflow_run),
-            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
-            Err(error) => Err(error),
-        }
+        self.read_one(&workflow_run_id).await
     }
 
-    async fn read_one(&self, workflow_run_id: &WorkflowRunId) -> EmResult<Option<WorkflowRun>> {
+    async fn read_one(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
         let result = sqlx::query_as(
             r#"
             select
@@ -281,7 +277,10 @@ impl WorkflowRunsService for PgWorkflowRunsService {
         .bind(workflow_run_id)
         .fetch_optional(&self.pool)
         .await?;
-        Ok(result)
+        match result {
+            Some(workflow_run) => Ok(workflow_run),
+            None => Err(EmError::MissingRecord { pk: workflow_run_id.to_string() })
+        }
     }
 
     async fn read_many(&self) -> EmResult<Vec<WorkflowRun>> {
@@ -302,11 +301,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        match self.read_one(workflow_run_id).await {
-            Ok(Some(workflow_run)) => Ok(workflow_run),
-            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
-            Err(error) => Err(error),
-        }
+        self.read_one(&workflow_run_id).await
     }
 
     async fn schedule(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
@@ -314,11 +309,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        match self.read_one(workflow_run_id).await {
-            Ok(Some(workflow_run)) => Ok(workflow_run),
-            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
-            Err(error) => Err(error),
-        }
+        self.read_one(&workflow_run_id).await
     }
 
     async fn schedule_with_executor(
@@ -331,11 +322,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             .bind(executor_id)
             .execute(&self.pool)
             .await?;
-        match self.read_one(workflow_run_id).await {
-            Ok(Some(workflow_run)) => Ok(workflow_run),
-            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
-            Err(error) => Err(error),
-        }
+        self.read_one(&workflow_run_id).await
     }
 
     async fn restart(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
@@ -343,11 +330,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        match self.read_one(workflow_run_id).await {
-            Ok(Some(workflow_run)) => Ok(workflow_run),
-            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
-            Err(error) => Err(error),
-        }
+        self.read_one(&workflow_run_id).await
     }
 
     async fn complete(&self, workflow_run_id: &WorkflowRunId) -> EmResult<()> {
@@ -378,11 +361,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        match self.read_one(workflow_run_id).await {
-            Ok(Some(workflow_run)) => Ok(workflow_run),
-            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
-            Err(error) => Err(error),
-        }
+        self.read_one(&workflow_run_id).await
     }
 
     async fn complete_move(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
@@ -390,11 +369,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        match self.read_one(workflow_run_id).await {
-            Ok(Some(workflow_run)) => Ok(workflow_run),
-            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
-            Err(error) => Err(error),
-        }
+        self.read_one(&workflow_run_id).await
     }
 
     async fn scheduled_listener(

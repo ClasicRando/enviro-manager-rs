@@ -26,8 +26,7 @@ where
     J: JobsService,
 {
     match service.read_one(&job_id).await {
-        Ok(Some(job)) => ApiResponse::success(job),
-        Ok(None) => ApiResponse::failure(format!("Could not find record for job_id = {}", job_id)),
+        Ok(job) => ApiResponse::success(job),
         Err(error) => {
             error!("{}", error);
             ApiResponse::error(error)
@@ -53,7 +52,7 @@ where
             ));
         }
     };
-    match service.create(job).await {
+    match service.create_job(job).await {
         Ok(job) => ApiResponse::success(job),
         Err(error) => {
             error!("{}", error);

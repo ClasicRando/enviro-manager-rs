@@ -214,7 +214,6 @@ where
         self.executor_service
             .read_status(&self.executor_id)
             .await
-            .map(|status| status.unwrap_or(ExecutorStatus::Canceled))
     }
 
     /// Handle a manual shutdown by the user (performed by a ctrl+c) by logging the even and
