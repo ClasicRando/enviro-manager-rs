@@ -19,8 +19,6 @@ create table if not exists audit.logged_actions (
     em_uuid text
 );
 
-revoke all on audit.logged_actions from public;
-
 comment on table audit.logged_actions is
 'History of auditable actions on audited tables, from audit.if_modified_func()';
 comment on column audit.logged_actions.event_id is

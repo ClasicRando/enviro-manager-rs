@@ -13,7 +13,6 @@ select
     ) is_valid
 from workflow.workflow_runs wr;
 
-revoke all on workflow.v_executor_workflows from public;
 grant select on workflow.v_executor_workflows to we_web;
 
 comment on view executor.all_executor_workflows IS $$

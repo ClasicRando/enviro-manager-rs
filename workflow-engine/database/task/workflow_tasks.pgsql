@@ -96,8 +96,6 @@ create trigger verify_delete_records
 
 call audit.audit_table('task.workflow_tasks');
 
-revoke all on task.workflow_tasks from public;
-
 comment on table task.workflow_tasks is
 'All tasks linked to a parent workflow';
 comment on column task.workflow_tasks.workflow_id is

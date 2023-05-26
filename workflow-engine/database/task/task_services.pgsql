@@ -6,8 +6,6 @@ create table if not exists task.task_services (
 
 call audit.audit_table('task.task_services');
 
-revoke all on task.task_services from public;
-
 comment on table task.task_services is
 'All services that provide remote task execution';
 comment on column task.task_services.service_id is

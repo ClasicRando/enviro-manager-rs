@@ -12,8 +12,6 @@ create table if not exists task.tasks (
 
 call audit.audit_table('task.tasks');
 
-revoke all on task.tasks from public;
-
 comment on table task.tasks is
 'All tasks executable by the workflow engine';
 comment on column task.tasks.task_id is

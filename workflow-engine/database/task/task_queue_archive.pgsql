@@ -17,8 +17,6 @@ on task.task_queue_archive(workflow_run_id,task_order);
 create index if not exists wr_id_task_id
 on task.task_queue_archive(workflow_run_id,task_id);
 
-revoke all on task.task_queue_archive from public;
-
 comment on table task.task_queue_archive is
 'Archive of entires from task_queue that were deleted or altered due to user requests';
 comment on column task.task_queue_archive.workflow_run_id is

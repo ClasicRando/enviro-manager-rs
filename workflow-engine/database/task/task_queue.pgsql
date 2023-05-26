@@ -16,8 +16,6 @@ create table if not exists task.task_queue (
     constraint task_queue_pk primary key (workflow_run_id, task_order)
 ) partition by list(workflow_run_id);
 
-revoke all on task.task_queue from public;
-
 comment on table task.task_queue is
 'Single tasks for a given workflow run. Partitioned by workflow run';
 comment on column task.task_queue.workflow_run_id is

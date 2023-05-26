@@ -24,9 +24,7 @@ grant usage on schema workflow to we_web;
 comment on schema workflow is 'Workflow related objects for the workflow engine';
 
 alter schema audit owner to we_admin;
-revoke all on schema audit from public;
 alter schema data_check owner to we_admin;
-revoke all on schema data_check from public;
 grant usage on schema data_check to we_web;
 grant usage on schema audit to we_web;
 

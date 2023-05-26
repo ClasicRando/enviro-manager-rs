@@ -45,8 +45,6 @@ create trigger job_change_trig
 
 call audit.audit_table('job.jobs');
 
-revoke all on job.jobs from public;
-
 comment on table job.jobs is
 'Jobs to be run periodically as defined by the jobs''s schedule/interval';
 comment on column job.jobs.job_id is

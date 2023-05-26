@@ -70,8 +70,6 @@ create trigger workflow_run_progress
 
 call audit.audit_table('workflow.workflow_runs');
 
-revoke all on workflow.workflow_runs from public;
-
 comment on table workflow.workflow_runs is
 'Run instance of a given generic workflow';
 comment on column workflow.workflow_runs.workflow_run_id is
