@@ -1,11 +1,14 @@
 create or replace function executor.next_executor()
 returns bigint
+security definer
 language sql
 stable
 as $$
-select executor_id
-from executor.v_active_executors
-where session_active
+select e.executor_id
+from executor.v_executors e
+where
+    e.session_active
+    and e.status = 'Active'::executor.executor_status
 order by wr_count
 limit 1;
 $$;

@@ -87,7 +87,8 @@ impl ExecutorService for PgExecutorService {
             select
                 e.executor_id, e.pid, e.username, e.application_name, e.client_addr, e.client_port,
                 e.exec_start, e.session_active, e.wr_count
-            from executor.v_active_executors e"#,
+            from executor.v_executors e
+            where e.status = 'Active'::executor.executor_status"#,
         )
         .fetch_all(&self.pool)
         .await?;

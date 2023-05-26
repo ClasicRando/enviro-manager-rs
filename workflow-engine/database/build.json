@@ -103,20 +103,10 @@
             ]
         },
         {
-            "name": "executor/v_active_executors.pgsql",
-            "dependencies": [
-                "schema.pgsql",
-                "workflow/workflow_runs.pgsql",
-                "executor/executor_status.pgsql",
-                "executor/executors.pgsql",
-                "executor/v_executors.pgsql"
-            ]
-        },
-        {
             "name": "executor/next_executor.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "executor/v_active_executors.pgsql"
+                "executor/v_executors.pgsql"
             ]
         },
         {
