@@ -1,6 +1,9 @@
-use common::error::{EmError, EmResult};
+use common::{
+    database::connection::finalize_transaction,
+    error::{EmError, EmResult},
+};
 use log::error;
-use sqlx::{postgres::PgListener, PgPool, Postgres};
+use sqlx::{postgres::PgListener, PgPool, Postgres, Transaction};
 
 use crate::{
     database::listener::PgChangeListener,
@@ -17,6 +20,36 @@ use crate::{
 #[derive(Clone)]
 pub struct PgExecutorService {
     pool: PgPool,
+}
+
+impl PgExecutorService {
+    ///
+    async fn start_workflow_run<'c>(
+        executor_id: &ExecutorId,
+        workflow_run_id: &WorkflowRunId,
+        mut transaction: Transaction<'c, Postgres>,
+    ) -> EmResult<()> {
+        let result = sqlx::query("call executor.start_workflow_run($1, $2)")
+            .bind(workflow_run_id)
+            .bind(executor_id)
+            .execute(&mut transaction)
+            .await;
+        finalize_transaction(result, transaction).await?;
+        Ok(())
+    }
+
+    ///
+    async fn complete_workflow_run<'c>(
+        workflow_run_id: &WorkflowRunId,
+        mut transaction: Transaction<'c, Postgres>,
+    ) -> EmResult<()> {
+        let result = sqlx::query("call executor.complete_workflow_run($1)")
+            .bind(workflow_run_id)
+            .execute(&mut transaction)
+            .await;
+        finalize_transaction(result, transaction).await?;
+        Ok(())
+    }
 }
 
 impl ExecutorService for PgExecutorService {
@@ -48,7 +81,9 @@ impl ExecutorService for PgExecutorService {
         .await?;
         match result {
             Some(executor) => Ok(executor),
-            None => Err(EmError::MissingRecord { pk: executor_id.to_string() })
+            None => Err(EmError::MissingRecord {
+                pk: executor_id.to_string(),
+            }),
         }
     }
 
@@ -64,7 +99,9 @@ impl ExecutorService for PgExecutorService {
         .await?;
         match result {
             Some(status) => Ok(status),
-            None => Err(EmError::MissingRecord { pk: executor_id.to_string() })
+            None => Err(EmError::MissingRecord {
+                pk: executor_id.to_string(),
+            }),
         }
     }
 
@@ -96,13 +133,24 @@ impl ExecutorService for PgExecutorService {
     }
 
     async fn next_workflow_run(&self, executor_id: &ExecutorId) -> EmResult<Option<WorkflowRunId>> {
-        let workflow_run_id: Option<WorkflowRunId> =
-            sqlx::query_scalar("call workflow.process_next_workflow($1,$2)")
+        let mut transaction = self.pool.begin().await?;
+        let next_workflow: Option<(WorkflowRunId, bool)> =
+            sqlx::query_as("call workflow.next_workflow($1)")
                 .bind(executor_id)
-                .bind(None::<i64>)
-                .fetch_one(&self.pool)
+                .fetch_optional(&mut transaction)
                 .await?;
-        Ok(workflow_run_id)
+        let Some((workflow_run_id, is_valid)) = next_workflow else {
+            transaction.commit().await?;
+            return Ok(None)
+        };
+
+        if is_valid {
+            Self::start_workflow_run(executor_id, &workflow_run_id, transaction).await?;
+        } else {
+            Self::complete_workflow_run(&workflow_run_id, transaction).await?;
+        }
+
+        Ok(Some(workflow_run_id))
     }
 
     async fn shutdown(&self, executor_id: &ExecutorId) -> EmResult<Executor> {
@@ -167,7 +215,7 @@ mod test {
     use common::error::EmError;
     use indoc::indoc;
 
-    use super::{ExecutorStatus, ExecutorService, PgExecutorService};
+    use super::{ExecutorService, ExecutorStatus, PgExecutorService};
     use crate::{
         database::{listener::ChangeListener, ConnectionPool, PostgresConnectionPool},
         executor::utilities::ExecutorStatusUpdate,
