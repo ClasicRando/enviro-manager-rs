@@ -473,13 +473,13 @@ where
         &self,
         workflow_run_id: &WorkflowRunId,
         handle: &WorkflowRunWorkerResult,
-        is_cancelled: bool,
+        is_cancelled: &bool,
     ) -> EmResult<bool> {
         if handle.is_finished() {
             return Ok(false);
         }
 
-        if is_cancelled {
+        if *is_cancelled {
             handle.abort();
             return Ok(false);
         }
@@ -493,7 +493,7 @@ where
     /// process of being cancelled and a handle is no finished, the executor will attempt to move
     /// the workflow run to the next available executor, falling back to a scheduled state when no
     /// other executor is operating.
-    async fn shutdown_workers(&mut self, is_cancelled: bool) -> EmResult<()> {
+    async fn shutdown_workers(&mut self, is_cancelled: &bool) -> EmResult<()> {
         let handle_keys: Vec<WorkflowRunId> =
             self.wr_handles.keys().map(|key| key.to_owned()).collect();
         for workflow_run_id in handle_keys {
@@ -508,7 +508,7 @@ where
             if let Err(join_error) = handle.await {
                 warn!(
                     "Join error during {} shutdown.\n{}",
-                    if is_cancelled { "forced" } else { "graceful" },
+                    if *is_cancelled { "forced" } else { "graceful" },
                     join_error
                 );
             }
@@ -528,7 +528,7 @@ where
     async fn close_executor(&mut self, signal: ExecutorStatusUpdate) -> EmResult<()> {
         info!("Shutting down workers");
         let is_cancelled = signal.is_cancelled();
-        self.shutdown_workers(is_cancelled).await?;
+        self.shutdown_workers(&is_cancelled).await?;
 
         info!("Closing executor");
         self.executor_service
