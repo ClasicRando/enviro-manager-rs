@@ -1,6 +1,6 @@
 use std::fmt::Debug;
-use actix_session::Session;
 
+use actix_session::Session;
 use actix_web::Responder;
 use log::{error, warn};
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ pub enum ApiResponse<T: Serialize> {
     Success(T),
     Message(String),
     Failure(String),
-    Error(&'static str),
+    Error(String),
 }
 
 impl<T> Responder for ApiResponse<T>
