@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use actix_session::SessionInsertError;
 use chrono::NaiveDateTime;
 use lettre::{
     address::AddressError, error::Error as EmailError, transport::smtp::Error as StmpError,
@@ -61,6 +62,8 @@ pub enum EmError {
         request: String,
         reason: &'static str,
     },
+    #[error("Error attempting to insert a session value. {0}")]
+    SessionInsert(#[from] SessionInsertError),
 }
 
 impl From<&str> for EmError {
