@@ -1,6 +1,6 @@
 use std::path::Path;
-use lazy_regex::{Lazy, regex, Regex};
 
+use lazy_regex::{regex, Lazy, Regex};
 use serde::Deserialize;
 use sqlx::PgPool;
 use tokio::{
@@ -123,10 +123,12 @@ async fn run_common_db_tests(
     run_tests(&tests, pool).await
 }
 
-static ENUM_REGEX: &Lazy<Regex, fn() -> Regex> =
-    regex!(r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+)\s+as\s+enum\s*\((?P<labels>[^;]+)\s*\);");
-static COMPOSITE_REGEX: &Lazy<Regex, fn() -> Regex> =
-    regex!(r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+?)\s+as\s*\((?P<attributes>[^;]+)\);");
+static ENUM_REGEX: &Lazy<Regex, fn() -> Regex> = regex!(
+    r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+)\s+as\s+enum\s*\((?P<labels>[^;]+)\s*\);"
+);
+static COMPOSITE_REGEX: &Lazy<Regex, fn() -> Regex> = regex!(
+    r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+?)\s+as\s*\((?P<attributes>[^;]+)\);"
+);
 
 /// Check a database build unit to see if it defines an enum creation. If it does, it checks to see
 /// if all it's specified labels can be found within the database's definition of the enum. If the
