@@ -15,5 +15,10 @@ lettre = { workspace = true }
 thiserror = { workspace = true }
 rmp-serde = { workspace = true }
 reqwest = { workspace = true }
-regex = { version = "1.7.1" }
-lazy_static = "1.4.0"
+log = { workspace = true }
+mime = { workspace = true }
+actix-web = { workspace = true }
+actix-session = { workspace = true }
+uuid = { workspace = true }
+async-trait = { workspace = true }
+lazy-regex = { workspace = true }

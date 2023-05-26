@@ -86,7 +86,8 @@ impl std::fmt::Display for WorkflowId {
     }
 }
 
-#[async_trait::async_trait]
+/// Service for fetching and interacting with workflow run data. Wraps a [Pool] and provides
+/// interaction methods for the API.
 pub trait WorkflowsService: Clone + Send {
     type Database: Database;
     /// Create a new [WorkflowsService] with the referenced pool as the data source
@@ -105,14 +106,12 @@ pub trait WorkflowsService: Clone + Send {
     async fn deprecate(&self, request: WorkflowDeprecationRequest) -> EmResult<i64>;
 }
 
-/// Service for fetching and interacting with workflow run data. Wraps a [PgPool] and provides
-/// interaction methods for the API.
+/// Postgres implementation of [WorkflowsService]
 #[derive(Clone)]
 pub struct PgWorkflowsService {
     pool: PgPool,
 }
 
-#[async_trait::async_trait]
 impl WorkflowsService for PgWorkflowsService {
     type Database = Postgres;
 

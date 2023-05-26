@@ -106,6 +106,8 @@ pub enum TaskResponse {
     },
 }
 
+/// Service for fetching and interacting with `task_queue` data. Wraps a [Pool] and provides
+/// interaction methods for the API and [Executor][crate::executor::Executor] instances.
 #[async_trait::async_trait]
 pub trait TaskQueueService: Clone + Send + Sync + 'static {
     type Database: Database;
@@ -158,8 +160,7 @@ pub trait TaskQueueService: Clone + Send + Sync + 'static {
     ) -> EmResult<()>;
 }
 
-/// Service for fetching and interacting with `task_queue` data. Wraps a [PgPool] and provides
-/// interaction methods for the API and [Executor][crate::executor::Executor] instances.
+/// Postgres implementation of TaskQueueService
 #[derive(Clone)]
 pub struct PgTaskQueueService {
     pool: PgPool,

@@ -1,7 +1,6 @@
 use std::path::Path;
 
-use lazy_static::lazy_static;
-use regex::Regex;
+use lazy_regex::{regex, Lazy, Regex};
 use serde::Deserialize;
 use sqlx::PgPool;
 use tokio::{
@@ -10,8 +9,8 @@ use tokio::{
 };
 
 use crate::{
-    db_build::db_build, execute_anonymous_block, execute_anonymous_block_transaction, package_dir,
-    read_file, workspace_dir,
+    database::build::DbBuild, execute_anonymous_block, execute_anonymous_block_transaction,
+    package_dir, read_file, workspace_dir,
 };
 
 /// Represents a single entry in the list of test directory entries. Deserialized from a
@@ -19,7 +18,9 @@ use crate::{
 /// `rollback` tells the test runner to execute the file within a rolled back transaction.
 #[derive(Deserialize)]
 struct TestListEntry {
+    /// Name of the test script file to run
     name: String,
+    /// Flag indicating if the test should be executed in a rolled back transaction
     rollback: bool,
 }
 
@@ -115,23 +116,19 @@ async fn run_common_db_tests(
     pool: &PgPool,
     common_db_name: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let tests = workspace_dir()
+    let tests = workspace_dir()?
         .join("common-database")
         .join(common_db_name)
         .join("tests");
     run_tests(&tests, pool).await
 }
 
-lazy_static! {
-    static ref ENUM_REGEX: Regex = Regex::new(
-        r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+)\s+as\s+enum\s*\((?P<labels>[^;]+)\s*\);"
-    )
-    .unwrap();
-    static ref COMPOSITE_REGEX: Regex = Regex::new(
-        r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+?)\s+as\s*\((?P<attributes>[^;]+)\);"
-    )
-    .unwrap();
-}
+static ENUM_REGEX: &Lazy<Regex, fn() -> Regex> = regex!(
+    r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+)\s+as\s+enum\s*\((?P<labels>[^;]+)\s*\);"
+);
+static COMPOSITE_REGEX: &Lazy<Regex, fn() -> Regex> = regex!(
+    r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+?)\s+as\s*\((?P<attributes>[^;]+)\);"
+);
 
 /// Check a database build unit to see if it defines an enum creation. If it does, it checks to see
 /// if all it's specified labels can be found within the database's definition of the enum. If the
@@ -207,8 +204,10 @@ async fn check_for_composite(block: &str, pool: &PgPool) -> Result<(), Box<dyn s
 /// either type definition might not make it to the database and since Postgresql does not support
 /// any replace or update DDL statements for either type definition. In those cases a full refresh
 /// of the database might be required or manual alter statements must be created.
+/// # Errors
+/// TODO
 pub async fn run_db_tests(pool: &PgPool) -> Result<(), Box<dyn std::error::Error>> {
-    let package_dir = package_dir();
+    let package_dir = package_dir()?;
 
     let test_refresh_script = package_dir.join("database").join("test_data.pgsql");
     if test_refresh_script.exists() {
@@ -217,7 +216,7 @@ pub async fn run_db_tests(pool: &PgPool) -> Result<(), Box<dyn std::error::Error
     }
 
     let schema_directory = package_dir.join("database");
-    let db_build = db_build(&schema_directory).await?;
+    let db_build = DbBuild::new(&schema_directory).await?;
 
     for common_schema in &db_build.common_dependencies {
         run_common_db_tests(pool, common_schema).await?;

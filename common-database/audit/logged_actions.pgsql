@@ -16,7 +16,7 @@ create table if not exists audit.logged_actions (
     row_data jsonb,
     changed_fields jsonb,
     statement_only boolean not null,
-    em_user_id bigint
+    em_uuid text
 );
 
 revoke all on audit.logged_actions from public;
@@ -59,8 +59,8 @@ comment on column audit.logged_actions.changed_fields is
 'New values of fields changed by UPDATE. Null except for row-level UPDATE events.';
 comment on column audit.logged_actions.statement_only is
 '''t'' if audit event is from an FOR EACH STATEMENT trigger, ''f'' for FOR EACH ROW';
-comment on column audit.logged_actions.em_user_id is
-'ID of the EnviroManager user who execute the change';
+comment on column audit.logged_actions.em_uuid is
+'UUID of the EnviroManager user who execute the change';
 
 create index if not exists logged_actions_relid_idx on audit.logged_actions(relid);
 create index if not exists logged_actions_action_tstamp_tx_stm_idx

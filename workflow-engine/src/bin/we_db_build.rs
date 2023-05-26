@@ -1,4 +1,4 @@
-use common::db_build::build_database;
+use common::database::build::build_database;
 use workflow_engine::database::{ConnectionPool, PostgresConnectionPool};
 
 ///

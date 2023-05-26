@@ -1,0 +1,28 @@
+[package]
+name = "users"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "users_db_build"
+
+[dependencies]
+sqlx = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+log4rs = { workspace = true }
+chrono = { workspace = true }
+rmp-serde = { workspace = true }
+futures = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+mockall = { workspace = true }
+actix-web = { workspace = true }
+actix-session = { workspace = true }
+lazy-regex = { workspace = true }
+uuid = { workspace = true }
+rstest = { workspace = true }
+strum = { version = "0.24.1", features = ["derive"] }
+common = { path = "../common" }

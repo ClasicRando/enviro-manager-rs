@@ -1,8 +1,8 @@
 [workspace]
-members = ["workflow-engine", "common"]
+members = ["workflow-engine", "common", "users"]
 
 [workspace.dependencies]
-sqlx = { version = "0.6.2", features = ["postgres", "runtime-tokio-rustls", "json", "macros", "chrono", "ipnetwork"] }
+sqlx = { version = "0.6.2", features = ["postgres", "runtime-tokio-rustls", "json", "macros", "chrono", "ipnetwork", "uuid"] }
 tokio = { version = "1.23.1", features = ["full"] }
 serde = { version = "1.0.144" }
 serde_json = { version = "1.0.89", features = ["raw_value"] }
@@ -16,5 +16,10 @@ thiserror = "1.0.38"
 indoc = "2"
 lettre = { version = "0.10.1", features = ["tokio1", "tokio1-native-tls"] }
 actix-web = { version = "4.3.1" }
+actix-session = { version = "0.7.2", features = ["redis-actor-session"] }
 mime = "0.3.17"
 async-trait = "0.1.68"
+mockall = "0.11.4"
+lazy-regex = "2.5.0"
+rstest = "0.17.0"
+uuid = { version = "1.3.2", features = ["serde", "v4"] }

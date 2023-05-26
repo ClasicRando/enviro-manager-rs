@@ -5,7 +5,7 @@ pub use utilities::{ConnectionPool, PostgresConnectionPool};
 
 #[cfg(test)]
 mod test {
-    use common::db_test::run_db_tests;
+    use common::database::test::run_db_tests;
 
     use crate::database::utilities::{ConnectionPool, PostgresConnectionPool};
 

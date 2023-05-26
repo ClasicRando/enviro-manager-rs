@@ -1,0 +1,83 @@
+{
+    "common_dependencies": [
+        "data_check",
+        "audit"
+    ],
+    "entries": [
+        {
+            "name": "schema.pgsql",
+            "dependencies": []
+        },
+        {
+            "name": "users/users.pgsql",
+            "dependencies": [
+                "schema.pgsql"
+            ]
+        },
+        {
+            "name": "users/user_roles.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "users/users.pgsql"
+            ]
+        },
+        {
+            "name": "users/v_users.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "users/users.pgsql",
+                "users/user_roles.pgsql"
+            ]
+        },
+        {
+            "name": "users/validate_user.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "users/users.pgsql",
+                "users/v_users.pgsql"
+            ]
+        },
+        {
+            "name": "users/create_user.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "users/users.pgsql"
+            ]
+        },
+        {
+            "name": "users/reset_password.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "users/users.pgsql"
+            ]
+        },
+        {
+            "name": "users/update_full_name.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "users/users.pgsql"
+            ]
+        },
+        {
+            "name": "users/update_username.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "users/users.pgsql"
+            ]
+        },
+        {
+            "name": "users/add_user_role.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "users/user_roles.pgsql"
+            ]
+        },
+        {
+            "name": "users/add_user_roles.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "users/user_roles.pgsql"
+            ]
+        }
+    ]
+}

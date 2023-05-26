@@ -1,7 +1,11 @@
+use std::fmt::Debug;
+
+use actix_session::SessionInsertError;
 use chrono::NaiveDateTime;
 use lettre::{
     address::AddressError, error::Error as EmailError, transport::smtp::Error as StmpError,
 };
+use sqlx::types::Uuid;
 use thiserror::Error;
 
 /// All possible error types that may occur during workflow engine operations
@@ -23,6 +27,8 @@ pub enum EmError {
     RmpEncode(#[from] rmp_serde::encode::Error),
     #[error("MessagePack decode error\n{0}")]
     RmpDecode(#[from] rmp_serde::decode::Error),
+    #[error("Json serde error\n{0}")]
+    SerdeJson(#[from] serde_json::Error),
     #[error("Reqwest Error\n{0}")]
     Reqwest(#[from] reqwest::Error),
     #[error("Generic error\n{0}")]
@@ -43,7 +49,46 @@ pub enum EmError {
     EnvVar(#[from] std::env::VarError),
     #[error("IO error\n{0}")]
     IO(#[from] std::io::Error),
+    #[error("Invalid User")]
+    InvalidUser,
+    #[error("User missing privilege. UID = {uid}, role = {role}")]
+    MissingPrivilege { uid: Uuid, role: &'static str },
+    #[error("Password is not valid. {reason}")]
+    InvalidPassword { reason: &'static str },
+    #[error("Record cannot be found for `{pk}`")]
+    MissingRecord { pk: String },
+    #[error("Contents of request '{request}' were not valid.\nReason: {reason}")]
+    InvalidRequest {
+        request: String,
+        reason: &'static str,
+    },
+    #[error("Error attempting to insert a session value. {0}")]
+    SessionInsert(#[from] SessionInsertError),
 }
 
-/// Generic [Result][std::result::Result] type where the error is always [Error]
-pub type EmResult<T> = std::result::Result<T, EmError>;
+impl From<&str> for EmError {
+    fn from(value: &str) -> Self {
+        Self::Generic(value.to_owned())
+    }
+}
+
+impl From<String> for EmError {
+    fn from(value: String) -> Self {
+        Self::Generic(value)
+    }
+}
+
+impl<D> From<(&D, &'static str)> for EmError
+where
+    D: Debug,
+{
+    fn from(value: (&D, &'static str)) -> Self {
+        Self::InvalidRequest {
+            request: format!("{:?}", value.0),
+            reason: value.1,
+        }
+    }
+}
+
+/// Generic [Result] type where the error is always [EmError]
+pub type EmResult<T> = Result<T, EmError>;

@@ -120,7 +120,9 @@ where
 
     pub async fn run(mut self) {
         if let Err(error) = self.run_loop().await {
-            self.executor_service.post_error(&self.executor_id, error).await;
+            self.executor_service
+                .post_error(&self.executor_id, error)
+                .await;
         }
     }
 

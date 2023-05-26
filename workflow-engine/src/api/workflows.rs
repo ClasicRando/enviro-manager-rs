@@ -1,6 +1,6 @@
+use common::api::ApiResponse;
 use log::error;
 
-use super::utilities::ApiResponse;
 use crate::services::workflows::{
     Workflow, WorkflowDeprecationRequest, WorkflowId, WorkflowRequest, WorkflowsService,
 };
