@@ -94,7 +94,7 @@ pub trait ApiRequestValidator {
     /// [Err] of [EmError][crate::error::EmError] if the request is not valid. Otherwise [Ok] is
     /// returned.
     /// # Errors
-    ///
+    /// This function will return an error if the `request` cannot be validated
     fn validate(request: &Self::Request) -> EmResult<()>;
 }
 
