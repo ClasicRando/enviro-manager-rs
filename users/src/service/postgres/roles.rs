@@ -26,7 +26,10 @@ impl<'r> Decode<'r, Postgres> for Role {
             _ => return Err(format!("invalid value {:?} for role name", value).into()),
         };
         let description = name.description();
-        Ok(Role { name, description: description.to_owned() })
+        Ok(Role {
+            name,
+            description: description.to_owned(),
+        })
     }
 }
 
@@ -136,7 +139,10 @@ mod test {
         let static_roles: Vec<Role> = RoleName::iter()
             .map(|name| {
                 let description = name.description();
-                Role { name, description: description.to_owned() }
+                Role {
+                    name,
+                    description: description.to_owned(),
+                }
             })
             .collect();
 

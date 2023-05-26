@@ -1,5 +1,5 @@
 use actix_session::Session;
-use common::api::{ApiResponse, validate_session};
+use common::api::{validate_session, ApiResponse};
 
 use crate::service::roles::{Role, RoleService};
 
@@ -12,10 +12,7 @@ where
         Ok(inner) => inner,
         Err(response) => return response,
     };
-    match service
-        .read_all(&uuid)
-        .await
-    {
+    match service.read_all(&uuid).await {
         Ok(roles) => ApiResponse::success(roles),
         Err(error) => ApiResponse::error(error),
     }
