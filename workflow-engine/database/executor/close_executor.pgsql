@@ -2,6 +2,7 @@ create or replace procedure executor.close_executor(
     executor_id bigint,
     is_cancelled boolean default false
 )
+security definer
 language sql
 as $$
 update executor.executors e
@@ -33,6 +34,9 @@ where
     wr.workflow_run_id = tq.workflow_run_id
     and tq.status = 'Running'::task.task_status;
 $$;
+
+revoke all on procedure executor.close_executor from public;
+grant execute on procedure executor.close_executor to we_web;
 
 comment on procedure executor.close_executor IS $$
 Close the operations of an executor, including child operations of a workflow run.

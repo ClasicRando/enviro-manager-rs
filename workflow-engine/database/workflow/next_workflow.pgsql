@@ -1,9 +1,11 @@
 create or replace function workflow.next_workflow(
-    executor_id bigint
-) returns table(
-    workflow_run_id bigint,
-    is_valid boolean
+    executor_id bigint,
+    out workflow_run_id bigint
+    out is_valid boolean
 )
+returns record
+returns null on null input
+security definer
 language sql
 as $$
 select

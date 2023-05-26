@@ -4,6 +4,9 @@ create type executor.executor_status as enum (
     'Shutdown'
 );
 
+revoke all on type executor.executor_status from public;
+grant usage on type executor.executor_status to we_web;
+
 comment on type executor.executor_status IS $$
 Various states that dictate the lifecycle of an executor. 'Active' is the default state when
 initialized. 'Canceled' is a forced shutdown with no recovering of work in progress. 'Shutdown'

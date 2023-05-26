@@ -264,7 +264,7 @@
             ]
         },
         {
-            "name": "executor/all_executor_workflows.pgsql",
+            "name": "executor/v_executor_workflows.pgsql",
             "dependencies": [
                 "schema.pgsql",
                 "workflow/workflow_runs.pgsql",
@@ -514,15 +514,6 @@
                 "task/task_queue.pgsql",
                 "task/task_rule.pgsql",
                 "task/task_status.pgsql"
-            ]
-        },
-        {
-            "name": "workflow/process_next_workflow.pgsql",
-            "dependencies": [
-                "schema.pgsql",
-                "workflow/next_workflow.pgsql",
-                "workflow/start_workflow_run.pgsql",
-                "workflow/complete_workflow_run.pgsql"
             ]
         },
         {

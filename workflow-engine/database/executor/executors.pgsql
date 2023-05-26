@@ -36,6 +36,7 @@ create trigger status_event
 call audit.audit_table('executor.executors');
 
 revoke all on executor.executors from public;
+revoke all on executor.executors from we_web;
 
 comment on table executor.executors is
 'Executors registered as working to complete workflow runs';

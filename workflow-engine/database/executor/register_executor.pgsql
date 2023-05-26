@@ -10,6 +10,7 @@ where a.pid = pg_backend_pid()
 returning executor_id;
 $$;
 
+revoke all on function executor.register_executor from public;
 grant execute on function executor.register_executor to we_web;
 
 comment on function executor.register_executor IS $$

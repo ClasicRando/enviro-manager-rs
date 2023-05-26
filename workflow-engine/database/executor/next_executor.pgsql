@@ -13,6 +13,9 @@ order by wr_count
 limit 1;
 $$;
 
+revoke all on function executor.next_executor from public;
+grant execute on function executor.next_executor to we_web;
+
 comment on function executor.next_executor IS $$
 Get the next available executor to pick up a workflow run. Ensures the executor's session is active
 and give priority to the executor with the least number of workflow runs.

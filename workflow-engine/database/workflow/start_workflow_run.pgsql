@@ -2,6 +2,7 @@ create or replace procedure workflow.start_workflow_run(
     workflow_run_id bigint,
     executor_id bigint
 )
+security definer
 language sql
 as $$
 update workflow.workflow_runs wr
@@ -11,6 +12,8 @@ set
     progress = 0
 where wr.workflow_run_id = $1;
 $$;
+
+grant execute on procedure workflow.start_workflow_run to we_web;
 
 comment on procedure workflow.start_workflow_run IS $$
 Start the workflow run by setting the status and owner executor

@@ -1,4 +1,5 @@
 create or replace procedure executor.clean_executors()
+security definer
 language sql
 as $$
 with executors as (
@@ -27,8 +28,11 @@ where
     and tq.status = 'Running'::task.task_status;
 $$;
 
+revoke all on procedure executor.clean_executors;
+grant execute on procedure executor.clean_executors;
+
 comment on procedure executor.clean_executors IS $$
 Cleans any executors that are no longer attached to the database but have not been shutdown
-correctly. Also cleans all the workflows and task queue entires attached to the invalid
+correctly. Also cleans all the workflows and task queue entries attached to the invalid
 executors.
 $$;
