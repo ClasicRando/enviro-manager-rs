@@ -23,7 +23,11 @@ pub struct PgExecutorService {
 }
 
 impl PgExecutorService {
-    ///
+    /// Start a workflow run by executing the named procedure. Takes ownership of the `transaction`
+    /// and completes the transaction before exiting.
+    /// # Errors
+    /// This function will return an error if the `start_workflow_run` procedure fails or the an
+    /// error is returning completing the `transaction`
     async fn start_workflow_run<'c>(
         executor_id: &ExecutorId,
         workflow_run_id: &WorkflowRunId,
@@ -38,7 +42,11 @@ impl PgExecutorService {
         Ok(())
     }
 
-    ///
+    /// Complete a workflow run by executing the named procedure. Takes ownership of the
+    /// `transaction` and completes the transaction before exiting.
+    /// # Errors
+    /// This function will return an error if the `complete_workflow_run` procedure fails or the an
+    /// error is returning completing the `transaction`
     async fn complete_workflow_run<'c>(
         workflow_run_id: &WorkflowRunId,
         mut transaction: Transaction<'c, Postgres>,
