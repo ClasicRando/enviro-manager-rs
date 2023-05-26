@@ -16,7 +16,7 @@ pub mod workflows;
 
 use crate::{
     create_task_queue_service, create_tasks_service, create_workflow_runs_service,
-    create_workflows_service, database::ConnectionPool, ExecutorService, JobsService,
+    create_workflows_service, database::ConnectionPool, ExecutorService, JobService,
     TaskQueueService, TasksService, WorkflowRunsService, WorkflowsService,
 };
 
@@ -26,7 +26,7 @@ where
     C: ConnectionPool<D>,
     D: Database,
     E: ExecutorService<Database = D> + Send + Sync + 'static,
-    J: JobsService<Database = D, WorkflowRunService = R> + Send + Sync + 'static,
+    J: JobService<Database = D, WorkflowRunService = R> + Send + Sync + 'static,
     Q: TaskQueueService<Database = D> + Send + Sync + 'static,
     R: WorkflowRunsService<Database = D> + Send + Sync + 'static,
     T: TasksService<Database = D> + Send + Sync + 'static,

@@ -235,12 +235,12 @@ impl std::fmt::Display for JobId {
 
 /// Service for fetching and interacting with task data. Wraps a [PgPool] and provides
 /// interaction methods for the API and [JobWorker][crate::job_worker::JobWorker].
-pub trait JobsService: Clone + Send {
+pub trait JobService: Clone + Send {
     type Database: Database;
     type Listener: ChangeListener<NotificationAction>;
     type WorkflowRunService: WorkflowRunsService<Database = Self::Database>;
 
-    /// Create a new [JobsService] with the referenced pool as the data source
+    /// Create a new [JobService] with the referenced pool as the data source
     fn create(
         pool: &Pool<Self::Database>,
         workflow_runs_service: &Self::WorkflowRunService,

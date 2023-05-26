@@ -1,12 +1,12 @@
 use common::api::ApiResponse;
 use log::error;
 
-use crate::services::jobs::{Job, JobId, JobRequest, JobsService};
+use crate::services::jobs::{Job, JobId, JobRequest, JobService};
 
 /// API endpoint to fetch all `Job`s currently registered
 pub async fn jobs<J>(service: actix_web::web::Data<J>) -> ApiResponse<Vec<Job>>
 where
-    J: JobsService,
+    J: JobService,
 {
     match service.read_many().await {
         Ok(jobs) => ApiResponse::success(jobs),
@@ -23,7 +23,7 @@ pub async fn job<J>(
     service: actix_web::web::Data<J>,
 ) -> ApiResponse<Job>
 where
-    J: JobsService,
+    J: JobService,
 {
     match service.read_one(&job_id).await {
         Ok(job) => ApiResponse::success(job),
@@ -40,7 +40,7 @@ pub async fn create_job<J>(
     service: actix_web::web::Data<J>,
 ) -> ApiResponse<Job>
 where
-    J: JobsService,
+    J: JobService,
 {
     let job: JobRequest = match rmp_serde::from_slice(&data) {
         Ok(inner) => inner,

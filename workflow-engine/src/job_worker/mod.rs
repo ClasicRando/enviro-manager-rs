@@ -14,7 +14,7 @@ use tokio::{
 
 use crate::{
     database::listener::ChangeListener,
-    services::jobs::{Job, JobId, JobsService},
+    services::jobs::{Job, JobId, JobService},
 };
 
 /// Action to perform after receiving a job worker notification. Notification payload should be a
@@ -51,9 +51,9 @@ pub struct JobWorker<J> {
 
 impl<J> JobWorker<J>
 where
-    J: JobsService,
+    J: JobService,
 {
-    /// Create a new job worker, initializing with a reference to a [JobsService] and creating a
+    /// Create a new job worker, initializing with a reference to a [JobService] and creating a
     /// mailer to send job related emails to maintainers.
     pub async fn new(service: J) -> EmResult<Self> {
         let username = env::var("CLIPPY_USERNAME")?;

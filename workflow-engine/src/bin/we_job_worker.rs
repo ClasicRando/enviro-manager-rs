@@ -2,7 +2,7 @@ use common::error::EmResult;
 use log::{error, info};
 use workflow_engine::{
     database::{ConnectionPool, PostgresConnectionPool},
-    JobWorker, JobsService, PgJobsService, PgWorkflowRunsService, WorkflowRunsService,
+    JobWorker, JobService, PgJobsService, PgWorkflowRunsService, WorkflowRunsService,
 };
 
 #[tokio::main]

@@ -16,7 +16,7 @@ use crate::{
         workflow_runs::{WorkflowRun, WorkflowRunId, WorkflowRunStatus},
         workflows::WorkflowId,
     },
-    JobsService, PgWorkflowRunsService, WorkflowRunsService,
+    JobService, PgWorkflowRunsService, WorkflowRunsService,
 };
 
 #[derive(Clone)]
@@ -61,7 +61,7 @@ impl PgJobsService {
     }
 }
 
-impl JobsService for PgJobsService {
+impl JobService for PgJobsService {
     type Database = Postgres;
     type Listener = PgChangeListener<NotificationAction>;
     type WorkflowRunService = PgWorkflowRunsService;
