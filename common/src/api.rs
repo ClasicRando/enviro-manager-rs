@@ -40,7 +40,6 @@ where
                     .body(message.into_bytes());
             }
         };
-
         actix_web::HttpResponse::Ok()
             .content_type(actix_web::http::header::ContentType(
                 mime::APPLICATION_MSGPACK,
@@ -73,14 +72,15 @@ impl<T: Serialize> ApiResponse<T> {
         error!("{}", error);
         match error {
             EmError::Generic(message) => Self::failure(message),
-            EmError::InvalidRequest { reason, .. } => Self::failure(reason),
-            EmError::InvalidPassword { reason } => Self::Error(reason),
-            EmError::InvalidUser => Self::failure(format!("{error}")),
-            EmError::MissingRecord { .. } => Self::Error("Requested record cannot be found"),
-            EmError::RmpDecode(_) => {
-                Self::Failure("Could not decode the request object".to_owned())
-            }
-            _ => Self::Error("Could not perform the required action due to an internal error"),
+            EmError::InvalidUser
+            | EmError::MissingRecord { .. }
+            | EmError::InvalidRequest { .. }
+            | EmError::InvalidPassword { .. }
+            | EmError::MissingPrivilege { .. } => Self::failure(format!("{error}")),
+            EmError::RmpDecode(_) => Self::failure("Could not decode the request object"),
+            _ => Self::Error(
+                "Could not perform the required action due to an internal error".to_owned(),
+            ),
         }
     }
 }
