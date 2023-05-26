@@ -10,6 +10,8 @@ on j.workflow_id = w.workflow_id
 left join workflow.workflow_runs wr
 on j.current_workflow_run_id = wr.workflow_run_id;
 
+grant select on view job.v_jobs to we_web;
+
 comment on view job.v_jobs IS $$
 Utility view, showing all jobs with workflow and possible workflow run (if currently running)
 details.
