@@ -69,10 +69,10 @@ pub trait ExecutorService: Clone + Send {
     async fn register_executor(&self) -> EmResult<ExecutorId>;
     /// Read the [Executor] record to gain information about the specified `executor_id`. If no
     /// executor matches the id provided, [None] will be returned.
-    async fn read_one(&self, executor_id: &ExecutorId) -> EmResult<Option<Executor>>;
+    async fn read_one(&self, executor_id: &ExecutorId) -> EmResult<Executor>;
     /// Read the [ExecutorStatus] for the specified `executor_id`. If no executor matches the id
-    /// provided, [None] will be returned.
-    async fn read_status(&self, executor_id: &ExecutorId) -> EmResult<Option<ExecutorStatus>>;
+    /// provided, [Err] will be returned.
+    async fn read_status(&self, executor_id: &ExecutorId) -> EmResult<ExecutorStatus>;
     /// Read all [Executor] records, including instances that are inactive or marked as active but
     /// the underling session/pool is no longer active.
     async fn read_many(&self) -> EmResult<Vec<Executor>>;
@@ -85,11 +85,11 @@ pub trait ExecutorService: Clone + Send {
     /// Update the status of the executor specified by `executor_id` to [ExecutorStatus::Shutdown].
     /// This internally sends a signal to the [Executor][crate::executor::Executor] instance to
     /// gracefully shutdown all operation and close.
-    async fn shutdown(&self, executor_id: &ExecutorId) -> EmResult<Option<Executor>>;
+    async fn shutdown(&self, executor_id: &ExecutorId) -> EmResult<Executor>;
     /// Update the status of the executor specified by `executor_id` to [ExecutorStatus::Canceled].
     /// This internally sends a signal to the [Executor][crate::executor::Executor] instance to
     /// forcefully shutdown all operation and close.
-    async fn cancel(&self, executor_id: &ExecutorId) -> EmResult<Option<Executor>>;
+    async fn cancel(&self, executor_id: &ExecutorId) -> EmResult<Executor>;
     /// Clean up database entries linked to the `executor_id` specified. Acts as the final step to
     /// ending an [Executor][crate::executor::Executor] instance and should only be called from
     /// the [Executor][crate::executor::Executor] itself.

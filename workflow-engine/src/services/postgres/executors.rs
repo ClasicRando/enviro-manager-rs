@@ -34,7 +34,7 @@ impl ExecutorService for PgExecutorService {
         Ok(executor_id)
     }
 
-    async fn read_one(&self, executor_id: &ExecutorId) -> EmResult<Option<Executor>> {
+    async fn read_one(&self, executor_id: &ExecutorId) -> EmResult<Executor> {
         let result = sqlx::query_as(
             r#"
             select
@@ -46,20 +46,26 @@ impl ExecutorService for PgExecutorService {
         .bind(executor_id)
         .fetch_optional(&self.pool)
         .await?;
-        Ok(result)
+        match result {
+            Some(executor) => Ok(executor),
+            None => Err(EmError::MissingRecord { pk: executor_id.to_string() })
+        }
     }
 
-    async fn read_status(&self, executor_id: &ExecutorId) -> EmResult<Option<ExecutorStatus>> {
+    async fn read_status(&self, executor_id: &ExecutorId) -> EmResult<ExecutorStatus> {
         let result = sqlx::query_scalar(
             r#"
             select e.status
-            from executor.executors e
+            from executor.v_executors e
             where e.executor_id = $1"#,
         )
         .bind(executor_id)
         .fetch_optional(&self.pool)
         .await?;
-        Ok(result)
+        match result {
+            Some(status) => Ok(status),
+            None => Err(EmError::MissingRecord { pk: executor_id.to_string() })
+        }
     }
 
     async fn read_many(&self) -> EmResult<Vec<Executor>> {
@@ -98,7 +104,7 @@ impl ExecutorService for PgExecutorService {
         Ok(workflow_run_id)
     }
 
-    async fn shutdown(&self, executor_id: &ExecutorId) -> EmResult<Option<Executor>> {
+    async fn shutdown(&self, executor_id: &ExecutorId) -> EmResult<Executor> {
         sqlx::query("call executor.shutdown_executor($1)")
             .bind(executor_id)
             .execute(&self.pool)
@@ -106,7 +112,7 @@ impl ExecutorService for PgExecutorService {
         self.read_one(executor_id).await
     }
 
-    async fn cancel(&self, executor_id: &ExecutorId) -> EmResult<Option<Executor>> {
+    async fn cancel(&self, executor_id: &ExecutorId) -> EmResult<Executor> {
         sqlx::query("call executor.cancel_executor($1)")
             .bind(executor_id)
             .execute(&self.pool)
@@ -176,13 +182,7 @@ mod test {
             Err(error) => panic!("Failed to register a new executor, {}", error),
         };
 
-        if executor_service.read_one(&executor_id).await?.is_none() {
-            panic!("Failed to `read_one`");
-        };
-
-        let Some(executor_status) = executor_service.read_status(&executor_id).await? else {
-            panic!("Failed to `read_status`");
-        };
+        let executor_status = executor_service.read_status(&executor_id).await?;
         assert_eq!(executor_status, ExecutorStatus::Active);
         Ok(())
     }
@@ -197,12 +197,7 @@ mod test {
             Err(error) => panic!("Failed to register a new executor, {}", error),
         };
 
-        if executor_service.cancel(&executor_id).await?.is_none() {
-            panic!("Failed to `cancel`");
-        };
-        let Some(executor_status) = executor_service.read_status(&executor_id).await? else {
-            panic!("Failed to `read_status`");
-        };
+        let executor_status = executor_service.read_status(&executor_id).await?;
         assert_eq!(executor_status, ExecutorStatus::Canceled);
 
         Ok(())
@@ -218,12 +213,7 @@ mod test {
             Err(error) => panic!("Failed to register a new executor, {}", error),
         };
 
-        if executor_service.shutdown(&executor_id).await?.is_none() {
-            panic!("Failed to `shutdown`");
-        };
-        let Some(executor_status) = executor_service.read_status(&executor_id).await? else {
-            panic!("Failed to `read_status`");
-        };
+        let executor_status = executor_service.read_status(&executor_id).await?;
         assert_eq!(executor_status, ExecutorStatus::Shutdown);
 
         Ok(())
@@ -298,9 +288,7 @@ mod test {
         let executor_service = PgExecutorService::create(&pool);
         executor_service.clean_executors().await?;
 
-        let Some(status) = executor_service.read_status(&inactive_executor_id).await? else {
-            panic!("Could not `read_status`");
-        };
+        let status = executor_service.read_status(&inactive_executor_id).await?;
 
         assert_eq!(
             status,
