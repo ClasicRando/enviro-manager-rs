@@ -109,7 +109,7 @@ where
     /// instance.
     async fn initialize(&self, workflow_id: &WorkflowId) -> EmResult<WorkflowRun>;
     /// Read a single [WorkflowRun] record from `workflow.v_workflow_runs` for the specified
-    /// `workflow_run_id`. Will return [None] when the id does not match a record.
+    /// `workflow_run_id`. Will return [Err] when the id does not match a record.
     async fn read_one(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun>;
     /// Read all [WorkflowRun] records found from `workflow.v_workflow_runs`
     async fn read_many(&self) -> EmResult<Vec<WorkflowRun>>;
@@ -152,13 +152,13 @@ where
     /// 'Waiting' status and schedules the workflow run for execution. Returns the new state of the
     /// [WorkflowRun] specified by `workflow_run_id`.
     async fn complete_move(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun>;
-    /// Get a new workflow run scheduled listener for the specified `executor_id`. The [PgListener]
-    /// checks a channel named `wr_scheduled_{executor_id}`
+    /// Get a new workflow run scheduled listener for the specified `executor_id`. The
+    /// [ChangeListener] checks a channel named `wr_scheduled_{executor_id}`
     async fn scheduled_listener(
         &self,
         executor_id: &ExecutorId,
     ) -> EmResult<Self::ScheduledListener>;
-    /// Get a new workflow run canceled listener for the specified `executor_id`. The [PgListener]
-    /// checks a channel named `wr_canceled_{executor_id}`
+    /// Get a new workflow run canceled listener for the specified `executor_id`. The
+    /// [ChangeListener] checks a channel named `wr_canceled_{executor_id}`
     async fn cancel_listener(&self, executor_id: &ExecutorId) -> EmResult<Self::CancelListener>;
 }

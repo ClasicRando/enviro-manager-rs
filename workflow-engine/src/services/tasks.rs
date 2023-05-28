@@ -52,10 +52,10 @@ where
     /// Create a new task with the data contained within `request`
     async fn create_task(&self, request: &TaskRequest) -> EmResult<Task>;
     /// Read a single task record from `task.v_tasks` for the specified `task_id`. Will return
-    /// [None] when the id does not match a record.
+    /// [Err] when the id does not match a record.
     async fn read_one(&self, task_id: &TaskId) -> EmResult<Task>;
     /// Read all task records found from `task.v_tasks`
     async fn read_many(&self) -> EmResult<Vec<Task>>;
     /// Update a task specified by `task_id` with the new details contained within `request`
-    async fn update(&self, task_id: &TaskId, request: TaskRequest) -> EmResult<Task>;
+    async fn update(&self, task_id: &TaskId, request: &TaskRequest) -> EmResult<Task>;
 }

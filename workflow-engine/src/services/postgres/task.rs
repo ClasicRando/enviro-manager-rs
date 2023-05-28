@@ -57,13 +57,13 @@ impl TaskService for PgTasksService {
         Ok(result)
     }
 
-    async fn update(&self, task_id: &TaskId, request: TaskRequest) -> EmResult<Task> {
+    async fn update(&self, task_id: &TaskId, request: &TaskRequest) -> EmResult<Task> {
         sqlx::query("call task.update_task($1,$2,$3,$4,$5)")
             .bind(task_id)
-            .bind(request.name)
-            .bind(request.description)
-            .bind(request.task_service_id)
-            .bind(request.url)
+            .bind(&request.name)
+            .bind(&request.description)
+            .bind(&request.task_service_id)
+            .bind(&request.url)
             .execute(&self.pool)
             .await?;
         self.read_one(task_id).await
@@ -129,7 +129,7 @@ mod test {
             description: new_description.to_string(),
             ..request
         };
-        let task = tasks_service.update(&task.task_id, request).await?;
+        let task = tasks_service.update(&task.task_id, &request).await?;
 
         assert_eq!(task.name, task_name);
         assert_eq!(task.description, new_description);

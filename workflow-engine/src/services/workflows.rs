@@ -93,7 +93,7 @@ where
     /// Create a new workflow using the `request` data to call the `workflow.create_workflow`
     /// procedure. Returns the new [Workflow] created.
     async fn create_workflow(&self, request: &WorkflowRequest) -> EmResult<Workflow>;
-    /// Read a single [Workflow] record for the specified `workflow_id`. Returns [None] if the id
+    /// Read a single [Workflow] record for the specified `workflow_id`. Returns [Err] if the id
     /// does not match any record in the database.
     async fn read_one(&self, workflow_id: &WorkflowId) -> EmResult<Option<Workflow>>;
     /// Read all [Workflow] records in the database

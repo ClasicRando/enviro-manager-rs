@@ -83,7 +83,7 @@ where
         workflow_runs_service: &Self::WorkflowRunService,
     ) -> Self;
     /// Read a single task record from `task.task_queue` for the specified `request`data. Will
-    /// return [None] when the ids in the `request` do not match a record.
+    /// return [Err] when the ids in the `request` do not match a record.
     async fn read_one(&self, request: &TaskQueueRequest) -> EmResult<TaskQueueRecord>;
     /// Append the task `rule` data to the specified `task_queue` record
     async fn append_task_rule(

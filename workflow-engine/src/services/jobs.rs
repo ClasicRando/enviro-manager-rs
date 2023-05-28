@@ -279,7 +279,7 @@ where
     /// Create a new job with the data contained within `request`. Branches to specific calls for
     /// [JobType::Scheduled] and [JobType::Interval].
     async fn create_job(&self, request: &JobRequest) -> EmResult<Job>;
-    /// Read a single job record from `job.v_jobs` for the specified `job_id`. Will return [None]
+    /// Read a single job record from `job.v_jobs` for the specified `job_id`. Will return [Err]
     /// when the id does not match a record
     async fn read_one(&self, job_id: &JobId) -> EmResult<Job>;
 
