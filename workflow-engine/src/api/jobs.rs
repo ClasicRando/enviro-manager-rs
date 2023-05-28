@@ -52,7 +52,7 @@ where
             ));
         }
     };
-    match service.create_job(job).await {
+    match service.create_job(&job).await {
         Ok(job) => ApiResponse::success(job),
         Err(error) => {
             error!("{}", error);

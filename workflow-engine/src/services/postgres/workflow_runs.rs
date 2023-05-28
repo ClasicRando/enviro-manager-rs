@@ -25,8 +25,8 @@ use crate::{
 impl Encode<'_, Postgres> for WorkflowRunTask {
     fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> IsNull {
         let mut encoder = PgRecordEncoder::new(buf);
-        encoder.encode(&self.task_order);
-        encoder.encode(&self.task_id);
+        encoder.encode(self.task_order);
+        encoder.encode(self.task_id);
         encoder.encode(&self.name);
         encoder.encode(&self.description);
         encoder.encode(&self.task_status);
@@ -35,7 +35,7 @@ impl Encode<'_, Postgres> for WorkflowRunTask {
         encoder.encode(&self.rules);
         encoder.encode(self.task_start);
         encoder.encode(self.task_end);
-        encoder.encode(&self.progress);
+        encoder.encode(self.progress);
         encoder.finish();
         IsNull::No
     }
@@ -163,7 +163,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        self.read_one(&workflow_run_id).await
+        self.read_one(workflow_run_id).await
     }
 
     async fn schedule(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
@@ -171,7 +171,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        self.read_one(&workflow_run_id).await
+        self.read_one(workflow_run_id).await
     }
 
     async fn schedule_with_executor(
@@ -184,7 +184,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             .bind(executor_id)
             .execute(&self.pool)
             .await?;
-        self.read_one(&workflow_run_id).await
+        self.read_one(workflow_run_id).await
     }
 
     async fn restart(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
@@ -192,7 +192,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        self.read_one(&workflow_run_id).await
+        self.read_one(workflow_run_id).await
     }
 
     async fn update_progress(&self, workflow_run_id: &WorkflowRunId) -> EmResult<()> {
@@ -231,7 +231,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        self.read_one(&workflow_run_id).await
+        self.read_one(workflow_run_id).await
     }
 
     async fn complete_move(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
@@ -239,7 +239,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
-        self.read_one(&workflow_run_id).await
+        self.read_one(workflow_run_id).await
     }
 
     async fn scheduled_listener(

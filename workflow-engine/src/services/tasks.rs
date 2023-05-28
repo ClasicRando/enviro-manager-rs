@@ -22,7 +22,7 @@ pub struct TaskRequest {
     pub(crate) url: String,
 }
 
-struct TaskRequestValidator;
+pub struct TaskRequestValidator;
 
 impl ApiRequestValidator for TaskRequestValidator {
     type ErrorMessage = &'static str;

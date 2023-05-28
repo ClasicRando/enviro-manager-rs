@@ -2,7 +2,7 @@ use common::error::{EmError, EmResult};
 use sqlx::{PgPool, Postgres};
 
 use crate::{
-    services::tasks::{Task, TaskId, TaskRequest},
+    services::tasks::{Task, TaskId, TaskRequest, TaskRequestValidator},
     TaskService,
 };
 
@@ -13,6 +13,7 @@ pub struct PgTasksService {
 }
 
 impl TaskService for PgTasksService {
+    type RequestValidator = TaskRequestValidator;
     type Database = Postgres;
 
     fn create(pool: &PgPool) -> Self {
@@ -23,7 +24,7 @@ impl TaskService for PgTasksService {
         let task_id: TaskId = sqlx::query_scalar("select task.create_task($1,$2,$3,$4)")
         .bind(&request.name)
         .bind(&request.description)
-        .bind(&request.task_service_id)
+        .bind(request.task_service_id)
         .bind(&request.url)
         .fetch_one(&self.pool)
         .await?;
@@ -62,7 +63,7 @@ impl TaskService for PgTasksService {
             .bind(task_id)
             .bind(&request.name)
             .bind(&request.description)
-            .bind(&request.task_service_id)
+            .bind(request.task_service_id)
             .bind(&request.url)
             .execute(&self.pool)
             .await?;
@@ -92,7 +93,7 @@ mod test {
         let pool = PostgresConnectionPool::create_test_db_pool().await?;
         let (task_service_name, service_url): (String, String) =
             sqlx::query_as("select name, base_url from task.task_services where service_id = $1")
-                .bind(&task_service_id)
+                .bind(task_service_id)
                 .fetch_one(&pool)
                 .await?;
         let task_url_full = format!("{}\\{}", service_url, task_url);

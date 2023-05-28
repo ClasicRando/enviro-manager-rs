@@ -47,7 +47,7 @@ pub struct WorkflowRequest {
     pub(crate) tasks: Vec<WorkflowTaskRequest>,
 }
 
-pub(crate) struct WorkflowRequestValidator;
+pub struct WorkflowRequestValidator;
 
 impl ApiRequestValidator for WorkflowRequestValidator {
     type ErrorMessage = &'static str;
