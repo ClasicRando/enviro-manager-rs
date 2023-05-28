@@ -86,19 +86,22 @@ pub struct CreateUserRequest {
 pub struct CreateUserRequestValidator;
 
 impl ApiRequestValidator for CreateUserRequestValidator {
+    type ErrorMessage = String;
     type Request = CreateUserRequest;
 
-    fn validate(request: &Self::Request) -> EmResult<()> {
+    fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage> {
         if request.first_name.trim().is_empty() {
-            Err((request, "first_name cannot be empty or whitespace"))?;
+            Err("first_name cannot be empty or whitespace")?;
         }
         if request.last_name.trim().is_empty() {
-            Err((request, "last_name cannot be empty or whitespace"))?;
+            Err("last_name cannot be empty or whitespace")?;
         }
         if request.username.trim().is_empty() {
-            Err((request, "username cannot be empty or whitespace"))?;
+            Err("username cannot be empty or whitespace")?;
         }
-        validate_password(&request.password)?;
+        if let Err(error) = validate_password(&request.password) {
+            Err(format!("{error}"))?
+        }
         Ok(())
     }
 }
@@ -128,16 +131,17 @@ impl UpdateUserRequest {
 pub struct UpdateUserRequestValidator;
 
 impl ApiRequestValidator for UpdateUserRequestValidator {
+    type ErrorMessage = String;
     type Request = UpdateUserRequest;
 
-    fn validate(request: &Self::Request) -> EmResult<()> {
+    fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage> {
         if request.validate_user.username.trim().is_empty() {
-            Err((request, "username cannot be empty or whitespace"))?;
+            Err("username cannot be empty or whitespace")?;
         }
         match &request.update_type {
             UpdateUserType::Username { new_username } => {
                 if new_username.trim().is_empty() {
-                    Err((request, "new_username cannot be empty or whitespace"))?;
+                    Err("new_username cannot be empty or whitespace")?;
                 }
             }
             UpdateUserType::FullName {
@@ -145,14 +149,16 @@ impl ApiRequestValidator for UpdateUserRequestValidator {
                 new_last_name,
             } => {
                 if new_first_name.trim().is_empty() {
-                    Err((request, "new_first_name cannot be empty or whitespace"))?;
+                    Err("new_first_name cannot be empty or whitespace")?;
                 }
                 if new_last_name.trim().is_empty() {
-                    Err((request, "new_last_name cannot be empty or whitespace"))?;
+                    Err("new_last_name cannot be empty or whitespace")?;
                 }
             }
             UpdateUserType::ResetPassword { new_password } => {
-                validate_password(new_password)?;
+                if let Err(error) = validate_password(new_password) {
+                    Err(format!("{error}"))?
+                }
             }
         }
         Ok(())

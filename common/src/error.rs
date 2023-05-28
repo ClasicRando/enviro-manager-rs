@@ -60,7 +60,7 @@ pub enum EmError {
     #[error("Contents of request '{request}' were not valid.\nReason: {reason}")]
     InvalidRequest {
         request: String,
-        reason: &'static str,
+        reason: String,
     },
     #[error("Error attempting to insert a session value. {0}")]
     SessionInsert(#[from] SessionInsertError),
@@ -78,14 +78,15 @@ impl From<String> for EmError {
     }
 }
 
-impl<D> From<(&D, &'static str)> for EmError
+impl<D, S> From<(&D, S)> for EmError
 where
     D: Debug,
+    S: Into<String>
 {
-    fn from(value: (&D, &'static str)) -> Self {
+    fn from(value: (&D, S)) -> Self {
         Self::InvalidRequest {
             request: format!("{:?}", value.0),
-            reason: value.1,
+            reason: value.1.into(),
         }
     }
 }

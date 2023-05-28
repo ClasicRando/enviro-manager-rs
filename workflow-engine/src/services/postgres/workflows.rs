@@ -1,4 +1,4 @@
-use common::error::EmResult;
+use common::{api::ApiRequestValidator, error::EmResult};
 use sqlx::{
     postgres::{PgHasArrayType, PgTypeInfo},
     PgPool, Postgres,
@@ -6,7 +6,8 @@ use sqlx::{
 
 use crate::{
     services::workflows::{
-        Workflow, WorkflowDeprecationRequest, WorkflowId, WorkflowRequest, WorkflowTask,
+        Workflow, WorkflowDeprecationRequest, WorkflowId, WorkflowRequest,
+        WorkflowRequestValidator, WorkflowTask,
     },
     WorkflowsService,
 };
@@ -25,12 +26,14 @@ pub struct PgWorkflowsService {
 
 impl WorkflowsService for PgWorkflowsService {
     type Database = Postgres;
+    type RequestValidator = WorkflowRequestValidator;
 
     fn create(pool: &PgPool) -> Self {
         Self { pool: pool.clone() }
     }
 
     async fn create_workflow(&self, request: &WorkflowRequest) -> EmResult<Workflow> {
+        Self::RequestValidator::validate(request)?;
         let workflow_id = sqlx::query_scalar("select workflow.create_workflow($1,$2)")
             .bind(&request.name)
             .bind(&request.tasks)
@@ -82,11 +85,18 @@ mod test {
     use common::error::EmResult;
     use sqlx::PgPool;
 
-    use crate::{database::{ConnectionPool, PostgresConnectionPool}, services::workflows::{
-        Workflow, WorkflowDeprecationRequest, WorkflowId, WorkflowRequest, WorkflowTaskRequest,
-    }, WorkflowsService};
-    use crate::services::postgres::workflows::PgWorkflowsService;
-    use crate::services::tasks::TaskId;
+    use crate::{
+        database::{ConnectionPool, PostgresConnectionPool},
+        services::{
+            postgres::workflows::PgWorkflowsService,
+            tasks::TaskId,
+            workflows::{
+                Workflow, WorkflowDeprecationRequest, WorkflowId, WorkflowRequest,
+                WorkflowTaskRequest,
+            },
+        },
+        WorkflowsService,
+    };
 
     async fn clean_test_workflow(workflow_name: &str, pool: &PgPool) -> EmResult<()> {
         sqlx::query(

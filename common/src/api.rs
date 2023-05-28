@@ -87,15 +87,28 @@ impl<T: Serialize> ApiResponse<T> {
 
 /// Validator for api requests that should have the request data verified
 pub trait ApiRequestValidator {
+    /// Type of the error message that is returned by the [validate][ApiRequestValidator::validate]
+    /// method. Must be able to converted to a [String].
+    type ErrorMessage: Into<String>;
     /// Type of request this validator is processing. Must implement debug to convert into an
     /// [EmError] type.
     type Request: Debug;
     /// Perform checks against the `request` to confirm it meets specified requirements. Returns an
-    /// [Err] of [EmError][crate::error::EmError] if the request is not valid. Otherwise [Ok] is
-    /// returned.
+    /// [Err] of a type that can be converted into a [String] if the request is not valid. Otherwise
+    /// [Ok] is returned.
     /// # Errors
     /// This function will return an error if the `request` cannot be validated
-    fn validate(request: &Self::Request) -> EmResult<()>;
+    fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage>;
+    /// Performs the implemented validation against the `request`, mapping the error (if any) into a
+    /// specific validation [EmError]. If the validation succeeds, [Ok] is returned.
+    /// # Errors
+    /// This function will return an error if the `request` cannot be validated
+    fn validate_request(request: &Self::Request) -> EmResult<()> {
+        if let Err(error) = Self::validate(request) {
+            return Err((request, error).into())
+        }
+        Ok(())
+    }
 }
 
 /// Validate that a `session` object contains the required data. Returns the users [Uuid] if the

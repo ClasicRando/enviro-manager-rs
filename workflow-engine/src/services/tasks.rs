@@ -1,6 +1,7 @@
 use common::error::EmResult;
 use serde::{Deserialize, Serialize};
 use sqlx::{Database, Pool};
+use common::api::ApiRequestValidator;
 
 /// Task data type representing a row from `task.v_tasks`
 #[derive(sqlx::FromRow, Serialize)]
@@ -13,12 +14,32 @@ pub struct Task {
 }
 
 /// Data required to create or update the contents of task entry (the id cannot be updated)
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct TaskRequest {
     pub(crate) name: String,
     pub(crate) description: String,
     pub(crate) task_service_id: i64,
     pub(crate) url: String,
+}
+
+struct TaskRequestValidator;
+
+impl ApiRequestValidator for TaskRequestValidator {
+    type ErrorMessage = &'static str;
+    type Request = TaskRequest;
+
+    fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage> {
+        if request.name.trim().is_empty() {
+            return Err("Request 'name' cannot be empty or whitespace")
+        }
+        if request.description.trim().is_empty() {
+            return Err("Request 'description' cannot be empty or whitespace")
+        }
+        if request.url.trim().is_empty() {
+            return Err("Request 'url' cannot be empty or whitespace")
+        }
+        Ok(())
+    }
 }
 
 /// Wrapper for a `task_id` value. Made to ensure data passed as the id of a task is correct and
@@ -46,6 +67,7 @@ where
     Self: Clone + Send
 {
     type Database: Database;
+    type RequestValidator: ApiRequestValidator<Request = TaskRequest>;
 
     /// Create a new [TaskService] with the referenced pool as the data source
     fn create(pool: &Pool<Self::Database>) -> Self;

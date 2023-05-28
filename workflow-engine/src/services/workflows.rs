@@ -5,6 +5,7 @@ use sqlx::{
     postgres::{PgHasArrayType, PgTypeInfo},
     Database, Pool,
 };
+use common::api::ApiRequestValidator;
 use crate::services::tasks::TaskId;
 
 /// Task data as it can be seen from it's parent, a [Workflow] instance. Contains the underlining
@@ -25,7 +26,7 @@ pub struct WorkflowTask {
 
 /// Task information required to create a `task.workflow_tasks` entry. 1 or more entries can be
 /// found within the [WorkflowRequest] type used by the API.
-#[derive(sqlx::Type, Deserialize)]
+#[derive(sqlx::Type, Deserialize, Debug)]
 #[sqlx(type_name = "workflow_task_request")]
 pub struct WorkflowTaskRequest {
     pub(crate) task_id: TaskId,
@@ -40,15 +41,29 @@ impl PgHasArrayType for WorkflowTaskRequest {
 
 /// API request body when attempting to create a new `workflow.workflows` entry. Defines the name
 /// and tasks found within the workflow.
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct WorkflowRequest {
     pub(crate) name: String,
     pub(crate) tasks: Vec<WorkflowTaskRequest>,
 }
 
+pub(crate) struct WorkflowRequestValidator;
+
+impl ApiRequestValidator for WorkflowRequestValidator {
+    type ErrorMessage = &'static str;
+    type Request = WorkflowRequest;
+
+    fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage> {
+        if request.name.trim().is_empty() {
+            return Err("Request 'name' cannot be empty or whitespace")
+        }
+        Ok(())
+    }
+}
+
 /// API request body when attempting to deprecate an existing `workflow.workflows` record. Specifies
 /// the `workflow_id` as well as an optional `new_workflow_id` that replaces the old workflow.
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct WorkflowDeprecationRequest {
     pub(crate) workflow_id: WorkflowId,
     pub(crate) new_workflow_id: Option<WorkflowId>,
@@ -88,6 +103,7 @@ where
     Self: Clone + Send
 {
     type Database: Database;
+    type RequestValidator: ApiRequestValidator<Request = WorkflowRequest>;
     /// Create a new [WorkflowsService] with the referenced pool as the data source
     fn create(pool: &Pool<Self::Database>) -> Self;
     /// Create a new workflow using the `request` data to call the `workflow.create_workflow`

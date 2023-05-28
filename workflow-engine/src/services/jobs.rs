@@ -220,22 +220,21 @@ pub struct JobRequest {
 pub struct JobRequestValidator;
 
 impl ApiRequestValidator for JobRequestValidator {
+    type ErrorMessage = &'static str;
     type Request = JobRequest;
 
-    fn validate(request: &Self::Request) -> EmResult<()> {
+    fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage> {
         if request.maintainer.trim().is_empty() {
-            return Err((request, "Maintainer must not be empty or whitespace").into());
+            return Err("Maintainer must not be empty or whitespace");
         }
         if let JobType::Scheduled(entries) = &request.job_type {
             if entries
                 .iter()
                 .any(|entry| entry.day_of_the_week > 7 || entry.day_of_the_week < 1)
             {
-                return Err((
-                    request,
+                return Err(
                     "All schedule entries must have a 'day_of_the_week' attribute between 1 and 7",
-                )
-                    .into());
+                );
             }
         }
         Ok(())
