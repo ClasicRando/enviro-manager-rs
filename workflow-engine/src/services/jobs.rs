@@ -262,7 +262,10 @@ impl std::fmt::Display for JobId {
 
 /// Service for fetching and interacting with task data. Wraps a [PgPool] and provides
 /// interaction methods for the API and [JobWorker][crate::job_worker::JobWorker].
-pub trait JobService: Clone + Send {
+pub trait JobService
+where
+    Self: Clone + Send,
+{
     type Database: Database;
     type CreateRequestValidator: ApiRequestValidator<Request = JobRequest>;
     type Listener: ChangeListener<NotificationAction>;

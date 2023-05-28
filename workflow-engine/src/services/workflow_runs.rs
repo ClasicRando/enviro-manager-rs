@@ -95,7 +95,10 @@ impl std::fmt::Display for WorkflowRunId {
 }
 
 #[async_trait::async_trait]
-pub trait WorkflowRunsService: Clone + Send + Sync + 'static {
+pub trait WorkflowRunsService
+where
+    Self: Clone + Send + Sync + 'static
+{
     type CancelListener: ChangeListener<WorkflowRunCancelMessage>;
     type Database: Database;
     type ScheduledListener: ChangeListener<WorkflowRunScheduledMessage>;

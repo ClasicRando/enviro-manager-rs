@@ -83,7 +83,10 @@ impl std::fmt::Display for WorkflowId {
 
 /// Service for fetching and interacting with workflow run data. Wraps a [Pool] and provides
 /// interaction methods for the API.
-pub trait WorkflowsService: Clone + Send {
+pub trait WorkflowsService
+where
+    Self: Clone + Send
+{
     type Database: Database;
     /// Create a new [WorkflowsService] with the referenced pool as the data source
     fn create(pool: &Pool<Self::Database>) -> Self;

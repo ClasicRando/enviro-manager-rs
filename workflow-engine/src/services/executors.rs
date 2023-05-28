@@ -59,7 +59,10 @@ impl std::fmt::Display for ExecutorId {
 /// interaction methods for the API and [Executor][crate::executor::Executor] instances. To
 /// implement the trait you must specify the [Database] you are working with and the
 /// [ChangeListener] the service will provide.
-pub trait ExecutorService: Clone + Send {
+pub trait ExecutorService
+where
+    Self: Clone + Send,
+{
     type Database: Database;
     type Listener: ChangeListener<ExecutorStatusUpdate>;
 

@@ -41,7 +41,10 @@ impl std::fmt::Display for TaskId {
 
 /// Service for fetching and interacting with task data. Wraps a [Pool] and provides
 /// interaction methods for the API.
-pub trait TaskService: Clone + Send {
+pub trait TaskService
+where
+    Self: Clone + Send
+{
     type Database: Database;
 
     /// Create a new [TaskService] with the referenced pool as the data source
