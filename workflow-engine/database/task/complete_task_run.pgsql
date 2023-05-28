@@ -1,9 +1,10 @@
-create or replace procedure workflow.complete_task_run(
+create or replace procedure task.complete_task_run (
     workflow_run_id bigint,
     task_order integer,
     is_paused boolean,
     output text
 )
+security definer
 language sql
 as $$
 update task.task_queue tq
@@ -20,25 +21,11 @@ where
     tq.workflow_run_id = $1
     and tq.task_order = $2
     and tq.status = 'Running'::task.task_status;
-
-with tasks as (
-    select
-        tq.workflow_run_id,
-        count(0) filter (where tq.status = 'Complete'::task.task_status) complete_count,
-        count(0) total_tasks
-    from task.task_queue tq
-    group by tq.workflow_run_id
-)
-update workflow.workflow_runs wr
-set
-    progress = round((t.complete_count / cast(t.total_tasks as real)) * 100)::smallint
-from tasks t
-where
-    wr.workflow_run_id = t.workflow_run_id
-    and wr.workflow_run_id = $1;
 $$;
 
-comment on procedure workflow.complete_task_run IS $$
+grant execute on procedure task.complete_task_run to we_web;
+
+comment on procedure task.complete_task_run IS $$
 Set the task record as done with either a 'Rule Broken', 'Paused' or 'Complete' status. Optional
 message as output is also available
 

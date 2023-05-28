@@ -1,31 +1,18 @@
 create or replace function task.create_task(
-    p_name text,
-    p_description text,
-    p_task_service_id bigint,
-    p_url text,
-	out task_id bigint,
-	out name text,
-	out description text,
-	out url text,
-	out task_service_name text
-) returns record
-language plpgsql
+    in_name text,
+    in_description text,
+    in_task_service_id bigint,
+    in_url text
+) returns bigint
+security definer
+language sql
 as $$
-declare
-    v_task_id bigint;
-begin
-	insert into task.tasks as t (name,description,task_service_id,url)
-	values($1,$2,$3,$4)
-	returning t.task_id into v_task_id;
-
-	select v.task_id, v.name, v.description, v.url, v.task_service_name
-	into $5, $6, $7, $8, $9
-	from task.v_tasks v
-	where v.task_id = v_task_id;
-
-	return;
-end;
+insert into task.tasks as t (name,description,task_service_id,url)
+values($1,$2,$3,$4)
+returning t.task_id
 $$;
+
+grant execute on function task.create_task to we_web;
 
 comment on function task.create_task IS $$
 Create a new task, executable through the service referenced.

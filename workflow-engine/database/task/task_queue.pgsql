@@ -1,3 +1,18 @@
+create or replace function task.task_queue_record_archive()
+returns trigger
+language plpgsql
+as $$
+begin
+    insert into task.task_queue_archive(
+        workflow_run_id,task_order,task_id,status,parameters,output,rules,task_start,task_end
+    )
+    select
+        tq.workflow_run_id, tq.task_order, tq.task_id, tq.status, tq.parameters, tq.output,
+        tq.rules, tq.task_start, tq.task_end
+    from old_table tq
+end;
+$$;
+
 create table if not exists task.task_queue (
     workflow_run_id bigint not null references workflow.workflow_runs match simple
         on delete restrict
@@ -15,6 +30,20 @@ create table if not exists task.task_queue (
     progress smallint check(case when progress is not null then progress between 0 and 100 else true end),
     constraint task_queue_pk primary key (workflow_run_id, task_order)
 ) partition by list(workflow_run_id);
+
+create or replace trigger record_update
+    after update
+    on task.task_queue
+    referencing old table as old_table
+    for each statement
+    execute function task.task_queue_record_archive();
+
+create or replace trigger record_update
+    after delete
+    on task.task_queue
+    referencing old table as old_table
+    for each statement
+    execute function task.task_queue_record_archive();
 
 comment on table task.task_queue is
 'Single tasks for a given workflow run. Partitioned by workflow run';

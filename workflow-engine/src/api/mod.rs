@@ -15,9 +15,8 @@ pub mod workflow_runs;
 pub mod workflows;
 
 use crate::{
-    create_task_queue_service, create_tasks_service, create_workflow_runs_service,
-    create_workflows_service, database::ConnectionPool, ExecutorService, JobService,
-    TaskQueueService, TasksService, WorkflowRunsService, WorkflowsService,
+    database::ConnectionPool, ExecutorService, JobService, TaskQueueService, TaskService,
+    WorkflowRunsService, WorkflowsService,
 };
 
 pub async fn spawn_api_server<A, C, D, E, J, Q, R, T, W>(address: A) -> EmResult<()>
@@ -27,17 +26,17 @@ where
     D: Database,
     E: ExecutorService<Database = D> + Send + Sync + 'static,
     J: JobService<Database = D, WorkflowRunService = R> + Send + Sync + 'static,
-    Q: TaskQueueService<Database = D> + Send + Sync + 'static,
+    Q: TaskQueueService<Database = D, WorkflowRunService = R> + Send + Sync + 'static,
     R: WorkflowRunsService<Database = D> + Send + Sync + 'static,
-    T: TasksService<Database = D> + Send + Sync + 'static,
+    T: TaskService<Database = D> + Send + Sync + 'static,
     W: WorkflowsService<Database = D> + Send + Sync + 'static,
 {
     let pool = C::create_db_pool().await?;
     let executors_service: Data<E> = Data::new(E::create(&pool));
-    let task_queue_service: Data<Q> = Data::new(create_task_queue_service::<Q, D>(&pool)?);
-    let tasks_service: Data<T> = Data::new(create_tasks_service::<T, D>(&pool)?);
-    let workflow_runs_service: Data<R> = Data::new(create_workflow_runs_service::<R, D>(&pool)?);
-    let workflows_service: Data<W> = Data::new(create_workflows_service::<W, D>(&pool)?);
+    let workflow_runs_service: Data<R> = Data::new(R::create(&pool));
+    let task_queue_service: Data<Q> = Data::new(Q::create(&pool, workflow_runs_service.as_ref()));
+    let tasks_service: Data<T> = Data::new(T::create(&pool));
+    let workflows_service: Data<W> = Data::new(W::create(&pool));
     let jobs_service: Data<J> = Data::new(J::create(&pool, workflow_runs_service.get_ref()));
     HttpServer::new(move || {
         App::new().service(

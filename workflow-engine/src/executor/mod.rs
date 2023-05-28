@@ -13,8 +13,7 @@ use self::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage};
 use crate::{
     database::{listener::ChangeListener, ConnectionPool, PostgresConnectionPool},
     services::{
-        create_task_queue_service, create_workflow_runs_service,
-        executors::{ExecutorId, ExecutorStatus, ExecutorService},
+        executors::{ExecutorId, ExecutorService, ExecutorStatus},
         postgres::executors::PgExecutorService,
         task_queue::TaskQueueService,
         workflow_runs::{
@@ -84,8 +83,8 @@ impl Executor<PgExecutorService, PgWorkflowRunsService, PgTaskQueueService> {
     pub async fn new_postgres() -> EmResult<Self> {
         let pool = PostgresConnectionPool::create_db_pool().await?;
         let executor_service = PgExecutorService::create(&pool);
-        let wr_service: PgWorkflowRunsService = create_workflow_runs_service(&pool)?;
-        let tq_service: PgTaskQueueService = create_task_queue_service(&pool)?;
+        let wr_service = PgWorkflowRunsService::create(&pool);
+        let tq_service = PgTaskQueueService::create(&pool, &wr_service);
         Self::new(&executor_service, &wr_service, &tq_service).await
     }
 }
@@ -211,9 +210,7 @@ where
 
     /// Read the current status of the executor as stored by the database
     async fn status(&self) -> EmResult<ExecutorStatus> {
-        self.executor_service
-            .read_status(&self.executor_id)
-            .await
+        self.executor_service.read_status(&self.executor_id).await
     }
 
     /// Handle a manual shutdown by the user (performed by a ctrl+c) by logging the even and

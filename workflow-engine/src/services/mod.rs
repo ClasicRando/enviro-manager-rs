@@ -5,35 +5,3 @@ pub mod task_queue;
 pub mod tasks;
 pub mod workflow_runs;
 pub mod workflows;
-
-use common::error::EmResult;
-use sqlx::{Database, Pool};
-
-use self::{
-    task_queue::TaskQueueService, tasks::TasksService, workflow_runs::WorkflowRunsService,
-    workflows::WorkflowsService,
-};
-
-pub fn create_workflow_runs_service<R: WorkflowRunsService<Database = D>, D: Database>(
-    pool: &Pool<D>,
-) -> EmResult<R> {
-    Ok(R::new(pool))
-}
-
-pub fn create_task_queue_service<Q: TaskQueueService<Database = D>, D: Database>(
-    pool: &Pool<D>,
-) -> EmResult<Q> {
-    Ok(Q::new(pool))
-}
-
-pub fn create_tasks_service<T: TasksService<Database = D>, D: Database>(
-    pool: &Pool<D>,
-) -> EmResult<T> {
-    Ok(T::new(pool))
-}
-
-pub fn create_workflows_service<W: WorkflowsService<Database = D>, D: Database>(
-    pool: &Pool<D>,
-) -> EmResult<W> {
-    Ok(W::new(pool))
-}

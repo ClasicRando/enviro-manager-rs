@@ -13,10 +13,11 @@ use crate::{
     job_worker::NotificationAction,
     services::{
         jobs::{Job, JobId, JobMin, JobRequest, JobType, ScheduleEntry},
+        postgres::workflow_runs::PgWorkflowRunsService,
         workflow_runs::{WorkflowRun, WorkflowRunId, WorkflowRunStatus},
         workflows::WorkflowId,
     },
-    JobService, PgWorkflowRunsService, WorkflowRunsService,
+    JobService, WorkflowRunsService,
 };
 
 #[derive(Clone)]

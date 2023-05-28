@@ -54,15 +54,13 @@ create table if not exists workflow.workflow_runs (
     progress smallint check(case when progress is not null then progress between 0 and 100 else true end)
 );
 
-drop trigger if exists workflow_run_status on workflow.workflow_runs;
-create trigger workflow_run_status
+create or replace trigger workflow_run_status
     before update of status
     on workflow.workflow_runs
     for each row
     execute function workflow.workflow_run_status_event();
 
-drop trigger if exists workflow_run_progress on workflow.workflow_runs;
-create trigger workflow_run_progress
+create or replace trigger workflow_run_progress
     before update of progress
     on workflow.workflow_runs
     for each row

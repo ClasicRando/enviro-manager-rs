@@ -11,7 +11,7 @@ async fn main() -> EmResult<()> {
 
     info!("Initializing Worker");
     let pool = PostgresConnectionPool::create_db_pool().await?;
-    let workflow_runs_service = PgWorkflowRunsService::new(&pool);
+    let workflow_runs_service = PgWorkflowRunsService::create(&pool);
     let jobs_service = PgJobsService::create(&pool, &workflow_runs_service);
     let worker = match JobWorker::new(jobs_service).await {
         Ok(worker) => worker,

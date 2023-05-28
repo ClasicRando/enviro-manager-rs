@@ -5,6 +5,8 @@ select
 from task.tasks t
 join task.task_services ts on t.task_service_id = ts.service_id;
 
+grant select on view task.v_task to we_web;
+
 comment on view task.v_tasks IS $$
 Utility view, showing tasks with the full url using the base url from the task service.
 $$;

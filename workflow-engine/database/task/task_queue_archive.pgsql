@@ -2,12 +2,13 @@ create table if not exists task.task_queue_archive (
     workflow_run_id bigint not null,
     task_order int not null,
     task_id bigint not null,
-    status task.task_status not null default 'Waiting'::task.task_status,
+    status task.task_status not null,
     parameters jsonb,
-    output text check(data_check.check_not_blank_or_empty(output)),
-    rules task.task_rule[] check(rules != '{}'::task.task_rule[]),
+    output text,
+    rules task.task_rule[],
     task_start timestamp without time zone,
-    task_end timestamp without time zone
+    task_end timestamp without time zone,
+    progress smallint
 );
 
 create index if not exists wr_id
@@ -18,7 +19,7 @@ create index if not exists wr_id_task_id
 on task.task_queue_archive(workflow_run_id,task_id);
 
 comment on table task.task_queue_archive is
-'Archive of entires from task_queue that were deleted or altered due to user requests';
+'Archive of entries from task_queue that were deleted or altered due to user requests';
 comment on column task.task_queue_archive.workflow_run_id is
 'Id of the parent workflow run of this record';
 comment on column task.task_queue_archive.task_order is

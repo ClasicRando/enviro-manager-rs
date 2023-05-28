@@ -53,7 +53,7 @@ where
             ));
         }
     };
-    match service.create(request).await {
+    match service.create_workflow(&request).await {
         Ok(workflow) => ApiResponse::success(workflow),
         Err(error) => ApiResponse::error(error),
     }
@@ -77,7 +77,7 @@ where
             ));
         }
     };
-    match service.deprecate(request).await {
+    match service.deprecate(&request).await {
         Ok(workflow_id) => ApiResponse::message(format!(
             "Successfully deprecated workflow_id = {}",
             workflow_id

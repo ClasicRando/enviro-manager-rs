@@ -1,7 +1,8 @@
-create or replace procedure workflow.start_task_run(
+create or replace procedure task.start_task_run(
     workflow_run_id bigint,
     task_order int
 )
+security definer
 language sql
 as $$
 update task.task_queue tq
@@ -13,7 +14,9 @@ where
     and tq.task_order = $2;
 $$;
 
-comment on procedure workflow.start_task_run IS $$
+grant execute on procedure task.start_task_run to we_web;
+
+comment on procedure task.start_task_run IS $$
 Get the next available workflow run for the given executor. Returns at most 1 row of a
 workflow_run_id and a flag to indicate if the workflow run is valid or not. Invalid runs are reset
 by the executor.

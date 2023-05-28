@@ -1,12 +1,12 @@
 use common::api::ApiResponse;
 use log::error;
 
-use crate::services::tasks::{Task, TaskId, TaskRequest, TasksService};
+use crate::services::tasks::{Task, TaskId, TaskRequest, TaskService};
 
 /// API endpoint to fetch all tasks. Return an array of [Task] entries
 pub async fn tasks<T>(service: actix_web::web::Data<T>) -> ApiResponse<Vec<Task>>
 where
-    T: TasksService,
+    T: TaskService,
 {
     match service.read_many().await {
         Ok(tasks) => ApiResponse::success(tasks),
@@ -21,15 +21,10 @@ pub async fn task<T>(
     service: actix_web::web::Data<T>,
 ) -> ApiResponse<Task>
 where
-    T: TasksService,
+    T: TaskService,
 {
     match service.read_one(&task_id).await {
-        Ok(task_option) => match task_option {
-            Some(task) => ApiResponse::success(task),
-            None => {
-                ApiResponse::failure(format!("Could not find record for task_id = {}", task_id))
-            }
-        },
+        Ok(task) => ApiResponse::success(task),
         Err(error) => ApiResponse::error(error),
     }
 }
@@ -40,7 +35,7 @@ pub async fn create_task<T>(
     service: actix_web::web::Data<T>,
 ) -> ApiResponse<Task>
 where
-    T: TasksService,
+    T: TaskService,
 {
     let request: TaskRequest = match rmp_serde::from_slice(&data) {
         Ok(inner) => inner,
@@ -52,7 +47,7 @@ where
             ));
         }
     };
-    match service.create(&request).await {
+    match service.create_task(&request).await {
         Ok(task) => ApiResponse::success(task),
         Err(error) => ApiResponse::error(error),
     }

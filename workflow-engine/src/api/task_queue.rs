@@ -21,7 +21,7 @@ where
             ));
         }
     };
-    match service.retry_task(request).await {
+    match service.retry_task(&request).await {
         Ok(_) => ApiResponse::message(String::from(
             "Successfully set task queue record to retry. Workflow scheduled for run",
         )),
@@ -47,7 +47,7 @@ where
             ));
         }
     };
-    match service.complete_task(request).await {
+    match service.complete_task(&request).await {
         Ok(_) => ApiResponse::message(String::from(
             "Successfully set task queue record to complete. Workflow scheduled for run",
         )),

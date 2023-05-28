@@ -192,7 +192,7 @@
             ]
         },
         {
-            "name": "workflow/complete_task_run.pgsql",
+            "name": "task/complete_task_run.pgsql",
             "dependencies": [
                 "schema.pgsql",
                 "task/task_queue.pgsql",
@@ -200,7 +200,7 @@
             ]
         },
         {
-            "name": "workflow/fail_task_run.pgsql",
+            "name": "task/fail_task_run.pgsql",
             "dependencies": [
                 "schema.pgsql",
                 "task/task_queue.pgsql",
@@ -255,7 +255,7 @@
             ]
         },
         {
-            "name": "workflow/append_task_rule.pgsql",
+            "name": "task/append_task_rule.pgsql",
             "dependencies": [
                 "schema.pgsql",
                 "task/task_queue.pgsql",
@@ -375,14 +375,11 @@
             ]
         },
         {
-            "name": "workflow/retry_task.pgsql",
+            "name": "task/retry_task.pgsql",
             "dependencies": [
                 "schema.pgsql",
                 "task/task_queue.pgsql",
-                "task/task_status.pgsql",
-                "task/task_queue_archive.pgsql",
-                "workflow/workflow_runs.pgsql",
-                "workflow/workflow_run_status.pgsql"
+                "task/task_status.pgsql"
             ]
         },
         {
@@ -504,20 +501,19 @@
             ]
         },
         {
-            "name": "workflow/set_task_progress.pgsql",
+            "name": "task/set_task_progress.pgsql",
             "dependencies": [
                 "schema.pgsql",
                 "task/task_queue.pgsql",
-                "task/task_rule.pgsql",
                 "task/task_status.pgsql"
             ]
         },
         {
-            "name": "workflow/acquire_next_task.pgsql",
+            "name": "task/v_task_queue_record.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "workflow/next_task.pgsql",
-                "workflow/start_task_run.pgsql"
+                "task/task_queue.pgsql",
+                "task/v_tasks.pgsql"
             ]
         }
     ]

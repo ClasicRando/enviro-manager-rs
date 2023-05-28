@@ -1,16 +1,18 @@
-create or replace function workflow.next_task(
+create or replace function task.next_task(
     workflow_run_id bigint
 ) returns table (
     workflow_run_id bigint,
     task_order integer,
     task_id bigint,
+    status task.task_status,
     parameters jsonb,
     url text
 )
+security definer
 language sql
 stable
 as $$
-select tq.workflow_run_id, tq.task_order, tq.task_id, tq.parameters, t.url
+select tq.workflow_run_id, tq.task_order, tq.task_id, tq.status, tq.parameters, t.url
 from (
     select tq1.workflow_run_id, tq1.task_order, tq1.task_id, tq1.parameters
     from task.task_queue tq1
@@ -37,7 +39,9 @@ join task.v_tasks t
 on tq.task_id = t.task_id;
 $$;
 
-comment on function workflow.next_task IS $$
+grant execute function on task.next_task to we_web;
+
+comment on function task.next_task IS $$
 Get the next available task for the given workflow_run_id. Returns at most 1 row of a row
 containing data about the executable task.
 
