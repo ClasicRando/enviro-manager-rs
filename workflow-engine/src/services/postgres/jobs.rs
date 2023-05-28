@@ -7,6 +7,7 @@ use sqlx::{
     postgres::{types::PgInterval, PgListener},
     PgPool, Postgres,
 };
+use common::api::ApiRequestValidator;
 
 use crate::{
     database::listener::PgChangeListener,
@@ -19,6 +20,7 @@ use crate::{
     },
     JobService, WorkflowRunsService,
 };
+use crate::services::jobs::JobRequestValidator;
 
 #[derive(Clone)]
 pub struct PgJobsService {
@@ -30,7 +32,7 @@ impl PgJobsService {
     /// Create a new interval job using the specified details from the parameters
     async fn create_interval_job(
         &self,
-        workflow_id: &i64,
+        workflow_id: &WorkflowId,
         maintainer: &str,
         interval: &PgInterval,
         next_run: &Option<NaiveDateTime>,
@@ -48,7 +50,7 @@ impl PgJobsService {
     /// Create a new scheduled job using the specified details from the parameters
     async fn create_scheduled_job(
         &self,
-        workflow_id: &i64,
+        workflow_id: &WorkflowId,
         maintainer: &str,
         schedule: &[ScheduleEntry],
     ) -> EmResult<JobId> {
@@ -64,6 +66,7 @@ impl PgJobsService {
 
 impl JobService for PgJobsService {
     type Database = Postgres;
+    type CreateRequestValidator = JobRequestValidator;
     type Listener = PgChangeListener<NotificationAction>;
     type WorkflowRunService = PgWorkflowRunsService;
 
@@ -74,13 +77,14 @@ impl JobService for PgJobsService {
         }
     }
 
-    async fn create_job(&self, request: JobRequest) -> EmResult<Job> {
+    async fn create_job(&self, request: &JobRequest) -> EmResult<Job> {
+        Self::CreateRequestValidator::validate(request)?;
         let JobRequest {
             workflow_id,
             maintainer,
             job_type,
             next_run,
-        } = &request;
+        } = request;
         let job_id = match job_type {
             JobType::Scheduled(schedule) => {
                 self.create_scheduled_job(workflow_id, maintainer, schedule)

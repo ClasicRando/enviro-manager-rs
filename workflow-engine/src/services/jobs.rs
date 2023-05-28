@@ -1,5 +1,5 @@
 use chrono::NaiveDateTime;
-use common::error::EmResult;
+use common::{api::ApiRequestValidator, error::EmResult};
 use serde::{
     de::{MapAccess, Visitor},
     ser::SerializeStruct,
@@ -9,7 +9,8 @@ use sqlx::{postgres::types::PgInterval, Database, Pool};
 
 use super::workflow_runs::WorkflowRunStatus;
 use crate::{
-    database::listener::ChangeListener, job_worker::NotificationAction, WorkflowRunsService,
+    database::listener::ChangeListener, job_worker::NotificationAction,
+    services::workflows::WorkflowId, WorkflowRunsService,
 };
 
 /// Represents the `job_type` Postgresql enum value within the database. Should never be used by
@@ -24,7 +25,7 @@ pub enum JobTypeEnum {
 /// Details of a [JobType::Scheduled] job. Specifies a single run of the job as a `day_of_the_week`
 /// (Monday = 1, Sunday = 7) and a time within the day (timestamp without a timezone). Links to a
 /// postgresql composite type.
-#[derive(sqlx::Type, Serialize, Deserialize)]
+#[derive(sqlx::Type, Serialize, Deserialize, Debug)]
 #[sqlx(type_name = "schedule_entry")]
 pub struct ScheduleEntry {
     day_of_the_week: i16,
@@ -130,7 +131,7 @@ where
 
 /// Describes the only difference between job entry types. Jobs are either scheduled with a 1 or
 /// more weekly schedule entries or follow an interval schedule of a defined period between runs.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum JobType {
     Scheduled(Vec<ScheduleEntry>),
@@ -207,12 +208,38 @@ where
 
 /// API request data for updating a job entry. Specifies all fields within the record except for
 /// the `job_id` which should be provided by a path parameter
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct JobRequest {
-    pub(crate) workflow_id: i64,
+    pub(crate) workflow_id: WorkflowId,
     pub(crate) maintainer: String,
     pub(crate) job_type: JobType,
     pub(crate) next_run: Option<NaiveDateTime>,
+}
+
+/// API request validator for [JobRequest]
+pub struct JobRequestValidator;
+
+impl ApiRequestValidator for JobRequestValidator {
+    type Request = JobRequest;
+
+    fn validate(request: &Self::Request) -> EmResult<()> {
+        if request.maintainer.trim().is_empty() {
+            return Err((request, "Maintainer must not be empty or whitespace").into());
+        }
+        if let JobType::Scheduled(entries) = &request.job_type {
+            if entries
+                .iter()
+                .any(|entry| entry.day_of_the_week > 7 || entry.day_of_the_week < 1)
+            {
+                return Err((
+                    request,
+                    "All schedule entries must have a 'day_of_the_week' attribute between 1 and 7",
+                )
+                    .into());
+            }
+        }
+        Ok(())
+    }
 }
 
 /// Wrapper for a `job_id` value. Made to ensure data passed as the id of a job is correct and not
@@ -237,6 +264,7 @@ impl std::fmt::Display for JobId {
 /// interaction methods for the API and [JobWorker][crate::job_worker::JobWorker].
 pub trait JobService: Clone + Send {
     type Database: Database;
+    type CreateRequestValidator: ApiRequestValidator<Request = JobRequest>;
     type Listener: ChangeListener<NotificationAction>;
     type WorkflowRunService: WorkflowRunsService<Database = Self::Database>;
 
@@ -247,7 +275,7 @@ pub trait JobService: Clone + Send {
     ) -> Self;
     /// Create a new job with the data contained within `request`. Branches to specific calls for
     /// [JobType::Scheduled] and [JobType::Interval].
-    async fn create_job(&self, request: JobRequest) -> EmResult<Job>;
+    async fn create_job(&self, request: &JobRequest) -> EmResult<Job>;
     /// Read a single job record from `job.v_jobs` for the specified `job_id`. Will return [None]
     /// when the id does not match a record
     async fn read_one(&self, job_id: &JobId) -> EmResult<Job>;
