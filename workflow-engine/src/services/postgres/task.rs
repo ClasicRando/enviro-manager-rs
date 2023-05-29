@@ -13,8 +13,8 @@ pub struct PgTasksService {
 }
 
 impl TaskService for PgTasksService {
-    type RequestValidator = TaskRequestValidator;
     type Database = Postgres;
+    type RequestValidator = TaskRequestValidator;
 
     fn create(pool: &PgPool) -> Self {
         Self { pool: pool.clone() }
@@ -22,12 +22,12 @@ impl TaskService for PgTasksService {
 
     async fn create_task(&self, request: &TaskRequest) -> EmResult<Task> {
         let task_id: TaskId = sqlx::query_scalar("select task.create_task($1,$2,$3,$4)")
-        .bind(&request.name)
-        .bind(&request.description)
-        .bind(request.task_service_id)
-        .bind(&request.url)
-        .fetch_one(&self.pool)
-        .await?;
+            .bind(&request.name)
+            .bind(&request.description)
+            .bind(request.task_service_id)
+            .bind(&request.url)
+            .fetch_one(&self.pool)
+            .await?;
         self.read_one(&task_id).await
     }
 
@@ -43,7 +43,9 @@ impl TaskService for PgTasksService {
         .await?;
         match result {
             Some(task) => Ok(task),
-            None => Err(EmError::MissingRecord { pk: task_id.to_string() })
+            None => Err(EmError::MissingRecord {
+                pk: task_id.to_string(),
+            }),
         }
     }
 
@@ -73,8 +75,12 @@ impl TaskService for PgTasksService {
 
 #[cfg(test)]
 mod test {
+    use common::database::{
+        connection::ConnectionBuilder, postgres::connection::PgConnectionBuilder,
+    };
+
     use super::{PgTasksService, TaskRequest, TaskService};
-    use crate::database::{ConnectionPool, PostgresConnectionPool};
+    use crate::database::db_options;
 
     #[sqlx::test]
     async fn task() -> Result<(), Box<dyn std::error::Error>> {
@@ -90,7 +96,7 @@ mod test {
             url: task_url.to_string(),
         };
 
-        let pool = PostgresConnectionPool::create_test_db_pool().await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
         let (task_service_name, service_url): (String, String) =
             sqlx::query_as("select name, base_url from task.task_services where service_id = $1")
                 .bind(task_service_id)

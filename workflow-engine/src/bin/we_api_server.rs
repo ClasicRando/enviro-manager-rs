@@ -1,16 +1,17 @@
-use common::error::EmResult;
+use common::{error::EmResult, database::postgres::connection::PgConnectionBuilder};
 use sqlx::Postgres;
 use workflow_engine::{
-    api, database::PostgresConnectionPool, PgExecutorService, PgJobsService, PgTaskQueueService,
+    api, PgExecutorService, PgJobsService, PgTaskQueueService,
     PgTasksService, PgWorkflowRunsService, PgWorkflowsService,
 };
+use workflow_engine::database::db_options;
 
 #[tokio::main]
 async fn main() -> EmResult<()> {
     log4rs::init_file("workflow-engine/api_server_log.yml", Default::default()).unwrap();
     api::spawn_api_server::<
         (&str, u16),
-        PostgresConnectionPool,
+        PgConnectionBuilder,
         Postgres,
         PgExecutorService,
         PgJobsService,
@@ -18,7 +19,7 @@ async fn main() -> EmResult<()> {
         PgWorkflowRunsService,
         PgTasksService,
         PgWorkflowsService,
-    >(("127.0.0.1", 8080))
+    >(("127.0.0.1", 8080), db_options()?)
     .await?;
     Ok(())
 }

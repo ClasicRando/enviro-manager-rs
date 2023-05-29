@@ -82,11 +82,14 @@ impl WorkflowsService for PgWorkflowsService {
 
 #[cfg(test)]
 mod test {
-    use common::error::EmResult;
+    use common::{
+        database::{connection::ConnectionBuilder, postgres::connection::PgConnectionBuilder},
+        error::EmResult,
+    };
     use sqlx::PgPool;
 
     use crate::{
-        database::{ConnectionPool, PostgresConnectionPool},
+        database::db_options,
         services::{
             postgres::workflows::PgWorkflowsService,
             tasks::TaskId,
@@ -143,7 +146,7 @@ mod test {
 
     #[sqlx::test]
     async fn create() -> EmResult<()> {
-        let pool = PostgresConnectionPool::create_test_db_pool().await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
         let service = PgWorkflowsService::create(&pool);
         let workflow_name = "Create test";
         let task_id = TaskId::from(1);
@@ -172,7 +175,7 @@ mod test {
 
     #[sqlx::test]
     async fn read_one_should_return_some_when_record_exists() -> EmResult<()> {
-        let pool = PostgresConnectionPool::create_test_db_pool().await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
         let service = PgWorkflowsService::create(&pool);
         let workflow_id = WorkflowId::from(1);
         let workflow_name = "test";
@@ -191,7 +194,7 @@ mod test {
 
     #[sqlx::test]
     async fn read_one_should_return_none_when_record_exists() -> EmResult<()> {
-        let pool = PostgresConnectionPool::create_test_db_pool().await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
         let service = PgWorkflowsService::create(&pool);
         let workflow_id = WorkflowId::from(0);
 
@@ -204,7 +207,7 @@ mod test {
 
     #[sqlx::test]
     async fn read_many() -> EmResult<()> {
-        let pool = PostgresConnectionPool::create_test_db_pool().await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
         let service = PgWorkflowsService::create(&pool);
 
         let workflows = service.read_many().await?;
@@ -216,7 +219,7 @@ mod test {
 
     #[sqlx::test]
     async fn deprecate_workflow_with_no_new_workflow() -> EmResult<()> {
-        let pool = PostgresConnectionPool::create_test_db_pool().await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
         let service = PgWorkflowsService::create(&pool);
 
         let workflow_name = "deprecate no new workflow test";
@@ -263,7 +266,7 @@ mod test {
 
     #[sqlx::test]
     async fn deprecate_workflow_with_new_workflow() -> EmResult<()> {
-        let pool = PostgresConnectionPool::create_test_db_pool().await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
         let service = PgWorkflowsService::create(&pool);
         let workflow_id = WorkflowId::from(1);
         let new_workflow_name = "deprecate workflow new workflow test";

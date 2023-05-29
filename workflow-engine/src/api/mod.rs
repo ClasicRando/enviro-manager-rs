@@ -4,8 +4,8 @@ use actix_web::{
     web::{get, post, Data},
     App, HttpServer,
 };
-use common::error::EmResult;
-use sqlx::Database;
+use common::{database::connection::ConnectionBuilder, error::EmResult};
+use sqlx::{Connection, Database};
 
 pub mod executors;
 pub mod jobs;
@@ -15,14 +15,17 @@ pub mod workflow_runs;
 pub mod workflows;
 
 use crate::{
-    database::ConnectionPool, ExecutorService, JobService, TaskQueueService, TaskService,
-    WorkflowRunsService, WorkflowsService,
+    ExecutorService, JobService, TaskQueueService, TaskService, WorkflowRunsService,
+    WorkflowsService,
 };
 
-pub async fn spawn_api_server<A, C, D, E, J, Q, R, T, W>(address: A) -> EmResult<()>
+pub async fn spawn_api_server<A, C, D, E, J, Q, R, T, W>(
+    address: A,
+    options: <D::Connection as Connection>::Options,
+) -> EmResult<()>
 where
     A: ToSocketAddrs,
-    C: ConnectionPool<D>,
+    C: ConnectionBuilder<D>,
     D: Database,
     E: ExecutorService<Database = D> + Send + Sync + 'static,
     J: JobService<Database = D, WorkflowRunService = R> + Send + Sync + 'static,
@@ -31,7 +34,7 @@ where
     T: TaskService<Database = D> + Send + Sync + 'static,
     W: WorkflowsService<Database = D> + Send + Sync + 'static,
 {
-    let pool = C::create_db_pool().await?;
+    let pool = C::create_pool(options, 20, 1).await?;
     let executors_service: Data<E> = Data::new(E::create(&pool));
     let workflow_runs_service: Data<R> = Data::new(R::create(&pool));
     let task_queue_service: Data<Q> = Data::new(Q::create(&pool, workflow_runs_service.as_ref()));

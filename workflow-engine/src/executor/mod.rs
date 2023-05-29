@@ -3,7 +3,10 @@ mod worker;
 
 use std::collections::HashMap;
 
-use common::error::EmResult;
+use common::{
+    database::{connection::ConnectionBuilder, postgres::connection::PgConnectionBuilder},
+    error::EmResult,
+};
 use log::{error, info, warn};
 use tokio::{signal::ctrl_c, task::JoinError};
 use utilities::{ExecutorStatusUpdate, WorkflowRunWorkerResult};
@@ -11,7 +14,7 @@ use worker::WorkflowRunWorker;
 
 use self::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage};
 use crate::{
-    database::{listener::ChangeListener, ConnectionPool, PostgresConnectionPool},
+    database::{db_options, listener::ChangeListener},
     services::{
         executors::{ExecutorId, ExecutorService, ExecutorStatus},
         postgres::executors::PgExecutorService,
@@ -81,7 +84,7 @@ where
 
 impl Executor<PgExecutorService, PgWorkflowRunsService, PgTaskQueueService> {
     pub async fn new_postgres() -> EmResult<Self> {
-        let pool = PostgresConnectionPool::create_db_pool().await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?, 20, 1).await?;
         let executor_service = PgExecutorService::create(&pool);
         let wr_service = PgWorkflowRunsService::create(&pool);
         let tq_service = PgTaskQueueService::create(&pool, &wr_service);

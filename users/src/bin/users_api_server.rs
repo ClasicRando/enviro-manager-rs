@@ -1,9 +1,8 @@
 use actix_web::cookie::Key;
-use common::{database::connection::PgConnectionBuilder, error::EmResult};
-use sqlx::Postgres;
+use common::{database::postgres::connection::PgConnectionBuilder, error::EmResult};
 use users::{
     api,
-    database::db_web_options,
+    database::db_options,
     service::postgres::{roles::PgRoleService, users::PgUserService},
 };
 
@@ -14,10 +13,10 @@ async fn main() -> EmResult<()> {
     api::spawn_api_server::<
         (&str, u16),
         PgConnectionBuilder,
-        Postgres,
+        _,
         PgRoleService,
         PgUserService,
-    >(("127.0.0.1", 8080), db_web_options()?, signing_key)
+    >(("127.0.0.1", 8080), db_options()?, signing_key)
     .await?;
     Ok(())
 }
