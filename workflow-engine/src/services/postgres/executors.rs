@@ -234,7 +234,7 @@ mod test {
 
     #[sqlx::test]
     async fn create_executor() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?, 1, 1).await?;
         let executor_service = PgExecutorService { pool };
 
         let executor_id = match executor_service.register_executor().await {
@@ -249,7 +249,7 @@ mod test {
 
     #[sqlx::test]
     async fn cancel_executor() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?, 1, 1).await?;
         let executor_service = PgExecutorService { pool };
 
         let executor_id = match executor_service.register_executor().await {
@@ -265,7 +265,7 @@ mod test {
 
     #[sqlx::test]
     async fn shutdown_executor() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?, 1, 1).await?;
         let executor_service = PgExecutorService { pool };
 
         let executor_id = match executor_service.register_executor().await {
@@ -281,7 +281,7 @@ mod test {
 
     #[sqlx::test]
     async fn post_error() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?, 1, 1).await?;
         let executor_service = PgExecutorService::create(&pool);
 
         let executor_id = match executor_service.register_executor().await {
@@ -310,7 +310,7 @@ mod test {
 
     #[sqlx::test]
     async fn status_listener() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?, 1, 1).await?;
         let executor_service = PgExecutorService::create(&pool);
 
         let executor_id = match executor_service.register_executor().await {
@@ -332,7 +332,7 @@ mod test {
 
     #[sqlx::test]
     async fn clean_executors() -> Result<(), Box<dyn std::error::Error>> {
-        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?, 1, 1).await?;
         let executor_service = PgExecutorService::create(&pool);
 
         let inactive_executor_id = match executor_service.register_executor().await {
@@ -344,7 +344,7 @@ mod test {
         pool.close().await;
         drop(pool);
 
-        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?, 1, 1).await?;
         let executor_service = PgExecutorService::create(&pool);
         executor_service.clean_executors().await?;
 

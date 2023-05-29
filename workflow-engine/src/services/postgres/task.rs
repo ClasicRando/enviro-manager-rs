@@ -96,7 +96,7 @@ mod test {
             url: task_url.to_string(),
         };
 
-        let pool = PgConnectionBuilder::create_pool(db_options()?).await?;
+        let pool = PgConnectionBuilder::create_pool(db_options()?, 1, 1).await?;
         let (task_service_name, service_url): (String, String) =
             sqlx::query_as("select name, base_url from task.task_services where service_id = $1")
                 .bind(task_service_id)
