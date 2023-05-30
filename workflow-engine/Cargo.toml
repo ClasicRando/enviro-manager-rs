@@ -34,4 +34,6 @@ indoc = { workspace = true }
 actix-web = { workspace = true }
 mime = { workspace = true }
 async-trait = { workspace = true }
+rstest = { workspace = true }
+lazy-regex = { workspace = true }
 common = { path = "../common" }

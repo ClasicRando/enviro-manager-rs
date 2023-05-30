@@ -31,7 +31,7 @@ begin
 
     for r_executor in (
         select
-            coalesce(eb.executor_id, ea.executor_id) executor_id, wr_count,
+            coalesce(eb.executor_id, ea.executor_id) executor_id,
             eb.is_alive was_alive, ea.is_alive,
             eb.wr_count wr_count_before, ea.wr_cancelled_count wr_cancelled_after,
             eb.cancel_status + eb.running_status to_be_canceled_before,

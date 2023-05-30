@@ -25,3 +25,45 @@ pub trait Database {
         min_connection: u32,
     ) -> Self::ConnectionPool;
 }
+
+/// Container for multiple optional errors that could arise from an execution of an anonymous block
+/// of sql code with a rolled back transaction.
+pub struct RolledBackTransactionResult<B, T>
+where
+    B: std::error::Error,
+    T: std::error::Error,
+{
+    /// Error within the original block executed
+    pub block_error: Option<B>,
+    /// Error during the transaction rollback
+    pub transaction_error: Option<T>,
+}
+
+impl<B, T> Default for RolledBackTransactionResult<B, T>
+where
+    B: std::error::Error,
+    T: std::error::Error,
+{
+    fn default() -> Self {
+        Self {
+            block_error: None,
+            transaction_error: None,
+        }
+    }
+}
+
+impl<B, T> RolledBackTransactionResult<B, T>
+where
+    B: std::error::Error,
+    T: std::error::Error,
+{
+    /// Add or replace the current `block_error` attribute with `error`
+    fn with_block_error(&mut self, error: B) {
+        self.block_error = Some(error);
+    }
+
+    /// Add or replace the current `transaction_error` attribute with `error`
+    fn with_transaction_error(&mut self, error: T) {
+        self.transaction_error = Some(error);
+    }
+}

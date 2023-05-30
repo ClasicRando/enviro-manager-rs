@@ -1,60 +1,19 @@
-use std::path::PathBuf;
-
-use lazy_regex::{regex, Lazy, Regex};
 use log::{error, info, warn};
 use sqlx::PgPool;
 
 use crate::{
     database::{
         build::{DatabaseBuilder, DbBuild},
-        postgres::Postgres,
+        postgres::{format_anonymous_block, Postgres},
     },
     error::EmResult,
     package_dir, read_file,
 };
 
-/// Regex to find and parse a create type postgres statement
-static TYPE_REGEX: &Lazy<Regex, fn() -> Regex> =
-    regex!(r"^create\s+type\s+(?P<schema>[^.]+)\.(?P<name>[^.]+)\s+as(?P<definition>[^;]+);");
-
 ///
 pub struct PgDatabaseBuilder {
     ///
     pool: PgPool,
-}
-
-impl PgDatabaseBuilder {
-    /// Process a Postgresql type definition `block`, updating the contents to not run the create
-    /// statement if the type already exists and wrapping the entire block as an anonymous block.
-    fn process_type_definition(block: &str) -> String {
-        let block = TYPE_REGEX.replace(
-            block,
-            r#"
-        if not exists(
-            select 1
-            from pg_namespace n
-            join pg_type t on n.oid = t.typnamespace
-            where
-                n.nspname = '$schema'
-                and t.typname = '$name'
-        ) then
-            create type ${schema}.$name as $definition;
-        end if;
-        "#,
-        );
-        format!("do $body$\nbegin\n{block}\nend;\n$body$;")
-    }
-
-    /// Format the provided `block` so that is can be executed as an anonymous block of Postgresql
-    /// code
-    fn format_anonymous_block(block: &str) -> String {
-        match block.split_whitespace().next() {
-            Some("do") | None => block.to_owned(),
-            Some("begin" | "declare") => format!("do $body$\n{block}\n$body$;"),
-            Some(_) if TYPE_REGEX.is_match(block) => Self::process_type_definition(block),
-            Some(_) => format!("do $body$\nbegin\n{block}\nend;\n$body$;"),
-        }
-    }
 }
 
 impl DatabaseBuilder for PgDatabaseBuilder {
@@ -78,14 +37,6 @@ impl DatabaseBuilder for PgDatabaseBuilder {
         let db_refresh = std::env::var("DB_REFRESH")
             .map(|v| &v == "true")
             .unwrap_or_default();
-
-        let Some(name) = std::env::var("DB_BUILD_TARGET").ok() else {
-            warn!(
-            "Could not find a value for the database build target. Please specify with the \
-             'DB_BUILD_TARGET' environment variable"
-        );
-            return;
-        };
 
         info!("Target specified as '{database_target}' to rebuild");
 
@@ -112,13 +63,13 @@ impl DatabaseBuilder for PgDatabaseBuilder {
             }
         };
         if let Err(error) = db_build.run(&database_directory, self).await {
-            error!("Error building {} database. {}", name, error);
+            error!("Error building {} database. {}", database_target, error);
             return;
         }
 
         if db_refresh {
             let scaffold_path =
-                PathBuf::from(format!("./users/database/{database_target}_scaffold.pgsql"));
+                database_directory.join(format!("{database_target}_scaffold.pgsql"));
 
             if !scaffold_path.exists() {
                 info!("No scaffold file. Continuing");
@@ -139,24 +90,27 @@ impl DatabaseBuilder for PgDatabaseBuilder {
     }
 
     async fn refresh_database(&self) -> EmResult<()> {
-        let schema_names: Vec<String> = sqlx::query_scalar(
+        let schema_names_option: Option<String> = sqlx::query_scalar(
             r#"
-            select schema_name
+            select string_agg(schema_name,', ')
             from information_schema.schemata
             where schema_owner = current_user"#,
         )
-        .fetch_all(&self.pool)
+        .fetch_one(&self.pool)
         .await?;
-        for schema_name in schema_names {
-            sqlx::query(&format!("drop schema if exists {schema_name}"))
-                .execute(&self.pool)
-                .await?;
-        }
+        let Some(schema_names) = schema_names_option else {
+            warn!("Current user does not own any schemas");
+            return Ok(())
+        };
+
+        sqlx::query(&format!("drop schema if exists {schema_names} cascade"))
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 
     async fn execute_anonymous_block(&self, block: &str) -> EmResult<()> {
-        let block = Self::format_anonymous_block(block);
+        let block = format_anonymous_block(block);
         sqlx::query(&block).execute(&self.pool).await?;
         Ok(())
     }
