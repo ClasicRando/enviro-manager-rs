@@ -1,7 +1,4 @@
-use common::database::{
-    build::build_database,
-    postgres::{build::PgDatabaseBuilder, connection::PgConnectionBuilder},
-};
+use common::database::{build::build_database, postgres::build::PgDatabaseBuilder};
 use log::error;
 use users::database::db_options;
 
@@ -14,9 +11,5 @@ async fn main() {
             return;
         }
     };
-    build_database::<PgDatabaseBuilder, PgConnectionBuilder, _, _>(
-        "users/users_db_build_log.yml",
-        options,
-    )
-    .await
+    build_database::<PgDatabaseBuilder, _, _>("users/users_db_build_log.yml", options).await
 }

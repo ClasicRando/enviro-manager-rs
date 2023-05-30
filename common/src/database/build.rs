@@ -2,9 +2,8 @@ use std::{collections::HashSet, path::Path};
 
 use log::error;
 use serde::Deserialize;
-use sqlx::{Connection, Database, Pool};
 
-use crate::{database::connection::ConnectionBuilder, error::EmResult, read_file, workspace_dir};
+use crate::{database::Database, error::EmResult, read_file, workspace_dir};
 
 /// Database builder object defining the common database dependencies and the schema entries
 /// required.
@@ -171,7 +170,7 @@ where
     ///
     type Database: Database;
     ///
-    fn create(pool: Pool<Self::Database>) -> Self;
+    fn create(pool: <Self::Database as Database>::ConnectionPool) -> Self;
     ///
     async fn build_database(&self);
     ///
@@ -185,12 +184,9 @@ where
     async fn execute_anonymous_block(&self, block: &str) -> EmResult<()>;
 }
 
-pub async fn build_database<B, C, D, P>(
-    log_config_path: P,
-    options: <D::Connection as Connection>::Options,
-) where
+pub async fn build_database<B, D, P>(log_config_path: P, options: D::ConnectionOptions)
+where
     B: DatabaseBuilder<Database = D>,
-    C: ConnectionBuilder<D>,
     D: Database,
     P: AsRef<Path>,
 {
@@ -198,7 +194,7 @@ pub async fn build_database<B, C, D, P>(
         error!("Could not initialize log4rs. {error}");
         return;
     }
-    let pool = match C::create_pool(options, 1, 1).await {
+    let pool = match D::create_pool(options, 1, 1).await {
         Ok(inner) => inner,
         Err(error) => {
             error!("Could not create a connection pool for database building. {error}");

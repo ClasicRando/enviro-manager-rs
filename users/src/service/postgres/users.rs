@@ -1,9 +1,13 @@
 use common::{
     api::ApiRequestValidator,
-    database::connection::{finalize_transaction, get_connection_with_em_uid},
+    database::{
+        connection::{finalize_transaction, get_connection_with_em_uid},
+        postgres::Postgres,
+        Database,
+    },
     error::{EmError::InvalidUser, EmResult},
 };
-use sqlx::{Connection, PgPool, Pool, Postgres};
+use sqlx::{Connection, PgPool};
 use uuid::Uuid;
 
 use crate::service::{
@@ -67,7 +71,7 @@ impl UserService for PgUserService {
     type Database = Postgres;
     type UpdateRequestValidator = UpdateUserRequestValidator;
 
-    fn create(pool: &Pool<Self::Database>) -> Self {
+    fn create(pool: &<Postgres as Database>::ConnectionPool) -> Self {
         Self { pool: pool.clone() }
     }
 

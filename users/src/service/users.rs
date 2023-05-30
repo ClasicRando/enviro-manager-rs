@@ -1,10 +1,10 @@
 use common::{
     api::ApiRequestValidator,
+    database::Database,
     error::{EmError, EmResult},
 };
 use lazy_regex::regex;
 use serde::{Deserialize, Serialize};
-use sqlx::{Database, Pool};
 use uuid::Uuid;
 
 use super::roles::Role;
@@ -231,7 +231,7 @@ where
     type UpdateRequestValidator: ApiRequestValidator<Request = UpdateUserRequest>;
 
     /// Create new instance of a [UserService]
-    fn create(pool: &Pool<Self::Database>) -> Self;
+    fn create(pool: &<Self::Database as Database>::ConnectionPool) -> Self;
     /// Create a new [User]. The user specified in `request` must have the 'admin' role to perform
     /// this action. Returns the newly created [User]
     async fn create_user(&self, current_uid: &Uuid, request: &CreateUserRequest) -> EmResult<User>;

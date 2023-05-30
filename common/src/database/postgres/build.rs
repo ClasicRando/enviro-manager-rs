@@ -2,10 +2,13 @@ use std::path::PathBuf;
 
 use lazy_regex::{regex, Lazy, Regex};
 use log::{error, info, warn};
-use sqlx::{PgPool, Pool, Postgres};
+use sqlx::PgPool;
 
 use crate::{
-    database::build::{DatabaseBuilder, DbBuild},
+    database::{
+        build::{DatabaseBuilder, DbBuild},
+        postgres::Postgres,
+    },
     error::EmResult,
     package_dir, read_file,
 };
@@ -57,7 +60,7 @@ impl PgDatabaseBuilder {
 impl DatabaseBuilder for PgDatabaseBuilder {
     type Database = Postgres;
 
-    fn create(pool: Pool<Self::Database>) -> Self {
+    fn create(pool: PgPool) -> Self {
         Self { pool }
     }
 
