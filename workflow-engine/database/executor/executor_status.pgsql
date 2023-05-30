@@ -4,7 +4,6 @@ create type executor.executor_status as enum (
     'Shutdown'
 );
 
-revoke all on type executor.executor_status from public;
 grant usage on type executor.executor_status to we_web;
 
 comment on type executor.executor_status IS $$

@@ -14,7 +14,7 @@ stable
 as $$
 select tq.workflow_run_id, tq.task_order, tq.task_id, tq.status, tq.parameters, t.url
 from (
-    select tq1.workflow_run_id, tq1.task_order, tq1.task_id, tq1.parameters
+    select tq1.workflow_run_id, tq1.task_order, tq1.task_id, tq1.status, tq1.parameters
     from task.task_queue tq1
     where
         tq1.workflow_run_id = $1
@@ -39,7 +39,7 @@ join task.v_tasks t
 on tq.task_id = t.task_id;
 $$;
 
-grant execute function on task.next_task to we_web;
+grant execute on function task.next_task to we_web;
 
 comment on function task.next_task IS $$
 Get the next available task for the given workflow_run_id. Returns at most 1 row of a row

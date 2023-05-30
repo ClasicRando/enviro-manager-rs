@@ -175,7 +175,7 @@
             ]
         },
         {
-            "name": "workflow/next_task.pgsql",
+            "name": "task/next_task.pgsql",
             "dependencies": [
                 "schema.pgsql",
                 "task/task_queue.pgsql",
@@ -264,12 +264,13 @@
             ]
         },
         {
-            "name": "executor/v_executor_workflows.pgsql",
+            "name": "workflow/executor_workflows.pgsql",
             "dependencies": [
                 "schema.pgsql",
                 "workflow/workflow_runs.pgsql",
                 "task/task_queue.pgsql",
-                "task/task_status.pgsql"
+                "task/task_status.pgsql",
+                "workflow/workflow_run_status.pgsql"
             ]
         },
         {
@@ -383,13 +384,11 @@
             ]
         },
         {
-            "name": "workflow/complete_task.pgsql",
+            "name": "task/complete_task.pgsql",
             "dependencies": [
                 "schema.pgsql",
                 "task/task_queue.pgsql",
-                "task/task_status.pgsql",
-                "workflow/workflow_runs.pgsql",
-                "workflow/workflow_run_status.pgsql"
+                "task/task_status.pgsql"
             ]
         },
         {

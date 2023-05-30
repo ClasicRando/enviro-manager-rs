@@ -11,7 +11,6 @@ where
     and e.status = 'Active'::executor.executor_status;
 $$;
 
-revoke all on procedure executor.cancel_executor from public;
 grant execute on procedure executor.cancel_executor to we_web;
 
 comment on procedure executor.cancel_executor IS $$

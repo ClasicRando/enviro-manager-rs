@@ -23,6 +23,8 @@ from workflow.workflows w
 join w_tasks wt
 on w.workflow_id = wt.workflow_id;
 
+grant select on workflow.v_workflows to we_web;
+
 comment on view workflow.v_workflows IS $$
 Utility view, showing all workflows and their task details (as an array of workflow_task instances)
 $$;

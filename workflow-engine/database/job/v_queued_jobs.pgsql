@@ -11,7 +11,7 @@ where
     )
 order by j.next_run;
 
-grant select on view job.v_queued_jobs to we_web;
+grant select on job.v_queued_jobs to we_web;
 
 comment on view job.v_queued_jobs IS $$
 Get all jobs that are not paused and is not currently running

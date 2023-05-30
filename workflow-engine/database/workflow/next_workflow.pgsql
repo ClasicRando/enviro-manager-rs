@@ -1,6 +1,6 @@
 create or replace function workflow.next_workflow(
     executor_id bigint,
-    out workflow_run_id bigint
+    out workflow_run_id bigint,
     out is_valid boolean
 )
 returns record

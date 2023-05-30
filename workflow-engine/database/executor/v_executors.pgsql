@@ -14,8 +14,7 @@ select
     ) as wr_count
 from executor.executors re;
 
-revoke all on view executor.v_executors from public;
-grant select on view executor.v_executors to we_web;
+grant select on executor.v_executors to we_web;
 
 comment on view executor.v_executors IS $$
 Utility view, showing all executors. Includes all base details of an executor, as well as a flag

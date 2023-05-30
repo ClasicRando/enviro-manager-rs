@@ -220,7 +220,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
         let result = sqlx::query_as(
             r#"
             select workflow_run_id, status, is_valid
-            from executor.all_executor_workflows($1)"#,
+            from executor.executor_workflows($1)"#,
         )
         .bind(executor_id)
         .fetch_all(&self.pool)

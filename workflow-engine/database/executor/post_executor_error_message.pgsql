@@ -10,7 +10,6 @@ set error_message = $2
 where executor_id = $1;
 $$;
 
-revoke all on procedure executor.post_executor_error_message from public;
 grant execute on procedure executor.post_executor_error_message to we_web;
 
 comment on procedure executor.post_executor_error_message IS $$

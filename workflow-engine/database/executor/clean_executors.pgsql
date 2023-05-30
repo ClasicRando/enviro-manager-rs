@@ -28,8 +28,7 @@ where
     and tq.status = 'Running'::task.task_status;
 $$;
 
-revoke all on procedure executor.clean_executors;
-grant execute on procedure executor.clean_executors;
+grant execute on procedure executor.clean_executors to we_web;
 
 comment on procedure executor.clean_executors IS $$
 Cleans any executors that are no longer attached to the database but have not been shutdown

@@ -4,8 +4,8 @@ create or replace function users.create_user(
     username text,
     password text
 )
-security definer
 returns uuid
+security definer
 language sql
 as $$
 insert into users.users as u (first_name,last_name,username,password)

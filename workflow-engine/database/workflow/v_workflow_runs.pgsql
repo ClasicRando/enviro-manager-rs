@@ -26,6 +26,8 @@ select wr.workflow_run_id, wr.workflow_id, wr.status, wr.executor_id, wr.progres
 from workflow.workflow_runs wr
 join tasks t on wr.workflow_run_id = t.workflow_run_id;
 
+grant select on workflow.v_workflow_runs to we_web;
+
 comment on view workflow.v_workflow_runs IS $$
 Utility view, showing workflow runs with details about the workflows as needed
 $$;

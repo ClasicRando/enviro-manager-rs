@@ -13,7 +13,6 @@ order by wr_count
 limit 1;
 $$;
 
-revoke all on function executor.next_executor from public;
 grant execute on function executor.next_executor to we_web;
 
 comment on function executor.next_executor IS $$

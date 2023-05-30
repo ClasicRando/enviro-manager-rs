@@ -35,7 +35,6 @@ where
     and tq.status = 'Running'::task.task_status;
 $$;
 
-revoke all on procedure executor.close_executor from public;
 grant execute on procedure executor.close_executor to we_web;
 
 comment on procedure executor.close_executor IS $$

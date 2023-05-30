@@ -9,7 +9,8 @@ begin
     select
         tq.workflow_run_id, tq.task_order, tq.task_id, tq.status, tq.parameters, tq.output,
         tq.rules, tq.task_start, tq.task_end
-    from old_table tq
+    from old_table tq;
+    return null;
 end;
 $$;
 
