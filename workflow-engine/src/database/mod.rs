@@ -1,5 +1,3 @@
-pub mod listener;
-
 use std::env;
 
 use common::error::EmResult;
