@@ -1,7 +1,10 @@
 use std::{collections::HashMap, env, str::FromStr};
 
 use chrono::{NaiveDateTime, Utc};
-use common::error::{EmError, EmResult};
+use common::{
+    database::listener::ChangeListener,
+    error::{EmError, EmResult},
+};
 use lettre::{
     transport::smtp::authentication::Credentials, AsyncSmtpTransport, AsyncTransport, Message,
     Tokio1Executor,
@@ -12,10 +15,7 @@ use tokio::{
     time::{sleep as tokio_sleep, Duration as StdDuration},
 };
 
-use crate::{
-    database::listener::ChangeListener,
-    services::jobs::{Job, JobId, JobService},
-};
+use crate::services::jobs::{Job, JobId, JobService};
 
 /// Action to perform after receiving a job worker notification. Notification payload should be a
 /// workflow run id (as an i64/bigint) to tell the job worker a job has been completed or an empty
@@ -183,7 +183,8 @@ where
         let Err(error) = self.service.complete_job(job_id).await else {
             return Ok(())
         };
-        self.send_error_email(maintainer, format!("{error}")).await?;
+        self.send_error_email(maintainer, format!("{error}"))
+            .await?;
         Ok(())
     }
 

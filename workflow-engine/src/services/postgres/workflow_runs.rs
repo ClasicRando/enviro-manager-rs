@@ -1,5 +1,8 @@
 use chrono::NaiveDateTime;
-use common::error::{EmError, EmResult};
+use common::{
+    database::postgres::{listener::PgChangeListener, Postgres},
+    error::{EmError, EmResult},
+};
 use serde_json::Value;
 use sqlx::{
     encode::IsNull,
@@ -7,11 +10,10 @@ use sqlx::{
         types::{PgRecordDecoder, PgRecordEncoder},
         PgArgumentBuffer, PgHasArrayType, PgListener, PgTypeInfo, PgValueRef,
     },
-    Decode, Encode, PgPool, Postgres, Type,
+    Decode, Encode, PgPool, Type,
 };
 
 use crate::{
-    database::listener::PgChangeListener,
     executor::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage},
     services::{
         executors::ExecutorId,
@@ -22,7 +24,7 @@ use crate::{
     WorkflowRunsService,
 };
 
-impl Encode<'_, Postgres> for WorkflowRunTask {
+impl Encode<'_, sqlx::Postgres> for WorkflowRunTask {
     fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> IsNull {
         let mut encoder = PgRecordEncoder::new(buf);
         encoder.encode(self.task_order);
@@ -42,21 +44,21 @@ impl Encode<'_, Postgres> for WorkflowRunTask {
 
     fn size_hint(&self) -> usize {
         9usize * (4 + 4)
-            + <i32 as Encode<Postgres>>::size_hint(&self.task_order)
-            + <i64 as Encode<Postgres>>::size_hint(&self.task_id)
-            + <String as Encode<Postgres>>::size_hint(&self.name)
-            + <String as Encode<Postgres>>::size_hint(&self.description)
-            + <TaskStatus as Encode<Postgres>>::size_hint(&self.task_status)
-            + <Option<Value> as Encode<Postgres>>::size_hint(&self.parameters)
-            + <Option<String> as Encode<Postgres>>::size_hint(&self.output)
-            + <Option<Vec<TaskRule>> as Encode<Postgres>>::size_hint(&self.rules)
-            + <Option<NaiveDateTime> as Encode<Postgres>>::size_hint(&self.task_start)
-            + <Option<NaiveDateTime> as Encode<Postgres>>::size_hint(&self.task_end)
-            + <Option<i16> as Encode<Postgres>>::size_hint(&self.progress)
+            + <i32 as Encode<sqlx::Postgres>>::size_hint(&self.task_order)
+            + <i64 as Encode<sqlx::Postgres>>::size_hint(&self.task_id)
+            + <String as Encode<sqlx::Postgres>>::size_hint(&self.name)
+            + <String as Encode<sqlx::Postgres>>::size_hint(&self.description)
+            + <TaskStatus as Encode<sqlx::Postgres>>::size_hint(&self.task_status)
+            + <Option<Value> as Encode<sqlx::Postgres>>::size_hint(&self.parameters)
+            + <Option<String> as Encode<sqlx::Postgres>>::size_hint(&self.output)
+            + <Option<Vec<TaskRule>> as Encode<sqlx::Postgres>>::size_hint(&self.rules)
+            + <Option<NaiveDateTime> as Encode<sqlx::Postgres>>::size_hint(&self.task_start)
+            + <Option<NaiveDateTime> as Encode<sqlx::Postgres>>::size_hint(&self.task_end)
+            + <Option<i16> as Encode<sqlx::Postgres>>::size_hint(&self.progress)
     }
 }
 
-impl<'r> Decode<'r, Postgres> for WorkflowRunTask {
+impl<'r> Decode<'r, sqlx::Postgres> for WorkflowRunTask {
     fn decode(
         value: PgValueRef<'r>,
     ) -> Result<Self, Box<dyn std::error::Error + 'static + Send + Sync>> {
@@ -88,7 +90,7 @@ impl<'r> Decode<'r, Postgres> for WorkflowRunTask {
     }
 }
 
-impl Type<Postgres> for WorkflowRunTask {
+impl Type<sqlx::Postgres> for WorkflowRunTask {
     fn type_info() -> PgTypeInfo {
         PgTypeInfo::with_name("workflow_run_task")
     }

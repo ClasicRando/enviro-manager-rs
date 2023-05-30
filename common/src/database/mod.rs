@@ -2,15 +2,16 @@ use crate::error::EmResult;
 
 pub mod build;
 pub mod connection;
-pub mod test;
+pub mod listener;
 pub mod postgres;
+pub mod test;
 
-///
+/// Describes the high level abilities of the database operated against. Must
 pub trait Database {
-    /// Type for holding a pool of connections to the database
-    type ConnectionPool: Clone;
     /// Options to allow for connecting to the database
     type ConnectionOptions;
+    /// Type for holding a pool of connections to the database
+    type ConnectionPool: Clone;
     /// Return a new pool of database connections
     async fn create_pool(
         options: Self::ConnectionOptions,

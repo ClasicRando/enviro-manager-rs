@@ -1,11 +1,7 @@
-use common::error::EmResult;
+use common::{api::ApiRequestValidator, database::Database, error::EmResult};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::{
-    postgres::{PgHasArrayType, PgTypeInfo},
-    Database, Pool,
-};
-use common::api::ApiRequestValidator;
+
 use crate::services::tasks::TaskId;
 
 /// Task data as it can be seen from it's parent, a [Workflow] instance. Contains the underlining
@@ -33,12 +29,6 @@ pub struct WorkflowTaskRequest {
     pub(crate) parameters: Option<Value>,
 }
 
-impl PgHasArrayType for WorkflowTaskRequest {
-    fn array_type_info() -> PgTypeInfo {
-        PgTypeInfo::with_name("_workflow_task_request")
-    }
-}
-
 /// API request body when attempting to create a new `workflow.workflows` entry. Defines the name
 /// and tasks found within the workflow.
 #[derive(Deserialize, Debug)]
@@ -55,7 +45,7 @@ impl ApiRequestValidator for WorkflowRequestValidator {
 
     fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage> {
         if request.name.trim().is_empty() {
-            return Err("Request 'name' cannot be empty or whitespace")
+            return Err("Request 'name' cannot be empty or whitespace");
         }
         Ok(())
     }
@@ -100,12 +90,12 @@ impl std::fmt::Display for WorkflowId {
 /// interaction methods for the API.
 pub trait WorkflowsService
 where
-    Self: Clone + Send
+    Self: Clone + Send,
 {
     type Database: Database;
     type RequestValidator: ApiRequestValidator<Request = WorkflowRequest>;
     /// Create a new [WorkflowsService] with the referenced pool as the data source
-    fn create(pool: &Pool<Self::Database>) -> Self;
+    fn create(pool: &<Self::Database as Database>::ConnectionPool) -> Self;
     /// Create a new workflow using the `request` data to call the `workflow.create_workflow`
     /// procedure. Returns the new [Workflow] created.
     async fn create_workflow(&self, request: &WorkflowRequest) -> EmResult<Workflow>;

@@ -1,17 +1,18 @@
 use chrono::NaiveDateTime;
-use common::{api::ApiRequestValidator, error::EmResult};
+use common::{
+    api::ApiRequestValidator,
+    database::{listener::ChangeListener, Database},
+    error::EmResult,
+};
 use serde::{
     de::{MapAccess, Visitor},
     ser::SerializeStruct,
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use sqlx::{postgres::types::PgInterval, Database, Pool};
+use sqlx::postgres::types::PgInterval;
 
 use super::workflow_runs::WorkflowRunStatus;
-use crate::{
-    database::listener::ChangeListener, job_worker::NotificationAction,
-    services::workflows::WorkflowId, WorkflowRunsService,
-};
+use crate::{job_worker::NotificationAction, services::workflows::WorkflowId, WorkflowRunsService};
 
 /// Represents the `job_type` Postgresql enum value within the database. Should never be used by
 /// itself but rather used to parse into the [JobType] enum that hold the job running details.
@@ -265,14 +266,14 @@ pub trait JobService
 where
     Self: Clone + Send,
 {
-    type Database: Database;
     type CreateRequestValidator: ApiRequestValidator<Request = JobRequest>;
-    type Listener: ChangeListener<NotificationAction>;
+    type Database: Database;
+    type Listener: ChangeListener<Message = NotificationAction>;
     type WorkflowRunService: WorkflowRunsService<Database = Self::Database>;
 
     /// Create a new [JobService] with the referenced pool as the data source
     fn create(
-        pool: &Pool<Self::Database>,
+        pool: &<Self::Database as Database>::ConnectionPool,
         workflow_runs_service: &Self::WorkflowRunService,
     ) -> Self;
     /// Create a new job with the data contained within `request`. Branches to specific calls for

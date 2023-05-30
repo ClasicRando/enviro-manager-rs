@@ -1,13 +1,11 @@
 use std::str::FromStr;
 
 use chrono::NaiveDateTime;
-use common::error::{EmError, EmResult};
+use common::{error::{EmError, EmResult}, database::Database, database::listener::ChangeListener};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::{Database, Pool};
 
 use crate::{
-    database::listener::ChangeListener,
     executor::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage},
     services::{
         executors::ExecutorId,
@@ -99,12 +97,12 @@ pub trait WorkflowRunsService
 where
     Self: Clone + Send + Sync + 'static
 {
-    type CancelListener: ChangeListener<WorkflowRunCancelMessage>;
+    type CancelListener: ChangeListener<Message = WorkflowRunCancelMessage>;
     type Database: Database;
-    type ScheduledListener: ChangeListener<WorkflowRunScheduledMessage>;
+    type ScheduledListener: ChangeListener<Message = WorkflowRunScheduledMessage>;
 
     /// Create a new [WorkflowRunsService] with the referenced pool as the data source
-    fn create(pool: &Pool<Self::Database>) -> Self;
+    fn create(pool: &<Self::Database as Database>::ConnectionPool) -> Self;
     /// Initialize a new workflow run for the specified `workflow_id`. Returns the new [WorkflowRun]
     /// instance.
     async fn initialize(&self, workflow_id: &WorkflowId) -> EmResult<WorkflowRun>;

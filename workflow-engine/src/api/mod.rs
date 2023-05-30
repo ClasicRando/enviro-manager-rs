@@ -4,8 +4,7 @@ use actix_web::{
     web::{get, post, Data},
     App, HttpServer,
 };
-use common::{database::connection::ConnectionBuilder, error::EmResult};
-use sqlx::{Connection, Database};
+use common::{database::Database, error::EmResult};
 
 pub mod executors;
 pub mod jobs;
@@ -19,13 +18,12 @@ use crate::{
     WorkflowsService,
 };
 
-pub async fn spawn_api_server<A, C, D, E, J, Q, R, T, W>(
+pub async fn spawn_api_server<A, D, E, J, Q, R, T, W>(
     address: A,
-    options: <D::Connection as Connection>::Options,
+    options: D::ConnectionOptions,
 ) -> EmResult<()>
 where
     A: ToSocketAddrs,
-    C: ConnectionBuilder<D>,
     D: Database,
     E: ExecutorService<Database = D> + Send + Sync + 'static,
     J: JobService<Database = D, WorkflowRunService = R> + Send + Sync + 'static,
@@ -34,22 +32,28 @@ where
     T: TaskService<Database = D> + Send + Sync + 'static,
     W: WorkflowsService<Database = D> + Send + Sync + 'static,
 {
-    let pool = C::create_pool(options, 20, 1).await?;
-    let executors_service: Data<E> = Data::new(E::create(&pool));
-    let workflow_runs_service: Data<R> = Data::new(R::create(&pool));
-    let task_queue_service: Data<Q> = Data::new(Q::create(&pool, workflow_runs_service.as_ref()));
-    let tasks_service: Data<T> = Data::new(T::create(&pool));
-    let workflows_service: Data<W> = Data::new(W::create(&pool));
-    let jobs_service: Data<J> = Data::new(J::create(&pool, workflow_runs_service.get_ref()));
+    let pool = D::create_pool(options, 20, 1).await?;
+    let executors_service = E::create(&pool);
+    let workflow_runs_service = R::create(&pool);
+    let task_queue_service = Q::create(&pool, &workflow_runs_service);
+    let tasks_service = T::create(&pool);
+    let workflows_service = W::create(&pool);
+    let jobs_service = J::create(&pool, &workflow_runs_service);
+    let executors_service_data = Data::new(executors_service);
+    let workflow_runs_service_data = Data::new(workflow_runs_service);
+    let task_queue_service_data = Data::new(task_queue_service);
+    let tasks_service_data = Data::new(tasks_service);
+    let workflows_service_data = Data::new(workflows_service);
+    let jobs_service_data = Data::new(jobs_service);
     HttpServer::new(move || {
         App::new().service(
             actix_web::web::scope("/api/v1")
-                .app_data(executors_service.clone())
-                .app_data(jobs_service.clone())
-                .app_data(task_queue_service.clone())
-                .app_data(tasks_service.clone())
-                .app_data(workflow_runs_service.clone())
-                .app_data(workflows_service.clone())
+                .app_data(executors_service_data.clone())
+                .app_data(jobs_service_data.clone())
+                .app_data(task_queue_service_data.clone())
+                .app_data(tasks_service_data.clone())
+                .app_data(workflow_runs_service_data.clone())
+                .app_data(workflows_service_data.clone())
                 .route("/executors", get().to(executors::active_executors::<E>))
                 .route(
                     "/executors/shutdown/{executor_id}",

@@ -15,7 +15,7 @@ pub use services::{
     executors::ExecutorService,
     jobs::JobService,
     postgres::{
-        executors::PgExecutorService, jobs::PgJobsService, task::PgTasksService,
+        executors::PgExecutorService, jobs::PgJobsService, tasks::PgTasksService,
         task_queue::PgTaskQueueService, workflow_runs::PgWorkflowRunsService,
         workflows::PgWorkflowsService,
     },

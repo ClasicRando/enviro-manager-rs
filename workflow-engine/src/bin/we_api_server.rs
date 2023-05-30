@@ -1,5 +1,4 @@
-use common::{error::EmResult, database::postgres::connection::PgConnectionBuilder};
-use sqlx::Postgres;
+use common::{error::EmResult, database::postgres::Postgres};
 use workflow_engine::{
     api, PgExecutorService, PgJobsService, PgTaskQueueService,
     PgTasksService, PgWorkflowRunsService, PgWorkflowsService,
@@ -11,7 +10,6 @@ async fn main() -> EmResult<()> {
     log4rs::init_file("workflow-engine/api_server_log.yml", Default::default()).unwrap();
     api::spawn_api_server::<
         (&str, u16),
-        PgConnectionBuilder,
         Postgres,
         PgExecutorService,
         PgJobsService,

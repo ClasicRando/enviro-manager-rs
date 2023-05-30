@@ -1,7 +1,9 @@
-use common::error::{EmError, EmResult};
+use common::{
+    database::Database,
+    error::{EmError, EmResult},
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sqlx::{Database, Pool};
 
 use super::workflow_runs::WorkflowRunId;
 use crate::WorkflowRunsService;
@@ -72,14 +74,14 @@ pub enum TaskResponse {
 #[async_trait::async_trait]
 pub trait TaskQueueService
 where
-    Self: Clone + Send + Sync + 'static
+    Self: Clone + Send + Sync + 'static,
 {
     type Database: Database;
     type WorkflowRunService: WorkflowRunsService<Database = Self::Database>;
 
     /// Create a new [TaskQueueService] with the referenced pool as the data source
     fn create(
-        pool: &Pool<Self::Database>,
+        pool: &<Self::Database as Database>::ConnectionPool,
         workflow_runs_service: &Self::WorkflowRunService,
     ) -> Self;
     /// Read a single task record from `task.task_queue` for the specified `request`data. Will

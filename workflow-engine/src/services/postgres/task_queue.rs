@@ -1,6 +1,7 @@
 use common::{
     database::connection::finalize_transaction,
     error::{EmError, EmResult},
+    database::postgres::Postgres
 };
 use futures::StreamExt;
 use reqwest::{Client, Method};
@@ -11,7 +12,7 @@ use sqlx::{
         types::{PgRecordDecoder, PgRecordEncoder},
         PgArgumentBuffer, PgHasArrayType, PgTypeInfo, PgValueRef,
     },
-    PgPool, Postgres, Type,
+    PgPool, Type,
 };
 
 use crate::{
@@ -23,7 +24,7 @@ use crate::{
     TaskQueueRecord, TaskQueueService, TaskResponse, WorkflowRunsService,
 };
 
-impl Encode<'_, Postgres> for TaskRule {
+impl Encode<'_, sqlx::Postgres> for TaskRule {
     fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> IsNull {
         let mut encoder = PgRecordEncoder::new(buf);
         encoder.encode(&self.name);
@@ -35,13 +36,13 @@ impl Encode<'_, Postgres> for TaskRule {
 
     fn size_hint(&self) -> usize {
         3usize * (4 + 4)
-            + <String as Encode<Postgres>>::size_hint(&self.name)
-            + <bool as Encode<Postgres>>::size_hint(&self.failed)
-            + <Option<String> as Encode<Postgres>>::size_hint(&self.message)
+            + <String as Encode<sqlx::Postgres>>::size_hint(&self.name)
+            + <bool as Encode<sqlx::Postgres>>::size_hint(&self.failed)
+            + <Option<String> as Encode<sqlx::Postgres>>::size_hint(&self.message)
     }
 }
 
-impl<'r> Decode<'r, Postgres> for TaskRule {
+impl<'r> Decode<'r, sqlx::Postgres> for TaskRule {
     fn decode(
         value: PgValueRef<'r>,
     ) -> Result<Self, Box<dyn std::error::Error + 'static + Send + Sync>> {
@@ -57,7 +58,7 @@ impl<'r> Decode<'r, Postgres> for TaskRule {
     }
 }
 
-impl Type<Postgres> for TaskRule {
+impl Type<sqlx::Postgres> for TaskRule {
     fn type_info() -> PgTypeInfo {
         PgTypeInfo::with_name("task_rule")
     }

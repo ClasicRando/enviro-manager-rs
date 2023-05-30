@@ -1,6 +1,5 @@
-use common::error::EmResult;
+use common::{error::EmResult, database::Database};
 use serde::{Deserialize, Serialize};
-use sqlx::{Database, Pool};
 use common::api::ApiRequestValidator;
 
 /// Task data type representing a row from `task.v_tasks`
@@ -60,8 +59,8 @@ impl std::fmt::Display for TaskId {
     }
 }
 
-/// Service for fetching and interacting with task data. Wraps a [Pool] and provides
-/// interaction methods for the API.
+/// Service for fetching and interacting with task data. Wraps a `pool` and provides interaction
+/// methods for the API.
 pub trait TaskService
 where
     Self: Clone + Send
@@ -70,7 +69,7 @@ where
     type RequestValidator: ApiRequestValidator<Request = TaskRequest>;
 
     /// Create a new [TaskService] with the referenced pool as the data source
-    fn create(pool: &Pool<Self::Database>) -> Self;
+    fn create(pool: &<Self::Database as Database>::ConnectionPool) -> Self;
     /// Create a new task with the data contained within `request`
     async fn create_task(&self, request: &TaskRequest) -> EmResult<Task>;
     /// Read a single task record from `task.v_tasks` for the specified `task_id`. Will return

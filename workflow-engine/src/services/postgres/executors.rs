@@ -1,12 +1,14 @@
 use common::{
-    database::connection::finalize_transaction,
+    database::{
+        connection::finalize_transaction,
+        postgres::{listener::PgChangeListener, Postgres},
+    },
     error::{EmError, EmResult},
 };
 use log::error;
-use sqlx::{postgres::PgListener, PgPool, Postgres, Transaction};
+use sqlx::{postgres::PgListener, PgPool, Transaction};
 
 use crate::{
-    database::listener::PgChangeListener,
     executor::utilities::ExecutorStatusUpdate,
     services::{
         executors::{Executor, ExecutorId, ExecutorStatus},
@@ -31,7 +33,7 @@ impl PgExecutorService {
     async fn start_workflow_run<'c>(
         executor_id: &ExecutorId,
         workflow_run_id: &WorkflowRunId,
-        mut transaction: Transaction<'c, Postgres>,
+        mut transaction: Transaction<'c, sqlx::Postgres>,
     ) -> EmResult<()> {
         let result = sqlx::query("call executor.start_workflow_run($1, $2)")
             .bind(workflow_run_id)
@@ -49,7 +51,7 @@ impl PgExecutorService {
     /// error is returning completing the `transaction`
     async fn complete_workflow_run<'c>(
         workflow_run_id: &WorkflowRunId,
-        mut transaction: Transaction<'c, Postgres>,
+        mut transaction: Transaction<'c, sqlx::Postgres>,
     ) -> EmResult<()> {
         let result = sqlx::query("call executor.complete_workflow_run($1)")
             .bind(workflow_run_id)
@@ -221,16 +223,16 @@ impl ExecutorService for PgExecutorService {
 #[cfg(test)]
 mod test {
     use common::{
-        database::{connection::ConnectionBuilder, postgres::connection::PgConnectionBuilder},
+        database::{
+            connection::ConnectionBuilder, listener::ChangeListener,
+            postgres::connection::PgConnectionBuilder,
+        },
         error::EmError,
     };
     use indoc::indoc;
 
     use super::{ExecutorService, ExecutorStatus, PgExecutorService};
-    use crate::{
-        database::{db_options, listener::ChangeListener},
-        executor::utilities::ExecutorStatusUpdate,
-    };
+    use crate::{database::db_options, executor::utilities::ExecutorStatusUpdate};
 
     #[sqlx::test]
     async fn create_executor() -> Result<(), Box<dyn std::error::Error>> {

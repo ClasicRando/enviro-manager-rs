@@ -1,5 +1,5 @@
-use common::error::{EmError, EmResult};
-use sqlx::{PgPool, Postgres};
+use common::{error::{EmError, EmResult}, database::postgres::Postgres};
+use sqlx::{PgPool};
 
 use crate::{
     services::tasks::{Task, TaskId, TaskRequest, TaskRequestValidator},

@@ -1,26 +1,27 @@
 use chrono::NaiveDateTime;
 use common::{
-    database::connection::finalize_transaction,
+    api::ApiRequestValidator,
+    database::{
+        connection::finalize_transaction,
+        postgres::{listener::PgChangeListener, Postgres},
+    },
     error::{EmError, EmResult},
 };
 use sqlx::{
     postgres::{types::PgInterval, PgListener},
-    PgPool, Postgres,
+    PgPool,
 };
-use common::api::ApiRequestValidator;
 
 use crate::{
-    database::listener::PgChangeListener,
     job_worker::NotificationAction,
     services::{
-        jobs::{Job, JobId, JobMin, JobRequest, JobType, ScheduleEntry},
+        jobs::{Job, JobId, JobMin, JobRequest, JobRequestValidator, JobType, ScheduleEntry},
         postgres::workflow_runs::PgWorkflowRunsService,
         workflow_runs::{WorkflowRun, WorkflowRunId, WorkflowRunStatus},
         workflows::WorkflowId,
     },
     JobService, WorkflowRunsService,
 };
-use crate::services::jobs::JobRequestValidator;
 
 #[derive(Clone)]
 pub struct PgJobsService {
@@ -65,8 +66,8 @@ impl PgJobsService {
 }
 
 impl JobService for PgJobsService {
-    type Database = Postgres;
     type CreateRequestValidator = JobRequestValidator;
+    type Database = Postgres;
     type Listener = PgChangeListener<NotificationAction>;
     type WorkflowRunService = PgWorkflowRunsService;
 

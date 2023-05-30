@@ -7,12 +7,14 @@ use crate::{database::Database, error::EmResult};
 
 pub mod build;
 pub mod connection;
+pub mod listener;
 
+/// Postgresql implementation of the [Database] interface
 pub struct Postgres;
 
 impl Database for Postgres {
-    type ConnectionPool = PgPool;
     type ConnectionOptions = PgConnectOptions;
+    type ConnectionPool = PgPool;
 
     async fn create_pool(
         options: Self::ConnectionOptions,

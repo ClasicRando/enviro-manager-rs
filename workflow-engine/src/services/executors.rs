@@ -1,10 +1,13 @@
 use chrono::NaiveDateTime;
-use common::error::{EmError, EmResult};
+use common::{
+    database::{listener::ChangeListener, Database},
+    error::{EmError, EmResult},
+};
 use serde::{Deserialize, Serialize};
-use sqlx::{types::ipnetwork::IpNetwork, Database, Pool};
+use sqlx::types::ipnetwork::IpNetwork;
 
 use super::workflow_runs::WorkflowRunId;
-use crate::{database::listener::ChangeListener, executor::utilities::ExecutorStatusUpdate};
+use crate::executor::utilities::ExecutorStatusUpdate;
 
 /// Status of an [Executor][crate::executor::Executor] as found in the database as a simple
 /// Postgresql enum type
@@ -64,9 +67,9 @@ where
     Self: Clone + Send,
 {
     type Database: Database;
-    type Listener: ChangeListener<ExecutorStatusUpdate>;
+    type Listener: ChangeListener<Message = ExecutorStatusUpdate>;
 
-    fn create(pool: &Pool<Self::Database>) -> Self;
+    fn create(pool: &<Self::Database as Database>::ConnectionPool) -> Self;
     /// Register a new executor with the database. Creates a record for future processes to
     /// attribute workflow runs to the new executor.
     async fn register_executor(&self) -> EmResult<ExecutorId>;

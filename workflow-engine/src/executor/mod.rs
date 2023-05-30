@@ -3,27 +3,17 @@ mod worker;
 
 use std::collections::HashMap;
 
-use common::{
-    database::{connection::ConnectionBuilder, postgres::connection::PgConnectionBuilder},
-    error::EmResult,
-};
+use common::{database::listener::ChangeListener, error::EmResult};
 use log::{error, info, warn};
 use tokio::{signal::ctrl_c, task::JoinError};
 use utilities::{ExecutorStatusUpdate, WorkflowRunWorkerResult};
 use worker::WorkflowRunWorker;
 
 use self::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage};
-use crate::{
-    database::{db_options, listener::ChangeListener},
-    services::{
-        executors::{ExecutorId, ExecutorService, ExecutorStatus},
-        postgres::executors::PgExecutorService,
-        task_queue::TaskQueueService,
-        workflow_runs::{
-            ExecutorWorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunsService,
-        },
-    },
-    PgTaskQueueService, PgWorkflowRunsService,
+use crate::services::{
+    executors::{ExecutorId, ExecutorService, ExecutorStatus},
+    task_queue::TaskQueueService,
+    workflow_runs::{ExecutorWorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunsService},
 };
 
 /// Next operations available to an [Executor] after performing various checks on the status of
@@ -82,21 +72,11 @@ where
     wr_handles: HashMap<WorkflowRunId, WorkflowRunWorkerResult>,
 }
 
-impl Executor<PgExecutorService, PgWorkflowRunsService, PgTaskQueueService> {
-    pub async fn new_postgres() -> EmResult<Self> {
-        let pool = PgConnectionBuilder::create_pool(db_options()?, 20, 1).await?;
-        let executor_service = PgExecutorService::create(&pool);
-        let wr_service = PgWorkflowRunsService::create(&pool);
-        let tq_service = PgTaskQueueService::create(&pool, &wr_service);
-        Self::new(&executor_service, &wr_service, &tq_service).await
-    }
-}
-
 impl<U, C, S, E, W, T> Executor<E, W, T>
 where
-    U: ChangeListener<ExecutorStatusUpdate>,
-    C: ChangeListener<WorkflowRunCancelMessage>,
-    S: ChangeListener<WorkflowRunScheduledMessage>,
+    U: ChangeListener<Message = ExecutorStatusUpdate>,
+    C: ChangeListener<Message = WorkflowRunCancelMessage>,
+    S: ChangeListener<Message = WorkflowRunScheduledMessage>,
     E: ExecutorService<Listener = U>,
     W: WorkflowRunsService<CancelListener = C, ScheduledListener = S>,
     T: TaskQueueService,
@@ -104,7 +84,7 @@ where
     /// Create a new [Executor] using the provided services. Cleans output unused or stale
     /// executors in the database before registering the current [Executor] and returning the new
     /// [Executor].
-    async fn new(executor_service: &E, wr_service: &W, tq_service: &T) -> EmResult<Self> {
+    pub async fn new(executor_service: &E, wr_service: &W, tq_service: &T) -> EmResult<Self> {
         executor_service.clean_executors().await?;
         let executor_id = executor_service.register_executor().await?;
         Ok(Self {
