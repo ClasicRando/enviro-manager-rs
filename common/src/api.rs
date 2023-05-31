@@ -8,15 +8,32 @@ use uuid::Uuid;
 
 use crate::error::{EmError, EmResult};
 
+#[derive(Default, Deserialize)]
+pub enum ApiContentFormat {
+    #[serde(rename = "json")]
+    Json,
+    #[default]
+    #[serde(rename = "msgpack")]
+    MessagePack,
+}
+
 /// Generic response object as an API response. A response is either a success containing data, a
 /// message to let the user know what happened or an error/failure message.
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
-pub enum ApiResponse<T: Serialize> {
+pub enum ApiResponseBody<T: Serialize> {
     Success(T),
     Message(String),
     Failure(String),
     Error(String),
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ApiResponse<T: Serialize> {
+    #[serde(skip)]
+    format: ApiContentFormat,
+    #[serde(flatten)]
+    body: ApiResponseBody<T>,
 }
 
 impl<T> Responder for ApiResponse<T>
@@ -26,7 +43,11 @@ where
     type Body = actix_web::body::BoxBody;
 
     fn respond_to(self, req: &actix_web::HttpRequest) -> actix_web::HttpResponse<Self::Body> {
-        let bytes = match rmp_serde::to_vec(&self) {
+        let bytes_result: Result<Vec<u8>, EmError> = match self.format {
+            ApiContentFormat::Json => serde_json::to_vec(&self.body).map_err(|e| e.into()),
+            ApiContentFormat::MessagePack => rmp_serde::to_vec(&self.body).map_err(|e| e.into()),
+        };
+        let bytes = match bytes_result {
             Ok(inner) => inner,
             Err(error) => {
                 let message = format!(
@@ -41,33 +62,45 @@ where
             }
         };
         actix_web::HttpResponse::Ok()
-            .content_type(actix_web::http::header::ContentType(
-                mime::APPLICATION_MSGPACK,
-            ))
+            .content_type(actix_web::http::header::ContentType(match self.format {
+                ApiContentFormat::Json => mime::APPLICATION_JSON,
+                ApiContentFormat::MessagePack => mime::APPLICATION_MSGPACK,
+            }))
             .body(bytes.into_iter().collect::<actix_web::web::Bytes>())
     }
 }
 
 impl<T: Serialize> ApiResponse<T> {
-    /// Generate an [ApiResponse] wrapping a [Response::Success]`
+    /// Generate an [ApiResponse] wrapping a [ApiResponseBody::Success]`
     pub const fn success(data: T) -> Self {
-        Self::Success(data)
+        Self {
+            format: ApiContentFormat::MessagePack,
+            body: ApiResponseBody::Success(data),
+        }
     }
 
-    /// Generate an [ApiResponse] wrapping a [Response::Message]
+    /// Generate an [ApiResponse] wrapping a [ApiResponseBody::Message]
     pub const fn message(message: String) -> Self {
-        Self::Message(message)
+        Self {
+            format: ApiContentFormat::MessagePack,
+            body: ApiResponseBody::Message(message),
+        }
     }
 
-    /// Generate an [ApiResponse] wrapping a [Response::Error]. This is intended for errors that
-    /// are not runtime errors but rather user input issues.
-    pub fn failure<S: AsRef<str>>(message: S) -> Self {
-        warn!("{}", message.as_ref());
-        Self::Failure(message.as_ref().to_owned())
+    /// Generate an [ApiResponse] wrapping a [ApiResponseBody::Error]. This is intended for errors
+    /// that are not runtime errors but rather user input issues.
+    pub fn failure<S: Into<String>>(message: S) -> Self {
+        let failure_message = message.into();
+        warn!("{}", failure_message);
+        Self {
+            format: ApiContentFormat::MessagePack,
+            body: ApiResponseBody::Failure(failure_message),
+        }
     }
 
-    /// Generate an [ApiResponse] wrapping a [Response::Error]. This is intended for errors that
-    /// are returned from fallible operations.
+    /// Generate an [ApiResponse] for operations that return an [EmError]. Some [EmError] variants
+    /// are downgraded to a [Failure][ApiResponseBody::Failure] if the `error` does not indicate an
+    /// internal but rather bad user provided data or an error message the user could understand.
     pub fn error(error: EmError) -> Self {
         error!("{}", error);
         match error {
@@ -78,9 +111,12 @@ impl<T: Serialize> ApiResponse<T> {
             | EmError::InvalidPassword { .. }
             | EmError::MissingPrivilege { .. } => Self::failure(format!("{error}")),
             EmError::RmpDecode(_) => Self::failure("Could not decode the request object"),
-            _ => Self::Error(
-                "Could not perform the required action due to an internal error".to_owned(),
-            ),
+            _ => Self {
+                format: ApiContentFormat::MessagePack,
+                body: ApiResponseBody::Error(
+                    "Could not perform the required action due to an internal error".to_owned(),
+                ),
+            },
         }
     }
 }
@@ -105,7 +141,7 @@ pub trait ApiRequestValidator {
     /// This function will return an error if the `request` cannot be validated
     fn validate_request(request: &Self::Request) -> EmResult<()> {
         if let Err(error) = Self::validate(request) {
-            return Err((request, error).into())
+            return Err((request, error).into());
         }
         Ok(())
     }
