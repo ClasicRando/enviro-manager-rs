@@ -8,7 +8,7 @@ use lettre::{
 use sqlx::types::Uuid;
 use thiserror::Error;
 
-/// All possible error types that may occur during workflow engine operations
+/// All possible error types that may occur during EnviroManager operations
 #[derive(Error, Debug)]
 pub enum EmError {
     #[error("Generic SQL error\n{0}")]
