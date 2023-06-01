@@ -1,3 +1,5 @@
+pub mod request;
+
 use std::fmt::Debug;
 
 use actix_session::Session;
@@ -8,13 +10,30 @@ use uuid::Uuid;
 
 use crate::error::{EmError, EmResult};
 
-#[derive(Default, Deserialize)]
+#[derive(Deserialize, Default)]
+pub struct QueryApiFormat {
+    pub f: ApiContentFormat,
+}
+
+#[derive(Default, Deserialize, Clone, Copy)]
 pub enum ApiContentFormat {
     #[serde(rename = "json")]
     Json,
     #[default]
     #[serde(rename = "msgpack")]
     MessagePack,
+}
+
+impl ApiContentFormat {
+    fn from_mime(value: &mime::Mime) -> Option<Self> {
+        if value.subtype() == mime::JSON || value.suffix() == Some(mime::JSON) {
+            return Some(Self::Json);
+        }
+        if value.subtype() == mime::MSGPACK || value.suffix() == Some(mime::MSGPACK) {
+            return Some(Self::MessagePack);
+        }
+        None
+    }
 }
 
 /// Generic response object as an API response. A response is either a success containing data, a
@@ -71,29 +90,34 @@ where
 }
 
 impl<T: Serialize> ApiResponse<T> {
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn into_body(self) -> ApiResponseBody<T> {
+        self.body
+    }
+
     /// Generate an [ApiResponse] wrapping a [ApiResponseBody::Success]`
-    pub const fn success(data: T) -> Self {
+    pub const fn success(data: T, format: ApiContentFormat) -> Self {
         Self {
-            format: ApiContentFormat::MessagePack,
+            format,
             body: ApiResponseBody::Success(data),
         }
     }
 
     /// Generate an [ApiResponse] wrapping a [ApiResponseBody::Message]
-    pub const fn message(message: String) -> Self {
+    pub const fn message(message: String, format: ApiContentFormat) -> Self {
         Self {
-            format: ApiContentFormat::MessagePack,
+            format,
             body: ApiResponseBody::Message(message),
         }
     }
 
     /// Generate an [ApiResponse] wrapping a [ApiResponseBody::Error]. This is intended for errors
     /// that are not runtime errors but rather user input issues.
-    pub fn failure<S: Into<String>>(message: S) -> Self {
+    pub fn failure<S: Into<String>>(message: S, format: ApiContentFormat) -> Self {
         let failure_message = message.into();
         warn!("{}", failure_message);
         Self {
-            format: ApiContentFormat::MessagePack,
+            format,
             body: ApiResponseBody::Failure(failure_message),
         }
     }
@@ -101,18 +125,18 @@ impl<T: Serialize> ApiResponse<T> {
     /// Generate an [ApiResponse] for operations that return an [EmError]. Some [EmError] variants
     /// are downgraded to a [Failure][ApiResponseBody::Failure] if the `error` does not indicate an
     /// internal but rather bad user provided data or an error message the user could understand.
-    pub fn error(error: EmError) -> Self {
+    pub fn error(error: EmError, format: ApiContentFormat) -> Self {
         error!("{}", error);
         match error {
-            EmError::Generic(message) => Self::failure(message),
+            EmError::Generic(message) => Self::failure(message, format),
             EmError::InvalidUser
             | EmError::MissingRecord { .. }
             | EmError::InvalidRequest { .. }
             | EmError::InvalidPassword { .. }
-            | EmError::MissingPrivilege { .. } => Self::failure(format!("{error}")),
-            EmError::RmpDecode(_) => Self::failure("Could not decode the request object"),
+            | EmError::MissingPrivilege { .. } => Self::failure(format!("{error}"), format),
+            EmError::RmpDecode(_) => Self::failure("Could not decode the request object", format),
             _ => Self {
-                format: ApiContentFormat::MessagePack,
+                format,
                 body: ApiResponseBody::Error(
                     "Could not perform the required action due to an internal error".to_owned(),
                 ),
@@ -152,9 +176,12 @@ pub trait ApiRequestValidator {
 /// be sent as the response to the request.
 /// # Errors
 /// This function will return an error if the `session` does not contain the key 'em_uid'.
-pub fn validate_session<T: Serialize>(session: &Session) -> Result<Uuid, ApiResponse<T>> {
+pub fn validate_session<T: Serialize>(
+    session: &Session,
+    format: ApiContentFormat,
+) -> Result<Uuid, ApiResponse<T>> {
     let Some(uid) = session.get("em_uid").unwrap_or(None) else {
-        return Err(ApiResponse::failure("Invalid or missing session ID"))
+        return Err(ApiResponse::failure("Invalid or missing session ID", format))
     };
     session.renew();
     Ok(uid)

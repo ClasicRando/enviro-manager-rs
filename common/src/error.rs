@@ -8,6 +8,8 @@ use lettre::{
 use sqlx::types::Uuid;
 use thiserror::Error;
 
+use crate::api::request::ApiRequestPayloadError;
+
 /// All possible error types that may occur during EnviroManager operations
 #[derive(Error, Debug)]
 pub enum EmError {
@@ -58,12 +60,11 @@ pub enum EmError {
     #[error("Record cannot be found for `{pk}`")]
     MissingRecord { pk: String },
     #[error("Contents of request '{request}' were not valid.\nReason: {reason}")]
-    InvalidRequest {
-        request: String,
-        reason: String,
-    },
+    InvalidRequest { request: String, reason: String },
     #[error("Error attempting to insert a session value. {0}")]
     SessionInsert(#[from] SessionInsertError),
+    #[error("{0}")]
+    ApiRequestPayload(#[from] ApiRequestPayloadError),
 }
 
 impl From<&str> for EmError {
@@ -81,7 +82,7 @@ impl From<String> for EmError {
 impl<D, S> From<(&D, S)> for EmError
 where
     D: Debug,
-    S: Into<String>
+    S: Into<String>,
 {
     fn from(value: (&D, S)) -> Self {
         Self::InvalidRequest {
@@ -90,6 +91,8 @@ where
         }
     }
 }
+
+impl actix_web::ResponseError for EmError {}
 
 /// Generic [Result] type where the error is always [EmError]
 pub type EmResult<T> = Result<T, EmError>;

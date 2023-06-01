@@ -43,13 +43,14 @@ where
                         RedisActorSessionStore::new(&redis_connection_string),
                         signing_key.clone(),
                     )
-                    .cookie_http_only(false)
+                    .cookie_http_only(true)
                     .cookie_same_site(SameSite::Strict)
                     .build(),
                 )
                 .app_data(roles_service_data.clone())
                 .app_data(users_service_data.clone())
                 .route("/roles", get().to(roles::roles::<R>))
+                .route("/users", get().to(users::read_users::<U>))
                 .route("/users", post().to(users::create_user::<U>))
                 .route("/users", patch().to(users::update_user::<U>))
                 .route("/users/validate", post().to(users::validate_user::<U>))
