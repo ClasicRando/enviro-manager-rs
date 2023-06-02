@@ -10,9 +10,9 @@ use crate::{
     package_dir, read_file,
 };
 
-///
+/// Postgresql implementation of a [DatabaseBuilder]
 pub struct PgDatabaseBuilder {
-    ///
+    /// Shared pool of postgresql connections
     pool: PgPool,
 }
 

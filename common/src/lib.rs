@@ -9,7 +9,6 @@
 #![warn(clippy::expect_used)]
 #![warn(clippy::fn_params_excessive_bools)]
 #![warn(clippy::from_iter_instead_of_collect)]
-#![warn(clippy::future_not_send)]
 #![warn(clippy::indexing_slicing)]
 #![warn(clippy::inefficient_to_string)]
 #![warn(clippy::manual_let_else)]

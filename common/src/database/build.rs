@@ -162,18 +162,26 @@ where
     Ok(())
 }
 
-///
+/// Behaviour to allow for database to be populated with all the required objects. This type should
+/// be implemented for every [Database] implementation once and only utilized as a generic
+/// parameter to [build_database].
 pub trait DatabaseBuilder
 where
     Self: Send + Sync,
 {
-    ///
+    /// Database variation that will store the database objects
     type Database: Database;
-    ///
+    /// Create a new instance of the [DatabaseBuilder] using the [Database]'s connection pool type
     fn create(pool: <Self::Database as Database>::ConnectionPool) -> Self;
-    ///
+    /// Build the database. This operation is intended to be executed against a populated database
+    /// so the scripts should account for existing objects that cannot be replaced with new
+    /// versions. Deployments for objects that need to be altered should be handled manually... for
+    /// now. Any errors that would otherwise be returned during this stage should be handled as if
+    /// this function is a terminal operations of a script (i.e. log and exit early).
     async fn build_database(&self);
-    ///
+    /// Refresh the current database to a clean instance with no entities existing.
+    /// # Errors
+    /// This function will return an error if the refresh actions returns database errors.
     async fn refresh_database(&self) -> EmResult<()>;
     /// Execute the provided `block` of SQL code against the [DatabaseBuilder]. If the block does
     /// not match the required formatting to be an anonymous block, the code is wrapped in the
@@ -184,6 +192,8 @@ where
     async fn execute_anonymous_block(&self, block: &str) -> EmResult<()>;
 }
 
+/// Execute a build against the database specified by the connection `options` provided. All
+/// messages will be logged using the configuration specified by `log_config_path`.
 pub async fn build_database<B, D, P>(log_config_path: P, options: D::ConnectionOptions)
 where
     B: DatabaseBuilder<Database = D>,

@@ -21,6 +21,10 @@ static COMPOSITE_REGEX: &Lazy<Regex, fn() -> Regex> = regex!(
 /// Check a database build unit to see if it defines an enum creation. If it does, it checks to see
 /// if all it's specified labels can be found within the database's definition of the enum. If the
 /// unit is not an enum, then the function exits immediately with an [Ok].
+/// # Errors
+/// This function will return an error if the contents of `file_name` do not match the `ENUM_REGEX`
+/// pattern. Technically the function can also return an error if the captures of the regex pattern
+/// are not found, but they must exist to match the pattern so that should never happen.
 pub async fn check_for_enum(pool: &PgPool, file_name: &str) -> EmResult<()> {
     let file_path = package_dir()?.join("database").join(file_name);
     let block = read_file(file_path).await?;
@@ -53,6 +57,11 @@ pub async fn check_for_enum(pool: &PgPool, file_name: &str) -> EmResult<()> {
 /// Check a database build unit to see if it defines a composite creation. If it does, it checks to
 /// see if all it's specified attributes can be found within the database's definition of the
 /// composite. If the unit is not a composite, then the function exits immediately with an [Ok].
+/// # Errors
+/// This function will return an error if the contents of `file_name` do not match the
+/// `COMPOSITE_REGEX` pattern. Technically the function can also return an error if the captures of
+/// the regex pattern are not found, but they must exist to match the pattern so that should never
+/// happen.
 pub async fn check_for_composite(pool: &PgPool, file_name: &str) -> EmResult<()> {
     let file_path = package_dir()?.join("database").join(file_name);
     let block = read_file(file_path).await?;
@@ -82,22 +91,25 @@ pub async fn check_for_composite(pool: &PgPool, file_name: &str) -> EmResult<()>
     Ok(())
 }
 
-///
+/// Run the specified `test_file` as an anonymous block within a rolled back transaction.
+/// # Errors
+/// This function will return an error if the package directory cannot be found, the `test_file`
+/// cannot be read or an error is returned from the anonymous block execution (or rollback).
 pub async fn run_db_test(pool: &PgPool, test_file: &str) -> EmResult<()> {
     let tester = PgDatabaseTester::create(pool);
     let test_path = package_dir()?.join("database/tests").join(test_file);
     let block = read_file(test_path).await?;
     let result = tester.execute_anonymous_block_transaction(&block).await;
-    if let Some(block_error) = result.block_error {
-        panic!("{block_error}")
+    if let Some(block_error) = &result.block_error {
+        Err(format!("{block_error}"))?
     }
-    if let Some(transaction_error) = result.block_error {
-        panic!("{transaction_error}")
+    if let Some(transaction_error) = &result.block_error {
+        Err(format!("{transaction_error}"))?
     }
     Ok(())
 }
 
-///
+/// Postgresql implementation of a [DatabaseTester]
 pub struct PgDatabaseTester {
     pool: PgPool,
 }
