@@ -1,4 +1,4 @@
-use common::api::ApiResponse;
+use common::api::{ApiResponse, QueryApiFormat};
 
 use crate::services::{
     workflow_runs::{WorkflowRun, WorkflowRunId, WorkflowRunsService},
@@ -10,13 +10,15 @@ use crate::services::{
 pub async fn workflow_run<R>(
     workflow_run_id: actix_web::web::Path<WorkflowRunId>,
     service: actix_web::web::Data<R>,
+    query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<WorkflowRun>
 where
     R: WorkflowRunsService,
 {
+    let format = query.into_inner();
     match service.read_one(&workflow_run_id).await {
-        Ok(workflow_run) => ApiResponse::success(workflow_run),
-        Err(error) => ApiResponse::error(error),
+        Ok(workflow_run) => ApiResponse::success(workflow_run, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }
 
@@ -25,13 +27,15 @@ where
 pub async fn init_workflow_run<R>(
     workflow_id: actix_web::web::Path<WorkflowId>,
     service: actix_web::web::Data<R>,
+    query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<WorkflowRun>
 where
     R: WorkflowRunsService,
 {
+    let format = query.into_inner();
     match service.initialize(&workflow_id).await {
-        Ok(workflow_run) => ApiResponse::success(workflow_run),
-        Err(error) => ApiResponse::error(error),
+        Ok(workflow_run) => ApiResponse::success(workflow_run, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }
 
@@ -40,13 +44,15 @@ where
 pub async fn cancel_workflow_run<R>(
     workflow_run_id: actix_web::web::Path<WorkflowRunId>,
     service: actix_web::web::Data<R>,
+    query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<WorkflowRun>
 where
     R: WorkflowRunsService,
 {
+    let format = query.into_inner();
     match service.cancel(&workflow_run_id).await {
-        Ok(workflow_run) => ApiResponse::success(workflow_run),
-        Err(error) => ApiResponse::error(error),
+        Ok(workflow_run) => ApiResponse::success(workflow_run, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }
 
@@ -55,13 +61,15 @@ where
 pub async fn schedule_workflow_run<R>(
     workflow_run_id: actix_web::web::Path<WorkflowRunId>,
     service: actix_web::web::Data<R>,
+    query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<WorkflowRun>
 where
     R: WorkflowRunsService,
 {
+    let format = query.into_inner();
     match service.schedule(&workflow_run_id).await {
-        Ok(workflow_run) => ApiResponse::success(workflow_run),
-        Err(error) => ApiResponse::error(error),
+        Ok(workflow_run) => ApiResponse::success(workflow_run, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }
 
@@ -70,12 +78,14 @@ where
 pub async fn restart_workflow_run<R>(
     workflow_run_id: actix_web::web::Path<WorkflowRunId>,
     service: actix_web::web::Data<R>,
+    query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<WorkflowRun>
 where
     R: WorkflowRunsService,
 {
+    let format = query.into_inner();
     match service.restart(&workflow_run_id).await {
-        Ok(workflow_run) => ApiResponse::success(workflow_run),
-        Err(error) => ApiResponse::error(error),
+        Ok(workflow_run) => ApiResponse::success(workflow_run, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }

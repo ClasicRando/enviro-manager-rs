@@ -90,11 +90,6 @@ where
 }
 
 impl<T: Serialize> ApiResponse<T> {
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn into_body(self) -> ApiResponseBody<T> {
-        self.body
-    }
-
     /// Generate an [ApiResponse] wrapping a [ApiResponseBody::Success]`
     pub const fn success(data: T, format: ApiContentFormat) -> Self {
         Self {

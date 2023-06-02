@@ -1,56 +1,45 @@
-use common::api::ApiResponse;
-use log::error;
+use common::api::{request::ApiRequest, ApiResponse, QueryApiFormat};
 
 use crate::services::task_queue::{TaskQueueRequest, TaskQueueService};
 
 /// API endpoint to retry the task queue entry specified by `request`
 pub async fn task_queue_retry<T>(
-    data: actix_web::web::Bytes,
+    api_request: ApiRequest<TaskQueueRequest>,
     service: actix_web::web::Data<T>,
+    query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<()>
 where
     T: TaskQueueService,
 {
-    let request: TaskQueueRequest = match rmp_serde::from_slice(&data) {
-        Ok(inner) => inner,
-        Err(error) => {
-            error!("{}", error);
-            return ApiResponse::failure(format!(
-                "Could not deserialize job request. Error: {}",
-                error
-            ));
-        }
-    };
+    let format = query.into_inner();
+    let request = api_request.into_inner();
     match service.retry_task(&request).await {
-        Ok(_) => ApiResponse::message(String::from(
-            "Successfully set task queue record to retry. Workflow scheduled for run",
-        )),
-        Err(error) => ApiResponse::error(error),
+        Ok(_) => ApiResponse::message(
+            String::from("Successfully set task queue record to retry. Workflow scheduled for run"),
+            format.f,
+        ),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }
 
 /// API endpoint complete the task queue entry specified by `request`
 pub async fn task_queue_complete<T>(
-    data: actix_web::web::Bytes,
+    api_request: ApiRequest<TaskQueueRequest>,
     service: actix_web::web::Data<T>,
+    query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<()>
 where
     T: TaskQueueService,
 {
-    let request: TaskQueueRequest = match rmp_serde::from_slice(&data) {
-        Ok(inner) => inner,
-        Err(error) => {
-            error!("{}", error);
-            return ApiResponse::failure(format!(
-                "Could not deserialize job request. Error: {}",
-                error
-            ));
-        }
-    };
+    let format = query.into_inner();
+    let request = api_request.into_inner();
     match service.complete_task(&request).await {
-        Ok(_) => ApiResponse::message(String::from(
-            "Successfully set task queue record to complete. Workflow scheduled for run",
-        )),
-        Err(error) => ApiResponse::error(error),
+        Ok(_) => ApiResponse::message(
+            String::from(
+                "Successfully set task queue record to complete. Workflow scheduled for run",
+            ),
+            format.f,
+        ),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }

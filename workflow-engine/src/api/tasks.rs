@@ -1,16 +1,19 @@
-use common::api::ApiResponse;
-use log::error;
+use common::api::{request::ApiRequest, ApiResponse, QueryApiFormat};
 
 use crate::services::tasks::{Task, TaskId, TaskRequest, TaskService};
 
 /// API endpoint to fetch all tasks. Return an array of [Task] entries
-pub async fn tasks<T>(service: actix_web::web::Data<T>) -> ApiResponse<Vec<Task>>
+pub async fn tasks<T>(
+    service: actix_web::web::Data<T>,
+    query: actix_web::web::Query<QueryApiFormat>,
+) -> ApiResponse<Vec<Task>>
 where
     T: TaskService,
 {
+    let format = query.into_inner();
     match service.read_many().await {
-        Ok(tasks) => ApiResponse::success(tasks),
-        Err(error) => ApiResponse::error(error),
+        Ok(tasks) => ApiResponse::success(tasks, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }
 
@@ -19,36 +22,31 @@ where
 pub async fn task<T>(
     task_id: actix_web::web::Path<TaskId>,
     service: actix_web::web::Data<T>,
+    query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<Task>
 where
     T: TaskService,
 {
+    let format = query.into_inner();
     match service.read_one(&task_id).await {
-        Ok(task) => ApiResponse::success(task),
-        Err(error) => ApiResponse::error(error),
+        Ok(task) => ApiResponse::success(task, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }
 
 /// API endpoint to create a new task
 pub async fn create_task<T>(
-    data: actix_web::web::Bytes,
+    api_request: ApiRequest<TaskRequest>,
     service: actix_web::web::Data<T>,
+    query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<Task>
 where
     T: TaskService,
 {
-    let request: TaskRequest = match rmp_serde::from_slice(&data) {
-        Ok(inner) => inner,
-        Err(error) => {
-            error!("{}", error);
-            return ApiResponse::failure(format!(
-                "Could not deserialize task request. Error: {}",
-                error
-            ));
-        }
-    };
+    let format = query.into_inner();
+    let request = api_request.into_inner();
     match service.create_task(&request).await {
-        Ok(task) => ApiResponse::success(task),
-        Err(error) => ApiResponse::error(error),
+        Ok(task) => ApiResponse::success(task, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }

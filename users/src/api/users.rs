@@ -1,6 +1,6 @@
 use actix_session::Session;
 use common::{
-    api::{request::ApiRequest, validate_session, ApiContentFormat, ApiResponse, QueryApiFormat},
+    api::{request::ApiRequest, validate_session, ApiResponse, QueryApiFormat},
     error::EmError,
 };
 use log::error;
@@ -15,20 +15,20 @@ pub async fn create_user<U>(
     session: Session,
     api_request: ApiRequest<CreateUserRequest>,
     service: actix_web::web::Data<U>,
-    path: actix_web::web::Path<ApiContentFormat>,
+    query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<User>
 where
     U: UserService,
 {
-    let format = path.into_inner();
-    let uuid = match validate_session(&session, format) {
+    let format = query.into_inner();
+    let uuid = match validate_session(&session, format.f) {
         Ok(inner) => inner,
         Err(response) => return response,
     };
     let user_request = api_request.into_inner();
     match service.create_user(&uuid, &user_request).await {
-        Ok(user) => ApiResponse::success(user, format),
-        Err(error) => ApiResponse::error(error, format),
+        Ok(user) => ApiResponse::success(user, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }
 
@@ -36,19 +36,19 @@ where
 pub async fn read_users<U>(
     session: Session,
     service: actix_web::web::Data<U>,
-    path: actix_web::web::Path<ApiContentFormat>,
+    query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<Vec<User>>
 where
     U: UserService,
 {
-    let format = path.into_inner();
-    let uuid = match validate_session(&session, format) {
+    let format = query.into_inner();
+    let uuid = match validate_session(&session, format.f) {
         Ok(inner) => inner,
         Err(response) => return response,
     };
     match service.read_all(&uuid).await {
-        Ok(user) => ApiResponse::success(user, format),
-        Err(error) => ApiResponse::error(error, format),
+        Ok(user) => ApiResponse::success(user, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }
 
@@ -57,20 +57,20 @@ pub async fn update_user<U>(
     session: Session,
     api_request: ApiRequest<UpdateUserRequest>,
     service: actix_web::web::Data<U>,
-    path: actix_web::web::Path<ApiContentFormat>,
+    query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<()>
 where
     U: UserService,
 {
-    let format = path.into_inner();
-    let uuid = match validate_session(&session, format) {
+    let format = query.into_inner();
+    let uuid = match validate_session(&session, format.f) {
         Ok(inner) => inner,
         Err(response) => return response,
     };
     let user_request = api_request.into_inner();
     match service.update(&uuid, &user_request).await {
-        Ok(user) => ApiResponse::message(format!("Updated user {}", user.uid), format),
-        Err(error) => ApiResponse::error(error, format),
+        Ok(user) => ApiResponse::message(format!("Updated user {}", user.uid), format.f),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }
 
@@ -110,19 +110,19 @@ pub async fn modify_user_role<U>(
     session: Session,
     api_request: ApiRequest<ModifyUserRoleRequest>,
     service: actix_web::web::Data<U>,
-    path: actix_web::web::Path<ApiContentFormat>,
+    query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<User>
 where
     U: UserService,
 {
-    let format = path.into_inner();
-    let uuid = match validate_session(&session, format) {
+    let format = query.into_inner();
+    let uuid = match validate_session(&session, format.f) {
         Ok(inner) => inner,
         Err(response) => return response,
     };
     let user_request = api_request.into_inner();
     match service.modify_user_role(&uuid, &user_request).await {
-        Ok(user) => ApiResponse::success(user, format),
-        Err(error) => ApiResponse::error(error, format),
+        Ok(user) => ApiResponse::success(user, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }

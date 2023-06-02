@@ -110,10 +110,10 @@ impl ApiRequestValidator for CreateUserRequestValidator {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UpdateUserRequest {
     /// Username of the user to updated. Required to verify user before updating.
-    #[serde(flatten)]
+    // #[serde(flatten)]
     pub(crate) validate_user: ValidateUserRequest,
     /// Update variation the is required to be performed
-    #[serde(flatten)]
+    // #[serde(flatten)]
     pub(crate) update_type: UpdateUserType,
 }
 
@@ -174,16 +174,19 @@ impl UpdateUserRequest {
 
 /// User update type variations
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
+#[serde(tag = "type")]
 pub enum UpdateUserType {
     /// User is attempting to update the user's username to a new value
+    #[serde(rename = "username")]
     Username { new_username: String },
     /// User is attempting to update the user's first and last name
+    #[serde(rename = "full-name")]
     FullName {
         new_first_name: String,
         new_last_name: String,
     },
     /// User is attempting to update the user's password to a new value
+    #[serde(rename = "reset-password")]
     ResetPassword { new_password: String },
 }
 
