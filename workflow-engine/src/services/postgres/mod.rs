@@ -26,7 +26,6 @@ pub(crate) mod test {
     #[rstest]
     #[case::clean_executors("executor/clean_executors.pgsql")]
     #[case::next_run_job_schedule("job/next_run_job_schedule.pgsql")]
-    #[case::valid_job_schedule("job/valid_job_schedule.pgsql")]
     #[case::are_valid_task_rules("task/are_valid_task_rules.pgsql")]
     #[case::workflow_tasks("task/workflow_tasks.pgsql")]
     #[tokio::test]

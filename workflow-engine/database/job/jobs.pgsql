@@ -25,7 +25,7 @@ create table if not exists job.jobs (
     job_schedule job.schedule_entry[] check(
         case
             when job_type = 'Scheduled'::job.job_type
-                then job.valid_job_schedule(job_schedule)
+                then job_schedule is not null and job_schedule != '{}'
             else job_schedule is null
         end
     ),
