@@ -1,14 +1,19 @@
-create or replace function executor.executor_status()
+create or replace function executor.executor_updated_cancel()
 returns trigger
 language plpgsql
-volatile
 as $$
 begin
-    if new.status = 'Canceled'::executor.executor_status then
-        perform pg_notify('exec_status_'||new.executor_id, 'cancel');
-    elsif new.status = 'Shutdown'::executor.executor_status then
-        perform pg_notify('exec_status_'||new.executor_id, 'shutdown');
-    end if;
+    perform pg_notify('exec_status_'||new.executor_id, 'cancel');
+    return new;
+end;
+$$;
+
+create or replace function executor.executor_updated_shutdown()
+returns trigger
+language plpgsql
+as $$
+begin
+    perform pg_notify('exec_status_'||new.executor_id, 'shutdown');
     return new;
 end;
 $$;
@@ -26,12 +31,19 @@ create table if not exists executor.executors (
     error_message text
 );
 
-drop trigger if exists status_event on executor.executors;
-create trigger status_event
+create or replace trigger canceled_event
     before update of status
     on executor.executors
     for each row
-    execute function executor.executor_status();
+    when new.status = 'Canceled'::executor.executor_status
+    execute function executor.executor_updated_cancel();
+
+create or replace trigger shutdown_event
+    before update of status
+    on executor.executors
+    for each row
+    when new.status = 'Shutdown'::executor.executor_status
+    execute function executor.executor_updated_shutdown();
 
 call audit.audit_table('executor.executors');
 
