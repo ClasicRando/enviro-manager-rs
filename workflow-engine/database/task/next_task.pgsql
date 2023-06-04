@@ -1,13 +1,12 @@
 create or replace function task.next_task(
-    workflow_run_id bigint
-) returns table (
-    workflow_run_id bigint,
-    task_order integer,
-    task_id bigint,
-    status task.task_status,
-    parameters jsonb,
-    url text
-)
+    in_workflow_run_id bigint,
+    out workflow_run_id bigint,
+    out task_order integer,
+    out task_id bigint,
+    out status task.task_status,
+    out parameters jsonb,
+    out url text
+) returns record
 security definer
 language sql
 stable
