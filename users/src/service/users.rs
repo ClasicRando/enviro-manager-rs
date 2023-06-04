@@ -25,6 +25,8 @@ impl User {
     /// Checks the current roles of the [User] against the `role` name provided. If any of the roles
     /// match or the user is an admin, return [Ok]. Otherwise, return an [EmError::MissingPrivilege]
     /// error.
+    /// # Errors
+    /// This function will return an error if the user does not have the `role` provided
     pub fn check_role(&self, role: RoleName) -> EmResult<()> {
         if self
             .roles
@@ -259,6 +261,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 pub(crate) mod test {
     use std::str::FromStr;
 
@@ -284,10 +287,10 @@ pub(crate) mod test {
         roles: &[&str],
     ) -> CreateUserRequest {
         CreateUserRequest {
-            first_name: first_name.to_string(),
-            last_name: last_name.to_string(),
-            username: username.to_string(),
-            password: password.to_string(),
+            first_name: first_name.to_owned(),
+            last_name: last_name.to_owned(),
+            username: username.to_owned(),
+            password: password.to_owned(),
             roles: roles
                 .iter()
                 .map(|r| RoleName::from_str(r).unwrap())
@@ -298,8 +301,8 @@ pub(crate) mod test {
     /// Utility method for creating a new [ValidateUserRequest]
     pub(crate) fn validate_user_request(username: &str, password: &str) -> ValidateUserRequest {
         ValidateUserRequest {
-            username: username.to_string(),
-            password: password.to_string(),
+            username: username.to_owned(),
+            password: password.to_owned(),
         }
     }
 
@@ -318,22 +321,22 @@ pub(crate) mod test {
     /// Utility method for creating a new [UpdateUserType::Username]
     pub(crate) fn update_username(new_username: &str) -> UpdateUserType {
         UpdateUserType::Username {
-            new_username: new_username.to_string(),
+            new_username: new_username.to_owned(),
         }
     }
 
     /// Utility method for creating a new [UpdateUserType::FullName]
     pub(crate) fn update_full_name(new_first_name: &str, new_last_name: &str) -> UpdateUserType {
         UpdateUserType::FullName {
-            new_first_name: new_first_name.to_string(),
-            new_last_name: new_last_name.to_string(),
+            new_first_name: new_first_name.to_owned(),
+            new_last_name: new_last_name.to_owned(),
         }
     }
 
     /// Utility method for creating a new [UpdateUserType::ResetPassword]
     pub(crate) fn reset_password(new_password: &str) -> UpdateUserType {
         UpdateUserType::ResetPassword {
-            new_password: new_password.to_string(),
+            new_password: new_password.to_owned(),
         }
     }
 

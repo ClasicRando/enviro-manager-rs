@@ -30,7 +30,7 @@ where
     /// * `workflow_run_id` - ID of the workflow run to be executed
     /// * `wr_service` - workflow run service to interact with the database
     /// * `tq_service` - task queue service to interact with the database
-    pub fn new(workflow_run_id: WorkflowRunId, wr_service: W, tq_service: T) -> Self {
+    pub const fn new(workflow_run_id: WorkflowRunId, wr_service: W, tq_service: T) -> Self {
         Self {
             workflow_run_id,
             wr_service,

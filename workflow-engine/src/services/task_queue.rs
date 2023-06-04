@@ -5,8 +5,10 @@ use common::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::workflow_runs::WorkflowRunId;
-use crate::WorkflowRunsService;
+use super::{
+    tasks::TaskId,
+    workflow_runs::{WorkflowRunId, WorkflowRunsService},
+};
 
 /// Status of a task as found in the database as a simple Postgresql enum type
 #[derive(sqlx::Type, Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -26,31 +28,39 @@ pub enum TaskStatus {
 /// Check performed during a task run to validate the current state of a task or the system that the
 /// task is operating on. Rules must always have a non-empty and unique `name` per task, as well as
 /// a `failed` status and optional `message` to provide details of what the rule checked.
-///
-/// Since the `message` field is optional, the Type trait must be manually derived to encode and
-/// decode from a Postgres database.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskRule {
+    /// Descriptive name of the task rule
     pub(crate) name: String,
+    /// Flag indicating if the task rule failed during the check
     pub(crate) failed: bool,
+    /// Optional message included in the task rule completion
     pub(crate) message: Option<String>,
 }
 
 /// Represents a row from the `task.task_queue` table
 #[derive(sqlx::FromRow, Serialize, Deserialize, Debug, Clone)]
 pub struct TaskQueueRecord {
+    /// ID of the Workflow run that owns this task queue record
     pub(crate) workflow_run_id: WorkflowRunId,
+    /// Order within the workflow run
     pub(crate) task_order: i32,
-    pub(crate) task_id: i64,
+    /// ID of the task that is executed
+    pub(crate) task_id: TaskId,
+    /// Status of the task
     pub(crate) status: TaskStatus,
+    /// Parameters passed to the task to modify behaviour
     pub(crate) parameters: Option<Value>,
+    /// Url to be called as per the task execution
     pub(crate) url: String,
 }
 
 /// Container for the data required to fetch/update a single `task.task_queue` record
 #[derive(Deserialize)]
 pub struct TaskQueueRequest {
+    /// ID of the  workflow run to be accessed
     pub(crate) workflow_run_id: WorkflowRunId,
+    /// Order within the workflow run
     pub(crate) task_order: i32,
 }
 

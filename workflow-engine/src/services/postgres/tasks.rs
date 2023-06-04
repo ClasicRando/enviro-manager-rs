@@ -1,10 +1,10 @@
-use common::{error::{EmError, EmResult}, database::postgres::Postgres};
-use sqlx::{PgPool};
-
-use crate::{
-    services::tasks::{Task, TaskId, TaskRequest, TaskRequestValidator},
-    TaskService,
+use common::{
+    database::postgres::Postgres,
+    error::{EmError, EmResult},
 };
+use sqlx::PgPool;
+
+use crate::services::tasks::{Task, TaskId, TaskRequest, TaskRequestValidator, TaskService};
 
 /// Postgres implementation of [TaskService]
 #[derive(Clone)]
@@ -41,12 +41,14 @@ impl TaskService for PgTasksService {
         .bind(task_id)
         .fetch_optional(&self.pool)
         .await?;
-        match result {
-            Some(task) => Ok(task),
-            None => Err(EmError::MissingRecord {
-                pk: task_id.to_string(),
-            }),
-        }
+        result.map_or_else(
+            || {
+                Err(EmError::MissingRecord {
+                    pk: task_id.to_string(),
+                })
+            },
+            Ok,
+        )
     }
 
     async fn read_many(&self) -> EmResult<Vec<Task>> {

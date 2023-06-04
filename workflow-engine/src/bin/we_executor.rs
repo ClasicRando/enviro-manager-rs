@@ -4,8 +4,17 @@ use common::{
 };
 use log::{error, info};
 use workflow_engine::{
-    database::db_options, Executor, ExecutorService, PgExecutorService, PgTaskQueueService,
-    PgWorkflowRunsService, TaskQueueService, WorkflowRunsService,
+    database::db_options,
+    executor::Executor,
+    services::{
+        executors::ExecutorService,
+        postgres::{
+            executors::PgExecutorService, task_queue::PgTaskQueueService,
+            workflow_runs::PgWorkflowRunsService,
+        },
+        task_queue::TaskQueueService,
+        workflow_runs::WorkflowRunsService,
+    },
 };
 
 #[tokio::main]

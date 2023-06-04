@@ -11,8 +11,14 @@ use serde::{
 };
 use sqlx::postgres::types::PgInterval;
 
-use super::workflow_runs::WorkflowRunStatus;
-use crate::{job_worker::NotificationAction, services::workflows::WorkflowId, WorkflowRunsService};
+use super::{executors::ExecutorId, workflow_runs::WorkflowRunId};
+use crate::{
+    job_worker::NotificationAction,
+    services::{
+        workflow_runs::{WorkflowRunStatus, WorkflowRunsService},
+        workflows::WorkflowId,
+    },
+};
 
 /// Represents the `job_type` Postgresql enum value within the database. Should never be used by
 /// itself but rather used to parse into the [JobType] enum that hold the job running details.
@@ -44,7 +50,7 @@ impl sqlx::postgres::PgHasArrayType for ScheduleEntry {
 /// be executed.
 #[derive(sqlx::FromRow)]
 pub struct JobMin {
-    pub job_id: i64,
+    pub job_id: JobId,
     pub next_run: NaiveDateTime,
 }
 
@@ -53,6 +59,7 @@ const PG_INTERVAL_FIELDS: &[&str] = &["months", "days", "years"];
 /// Deserialization method for [PgInterval] to convert from a serialized object containing a
 /// months, days and microseconds value. This allows for [PgInterval] to be extracted from a
 /// [JobType::Interval] value serialized within a [JobRequest].
+#[allow(clippy::indexing_slicing)]
 fn deserialize_interval<'de, D>(deserializer: D) -> Result<PgInterval, D::Error>
 where
     D: Deserializer<'de>,
@@ -106,9 +113,9 @@ where
             Ok(PgInterval {
                 months: months
                     .ok_or_else(|| serde::de::Error::missing_field(PG_INTERVAL_FIELDS[0]))?,
-                days: days.ok_or_else(|| serde::de::Error::missing_field(PG_INTERVAL_FIELDS[0]))?,
+                days: days.ok_or_else(|| serde::de::Error::missing_field(PG_INTERVAL_FIELDS[1]))?,
                 microseconds: microseconds
-                    .ok_or_else(|| serde::de::Error::missing_field(PG_INTERVAL_FIELDS[0]))?,
+                    .ok_or_else(|| serde::de::Error::missing_field(PG_INTERVAL_FIELDS[2]))?,
             })
         }
     }
@@ -147,17 +154,24 @@ pub enum JobType {
 /// well as the current workflow run (if any) for the job.
 #[derive(Serialize)]
 pub struct Job {
-    job_id: i64,
-    workflow_id: i64,
+    job_id: JobId,
+    workflow_id: WorkflowId,
     workflow_name: String,
     job_type: JobType,
-    pub maintainer: String,
+    maintainer: String,
     is_paused: bool,
     next_run: NaiveDateTime,
-    current_workflow_run_id: i64,
+    current_workflow_run_id: WorkflowRunId,
     workflow_run_status: Option<WorkflowRunStatus>,
-    executor_id: Option<i64>,
+    executor_id: Option<ExecutorId>,
     progress: i16,
+}
+
+impl Job {
+    ///
+    pub fn maintainer(&self) -> &str {
+        &self.maintainer
+    }
 }
 
 impl<'r, R> sqlx::FromRow<'r, R> for Job
@@ -211,9 +225,14 @@ where
 /// the `job_id` which should be provided by a path parameter
 #[derive(Deserialize, Debug)]
 pub struct JobRequest {
+    /// ID of the workflow that is to be executed as the [Job]
     pub(crate) workflow_id: WorkflowId,
+    /// Email address of the maintainer to be sent a message if the job fails
     pub(crate) maintainer: String,
+    /// Type of job that is be created. Contains the details of how the job is to be executed
     pub(crate) job_type: JobType,
+    /// Optional datetime that defines when the next run of the job is to be executed. If [None]
+    /// then the system will calculate when the next run should be.
     pub(crate) next_run: Option<NaiveDateTime>,
 }
 
@@ -244,13 +263,20 @@ impl ApiRequestValidator for JobRequestValidator {
 
 /// Wrapper for a `job_id` value. Made to ensure data passed as the id of a job is correct and not
 /// just any i64 value.
-#[derive(sqlx::Type, Eq, Hash, PartialEq, Deserialize)]
+#[derive(sqlx::Type, Eq, Hash, PartialEq, Deserialize, Serialize, Clone, Copy)]
 #[sqlx(transparent)]
 pub struct JobId(i64);
 
 impl From<i64> for JobId {
     fn from(value: i64) -> Self {
         Self(value)
+    }
+}
+
+impl JobId {
+    /// Extract the inner [`i64`] value
+    pub const fn into_inner(self) -> i64 {
+        self.0
     }
 }
 

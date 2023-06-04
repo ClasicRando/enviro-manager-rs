@@ -1,23 +1,31 @@
-use common::{error::EmResult, database::Database};
+use common::{api::ApiRequestValidator, database::Database, error::EmResult};
 use serde::{Deserialize, Serialize};
-use common::api::ApiRequestValidator;
 
 /// Task data type representing a row from `task.v_tasks`
 #[derive(sqlx::FromRow, Serialize)]
 pub struct Task {
+    /// ID of the task
     pub(crate) task_id: TaskId,
+    /// Name of the task
     pub(crate) name: String,
+    /// Short description of the task
     pub(crate) description: String,
+    /// Url to be called as per the task execution
     pub(crate) url: String,
+    /// Name of the task service that executes this task
     pub(crate) task_service_name: String,
 }
 
 /// Data required to create or update the contents of task entry (the id cannot be updated)
 #[derive(Deserialize, Debug)]
 pub struct TaskRequest {
+    /// Name of the task
     pub(crate) name: String,
+    /// Short description of the task
     pub(crate) description: String,
+    /// ID of the service that executes this task
     pub(crate) task_service_id: i64,
+    /// Relative url from the task service referenced by `task_service_id`
     pub(crate) url: String,
 }
 
@@ -29,13 +37,13 @@ impl ApiRequestValidator for TaskRequestValidator {
 
     fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage> {
         if request.name.trim().is_empty() {
-            return Err("Request 'name' cannot be empty or whitespace")
+            return Err("Request 'name' cannot be empty or whitespace");
         }
         if request.description.trim().is_empty() {
-            return Err("Request 'description' cannot be empty or whitespace")
+            return Err("Request 'description' cannot be empty or whitespace");
         }
         if request.url.trim().is_empty() {
-            return Err("Request 'url' cannot be empty or whitespace")
+            return Err("Request 'url' cannot be empty or whitespace");
         }
         Ok(())
     }
@@ -63,7 +71,7 @@ impl std::fmt::Display for TaskId {
 /// methods for the API.
 pub trait TaskService
 where
-    Self: Clone + Send
+    Self: Clone + Send,
 {
     type Database: Database;
     type RequestValidator: ApiRequestValidator<Request = TaskRequest>;

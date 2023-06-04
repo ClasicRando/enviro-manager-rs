@@ -6,12 +6,10 @@ pub mod workflow_runs;
 pub mod workflows;
 
 #[cfg(test)]
+#[allow(clippy::expect_used)]
 pub(crate) mod test {
     use common::{
-        database::{
-            connection::ConnectionBuilder,
-            postgres::{connection::PgConnectionBuilder},
-        },
+        database::{connection::ConnectionBuilder, postgres::connection::PgConnectionBuilder},
         error::EmResult,
     };
     use rstest::{fixture, rstest};

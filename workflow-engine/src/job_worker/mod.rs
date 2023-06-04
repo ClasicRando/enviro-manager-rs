@@ -15,7 +15,7 @@ use tokio::{
     time::{sleep as tokio_sleep, Duration as StdDuration},
 };
 
-use crate::services::jobs::{Job, JobId, JobService};
+use crate::services::jobs::{JobId, JobService};
 
 /// Action to perform after receiving a job worker notification. Notification payload should be a
 /// workflow run id (as an i64/bigint) to tell the job worker a job has been completed or an empty
@@ -30,13 +30,13 @@ impl FromStr for NotificationAction {
 
     fn from_str(s: &str) -> EmResult<Self> {
         if s.is_empty() {
-            return Ok(NotificationAction::LoadJobs);
+            return Ok(Self::LoadJobs);
         }
         let Ok(job_id) = s.parse::<i64>() else {
             return Err(EmError::PayloadParseError(s.to_owned()))
         };
         info!("Received notification of \"{}\"", s);
-        Ok(NotificationAction::CompleteJob(job_id.into()))
+        Ok(Self::CompleteJob(job_id.into()))
     }
 }
 
@@ -55,7 +55,13 @@ where
 {
     /// Create a new job worker, initializing with a reference to a [JobService] and creating a
     /// mailer to send job related emails to maintainers.
-    pub async fn new(service: J) -> EmResult<Self> {
+    /// # Errors
+    /// This function will returns an error if there are missing environment variables or the SMTP
+    /// transport cannot be created. Require environment variables are:
+    /// - CLIPPY_USERNAME -> email service username
+    /// - CLIPPY_PASSWORD -> email service password
+    /// - CLIPPY_RELAY -> email service relay
+    pub fn new(service: J) -> EmResult<Self> {
         let username = env::var("CLIPPY_USERNAME")?;
         let password = env::var("CLIPPY_PASSWORD")?;
         let relay = env::var("CLIPPY_RELAY")?;
@@ -74,6 +80,13 @@ where
     /// Run the main action of the worker. Continuously listens for notification and executes the
     /// next job when ready. If there are no jobs available for the worker, it will wait for a
     /// shutdown signal (ctrl+c) or a new notification to load jobs.
+    /// # Errors
+    /// This function will return an error if an error is returned:
+    /// - creating the job change listener
+    /// - loading the new job map
+    /// - parsing the job listener notification
+    /// - handling the job listener notification
+    /// - running the next job
     pub async fn run(mut self) -> EmResult<()> {
         let mut job_channel = self.service.listener().await?;
         self.load_jobs().await?;
@@ -117,16 +130,15 @@ where
         info!("Requesting new job queue");
         let jobs = self.service.read_queued().await?;
         self.jobs.clear();
-        self.next_job = jobs.get(0).map(|j| j.job_id).unwrap_or(0).into();
+        self.next_job = jobs.get(0).map(|j| j.job_id).unwrap_or(0.into());
         for job in jobs {
-            let job_id = job.job_id.into();
-            if let Some(duplicate) = self.jobs.get(&job_id) {
+            if let Some(duplicate) = self.jobs.get(&job.job_id) {
                 return Err(EmError::DuplicateJobId(
-                    job.job_id,
+                    job.job_id.into_inner(),
                     [job.next_run, duplicate.to_owned()],
                 ));
             }
-            self.jobs.insert(job_id, job.next_run);
+            self.jobs.insert(job.job_id, job.next_run);
         }
         Ok(())
     }
@@ -178,18 +190,18 @@ where
             );
             return Ok(());
         };
-        let Job { maintainer, .. } = self.service.read_one(job_id).await?;
+        let job = self.service.read_one(job_id).await?;
         info!("Completing run for job_id = {}", job_id);
         let Err(error) = self.service.complete_job(job_id).await else {
             return Ok(())
         };
-        self.send_error_email(maintainer, format!("{error}"))
+        self.send_error_email(job.maintainer(), format!("{error}"))
             .await?;
         Ok(())
     }
 
     /// Send an email to the specified `maintainer` with the error message as the email body
-    async fn send_error_email(&self, maintainer: String, message: String) -> EmResult<()> {
+    async fn send_error_email(&self, maintainer: &str, message: String) -> EmResult<()> {
         warn!(
             "Sending error email to {} with message\n{}",
             maintainer, message

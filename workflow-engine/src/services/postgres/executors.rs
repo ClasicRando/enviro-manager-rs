@@ -11,10 +11,9 @@ use sqlx::{postgres::PgListener, PgPool, Transaction};
 use crate::{
     executor::utilities::ExecutorStatusUpdate,
     services::{
-        executors::{Executor, ExecutorId, ExecutorStatus},
+        executors::{Executor, ExecutorId, ExecutorService, ExecutorStatus},
         workflow_runs::WorkflowRunId,
     },
-    ExecutorService,
 };
 
 /// Postgresql implementation of the [ExecutorService]. Wraps a [PgPool] and provides interaction
@@ -89,12 +88,14 @@ impl ExecutorService for PgExecutorService {
         .bind(executor_id)
         .fetch_optional(&self.pool)
         .await?;
-        match result {
-            Some(executor) => Ok(executor),
-            None => Err(EmError::MissingRecord {
-                pk: executor_id.to_string(),
-            }),
-        }
+        result.map_or_else(
+            || {
+                Err(EmError::MissingRecord {
+                    pk: executor_id.to_string(),
+                })
+            },
+            Ok,
+        )
     }
 
     async fn read_status(&self, executor_id: &ExecutorId) -> EmResult<ExecutorStatus> {
@@ -107,12 +108,14 @@ impl ExecutorService for PgExecutorService {
         .bind(executor_id)
         .fetch_optional(&self.pool)
         .await?;
-        match result {
-            Some(status) => Ok(status),
-            None => Err(EmError::MissingRecord {
-                pk: executor_id.to_string(),
-            }),
-        }
+        result.map_or_else(
+            || {
+                Err(EmError::MissingRecord {
+                    pk: executor_id.to_string(),
+                })
+            },
+            Ok,
+        )
     }
 
     async fn read_many(&self) -> EmResult<Vec<Executor>> {

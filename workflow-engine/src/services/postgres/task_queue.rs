@@ -1,7 +1,6 @@
 use common::{
-    database::connection::finalize_transaction,
+    database::{connection::finalize_transaction, postgres::Postgres},
     error::{EmError, EmResult},
-    database::postgres::Postgres
 };
 use futures::StreamExt;
 use reqwest::{Client, Method};
@@ -15,13 +14,12 @@ use sqlx::{
     PgPool, Type,
 };
 
-use crate::{
-    services::{
-        postgres::workflow_runs::PgWorkflowRunsService,
-        task_queue::{TaskQueueRequest, TaskRule, TaskStatus},
-        workflow_runs::WorkflowRunId,
+use crate::services::{
+    postgres::workflow_runs::PgWorkflowRunsService,
+    task_queue::{
+        TaskQueueRecord, TaskQueueRequest, TaskQueueService, TaskResponse, TaskRule, TaskStatus,
     },
-    TaskQueueRecord, TaskQueueService, TaskResponse, WorkflowRunsService,
+    workflow_runs::{WorkflowRunId, WorkflowRunsService},
 };
 
 impl Encode<'_, sqlx::Postgres> for TaskRule {
@@ -50,7 +48,7 @@ impl<'r> Decode<'r, sqlx::Postgres> for TaskRule {
         let name: String = decoder.try_decode()?;
         let failed: bool = decoder.try_decode()?;
         let message: Option<String> = decoder.try_decode()?;
-        Ok(TaskRule {
+        Ok(Self {
             name,
             failed,
             message,
@@ -158,12 +156,14 @@ impl TaskQueueService for PgTaskQueueService {
         .bind(request.task_order)
         .fetch_optional(&self.pool)
         .await?;
-        match result {
-            Some(record) => Ok(record),
-            None => Err(EmError::MissingRecord {
-                pk: format!("{} + {}", request.workflow_run_id, request.task_order),
-            }),
-        }
+        result.map_or_else(
+            || {
+                Err(EmError::MissingRecord {
+                    pk: format!("{} + {}", request.workflow_run_id, request.task_order),
+                })
+            },
+            Ok,
+        )
     }
 
     async fn append_task_rule(

@@ -15,12 +15,13 @@ use sqlx::{
 use crate::{
     job_worker::NotificationAction,
     services::{
-        jobs::{Job, JobId, JobMin, JobRequest, JobRequestValidator, JobType, ScheduleEntry},
+        jobs::{
+            Job, JobId, JobMin, JobRequest, JobRequestValidator, JobService, JobType, ScheduleEntry,
+        },
         postgres::workflow_runs::PgWorkflowRunsService,
-        workflow_runs::{WorkflowRun, WorkflowRunId, WorkflowRunStatus},
+        workflow_runs::{WorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunsService},
         workflows::WorkflowId,
     },
-    JobService, WorkflowRunsService,
 };
 
 #[derive(Clone)]
@@ -112,12 +113,14 @@ impl JobService for PgJobsService {
         .bind(job_id)
         .fetch_optional(&self.pool)
         .await?;
-        match job_option {
-            Some(job) => Ok(job),
-            None => Err(EmError::MissingRecord {
-                pk: job_id.to_string(),
-            }),
-        }
+        job_option.map_or_else(
+            || {
+                Err(EmError::MissingRecord {
+                    pk: job_id.to_string(),
+                })
+            },
+            Ok,
+        )
     }
 
     async fn read_many(&self) -> EmResult<Vec<Job>> {

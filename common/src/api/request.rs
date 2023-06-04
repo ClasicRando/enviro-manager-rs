@@ -19,6 +19,13 @@ use thiserror::Error;
 use super::ApiContentFormat;
 use crate::error::{EmError, EmResult};
 
+/// Generic API request containing the extracted body of a request object. This type is
+/// constrained to requests that have a `Content-Type` header that matches the labels in the
+/// [ApiContentFormat] enum. Otherwise, you will encounter a error response before entering the
+/// route handler body.
+///
+/// If your request does match the expected `Content-Type` options, this type can be used in a
+/// route handler to extract the request body into the desired type `T`.
 #[derive(Serialize, Deserialize)]
 pub struct ApiRequest<T>(T);
 
@@ -80,9 +87,15 @@ impl<T: DeserializeOwned> FromRequest for ApiRequest<T> {
     }
 }
 
+/// Type alias for a function that processes an [ApiRequestPayloadError] and a borrowed
+/// [HttpRequest] to return an [EmError]. This is meant to handle an error parsing the payload of
+/// an API request into an [ApiRequest].
 type ApiRequestErrorHandler =
     Option<Arc<dyn Fn(ApiRequestPayloadError, &HttpRequest) -> EmError + Send + Sync>>;
 
+/// Future type that processes an [HttpRequest] and returns the result of another future,
+/// [ApiRequestBody]. This nested future processes the request body into the generic type `T` to
+/// which this future wraps an successful parsing result into an [ApiRequest] result.
 pub struct ApiRequestExtractFut<T> {
     req: Option<HttpRequest>,
     fut: ApiRequestBody<T>,
@@ -119,7 +132,7 @@ impl<T: DeserializeOwned> Future for ApiRequestExtractFut<T> {
     }
 }
 
-/// `Json` extractor configuration.
+/// `ApiRequest` extractor configuration.
 #[derive(Clone)]
 pub struct ApiRequestConfig {
     limit: usize,
@@ -168,15 +181,14 @@ impl Default for ApiRequestConfig {
     }
 }
 
-/// Future that resolves to some `T` when parsed from a JSON payload.
+/// Future that resolves to some `T` when parsed from a valid API request payload.
 ///
 /// Can deserialize any type `T` that implements [`Deserialize`][serde::Deserialize].
 ///
 /// Returns error if:
-/// - `Content-Type` is not `application/json` when `ctype_required` (passed to [`new`][Self::new])
-///   is `true`.
-/// - `Content-Length` is greater than [limit](JsonBody::limit()).
-/// - The payload, when consumed, is not valid JSON.
+/// - `Content-Type` does not match any content within [ApiContentFormat]
+/// - `Content-Length` is greater than [limit](ApiRequestBody::limit()).
+/// - The payload, when consumed, does not match the specified `Content-Type`
 pub enum ApiRequestBody<T> {
     Error(Option<ApiRequestPayloadError>),
     Body {

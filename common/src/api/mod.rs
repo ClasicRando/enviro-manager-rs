@@ -10,11 +10,16 @@ use uuid::Uuid;
 
 use crate::error::{EmError, EmResult};
 
+/// Deserializable wrapper for allowing an API caller to send back content of an [ApiResponse].
+/// This type should be used in a route handler to deserialize a url query with the template of
+/// `?f={format}`.
 #[derive(Deserialize, Default)]
 pub struct QueryApiFormat {
     pub f: ApiContentFormat,
 }
 
+/// Format variants that an [ApiResponse] supports for serialization and deserialization of API
+/// content
 #[derive(Default, Deserialize, Clone, Copy)]
 pub enum ApiContentFormat {
     #[serde(rename = "json")]
@@ -36,7 +41,7 @@ impl ApiContentFormat {
     }
 }
 
-/// Generic response object as an API response. A response is either a success containing data, a
+/// Generic response body for an [ApiResponse]. A response is either a success containing data, a
 /// message to let the user know what happened or an error/failure message.
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
@@ -47,6 +52,9 @@ pub enum ApiResponseBody<T: Serialize> {
     Error(String),
 }
 
+/// API response object to enable serializing a `body` using the specified `format`. This type
+/// can be used as a [Responder] for HTTP route handlers, always returning a 200 response unless
+/// the serialization of the `body` fails.
 #[derive(Serialize, Deserialize)]
 pub struct ApiResponse<T: Serialize> {
     #[serde(skip)]

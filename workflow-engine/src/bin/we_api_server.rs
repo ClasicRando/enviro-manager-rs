@@ -1,9 +1,12 @@
-use common::{error::EmResult, database::postgres::Postgres};
+use common::{database::postgres::Postgres, error::EmResult};
 use workflow_engine::{
-    api, PgExecutorService, PgJobsService, PgTaskQueueService,
-    PgTasksService, PgWorkflowRunsService, PgWorkflowsService,
+    api,
+    database::db_options,
+    services::postgres::{
+        executors::PgExecutorService, jobs::PgJobsService, task_queue::PgTaskQueueService,
+        tasks::PgTasksService, workflow_runs::PgWorkflowRunsService, workflows::PgWorkflowsService,
+    },
 };
-use workflow_engine::database::db_options;
 
 #[tokio::main]
 async fn main() -> EmResult<()> {

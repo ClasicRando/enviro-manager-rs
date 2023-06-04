@@ -4,8 +4,13 @@ use common::{
 };
 use log::{error, info};
 use workflow_engine::{
-    database::db_options, JobService, JobWorker, PgJobsService, PgWorkflowRunsService,
-    WorkflowRunsService,
+    database::db_options,
+    job_worker::JobWorker,
+    services::{
+        jobs::JobService,
+        postgres::{jobs::PgJobsService, workflow_runs::PgWorkflowRunsService},
+        workflow_runs::WorkflowRunsService,
+    },
 };
 
 #[tokio::main]
@@ -16,7 +21,7 @@ async fn main() -> EmResult<()> {
     let pool = PgConnectionBuilder::create_pool(db_options()?, 20, 1).await?;
     let workflow_runs_service = PgWorkflowRunsService::create(&pool);
     let jobs_service = PgJobsService::create(&pool, &workflow_runs_service);
-    let worker = match JobWorker::new(jobs_service).await {
+    let worker = match JobWorker::new(jobs_service) {
         Ok(worker) => worker,
         Err(error) => {
             error!("{}", error);

@@ -18,10 +18,12 @@ use crate::{
     services::{
         executors::ExecutorId,
         task_queue::{TaskRule, TaskStatus},
-        workflow_runs::{ExecutorWorkflowRun, WorkflowRun, WorkflowRunId, WorkflowRunTask},
+        tasks::TaskId,
+        workflow_runs::{
+            ExecutorWorkflowRun, WorkflowRun, WorkflowRunId, WorkflowRunTask, WorkflowRunsService,
+        },
         workflows::WorkflowId,
     },
-    WorkflowRunsService,
 };
 
 impl Encode<'_, sqlx::Postgres> for WorkflowRunTask {
@@ -45,7 +47,7 @@ impl Encode<'_, sqlx::Postgres> for WorkflowRunTask {
     fn size_hint(&self) -> usize {
         9usize * (4 + 4)
             + <i32 as Encode<sqlx::Postgres>>::size_hint(&self.task_order)
-            + <i64 as Encode<sqlx::Postgres>>::size_hint(&self.task_id)
+            + <TaskId as Encode<sqlx::Postgres>>::size_hint(&self.task_id)
             + <String as Encode<sqlx::Postgres>>::size_hint(&self.name)
             + <String as Encode<sqlx::Postgres>>::size_hint(&self.description)
             + <TaskStatus as Encode<sqlx::Postgres>>::size_hint(&self.task_status)
@@ -64,7 +66,7 @@ impl<'r> Decode<'r, sqlx::Postgres> for WorkflowRunTask {
     ) -> Result<Self, Box<dyn std::error::Error + 'static + Send + Sync>> {
         let mut decoder = PgRecordDecoder::new(value)?;
         let task_order = decoder.try_decode::<i32>()?;
-        let task_id = decoder.try_decode::<i64>()?;
+        let task_id = decoder.try_decode::<TaskId>()?;
         let name = decoder.try_decode::<String>()?;
         let description = decoder.try_decode::<String>()?;
         let task_status = decoder.try_decode::<TaskStatus>()?;
@@ -74,7 +76,7 @@ impl<'r> Decode<'r, sqlx::Postgres> for WorkflowRunTask {
         let task_start = decoder.try_decode::<Option<NaiveDateTime>>()?;
         let task_end = decoder.try_decode::<Option<NaiveDateTime>>()?;
         let progress = decoder.try_decode::<Option<i16>>()?;
-        Ok(WorkflowRunTask {
+        Ok(Self {
             task_order,
             task_id,
             name,
@@ -139,12 +141,14 @@ impl WorkflowRunsService for PgWorkflowRunsService {
         .bind(workflow_run_id)
         .fetch_optional(&self.pool)
         .await?;
-        match result {
-            Some(workflow_run) => Ok(workflow_run),
-            None => Err(EmError::MissingRecord {
-                pk: workflow_run_id.to_string(),
-            }),
-        }
+        result.map_or_else(
+            || {
+                Err(EmError::MissingRecord {
+                    pk: workflow_run_id.to_string(),
+                })
+            },
+            Ok,
+        )
     }
 
     async fn read_many(&self) -> EmResult<Vec<WorkflowRun>> {

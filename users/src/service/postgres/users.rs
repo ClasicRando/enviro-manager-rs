@@ -176,10 +176,7 @@ impl UserService for PgUserService {
         .bind(password)
         .fetch_optional(&self.pool)
         .await?;
-        match result {
-            Some(user) => Ok(user),
-            None => Err(InvalidUser),
-        }
+        result.map_or_else(|| Err(InvalidUser), Ok)
     }
 
     async fn modify_user_role(
@@ -301,7 +298,7 @@ mod test {
         let user = users
             .iter()
             .find(|u| u.uid == uuid)
-            .expect("Could not find admin user");
+            .ok_or("Could not find admin user")?;
         let user_roles: Vec<&str> = user.roles.iter().map(|r| r.name.as_ref()).collect();
         assert_eq!(user.full_name, full_name);
         assert_eq!(user_roles, roles);

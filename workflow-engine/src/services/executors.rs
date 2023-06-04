@@ -30,7 +30,7 @@ where
 /// Executor data type representing a row from `executor.v_executor`
 #[derive(sqlx::FromRow, Serialize)]
 pub struct Executor {
-    executor_id: i64,
+    executor_id: ExecutorId,
     pid: i32,
     username: String,
     application_name: String,
@@ -48,7 +48,7 @@ pub struct Executor {
 
 /// Wrapper for an `executor_id` value. Made to ensure data passed as the id of an executor is
 /// correct and not just any i64 value.
-#[derive(sqlx::Type, Clone, Deserialize)]
+#[derive(sqlx::Type, Clone, Deserialize, Serialize)]
 #[sqlx(transparent)]
 pub struct ExecutorId(i64);
 

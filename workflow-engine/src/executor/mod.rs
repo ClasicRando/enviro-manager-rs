@@ -1,4 +1,7 @@
-pub mod utilities;
+//! Executor module for components of the Workflow Engine that belong to workflow and task
+//! execution.
+
+pub(crate) mod utilities;
 mod worker;
 
 use std::collections::HashMap;
@@ -84,6 +87,9 @@ where
     /// Create a new [Executor] using the provided services. Cleans output unused or stale
     /// executors in the database before registering the current [Executor] and returning the new
     /// [Executor].
+    /// # Errors
+    /// This function will return an error if either the cleaning of existing executors or the
+    /// registering of this new executor fails.
     pub async fn new(executor_service: &E, wr_service: &W, tq_service: &T) -> EmResult<Self> {
         executor_service.clean_executors().await?;
         let executor_id = executor_service.register_executor().await?;
@@ -97,7 +103,7 @@ where
     }
 
     /// Return a reference to the [ExecutorId] of the [Executor].
-    pub fn executor_id(&self) -> &ExecutorId {
+    pub const fn executor_id(&self) -> &ExecutorId {
         &self.executor_id
     }
 
@@ -199,7 +205,7 @@ where
     /// Handle a manual shutdown by the user (performed by a ctrl+c) by logging the even and
     /// returning a [ExecutorNextOperation::Break] entry containing a
     /// [ExecutorNotificationSignal::Shutdown] variant.
-    fn handle_manual_shutdown(&self) -> ExecutorNextOperation {
+    fn handle_manual_shutdown() -> ExecutorNextOperation {
         info!("Received shutdown signal. Starting graceful shutdown");
         ExecutorNextOperation::Break(ExecutorStatusUpdate::Shutdown)
     }
@@ -220,9 +226,9 @@ where
     ) -> EmResult<ExecutorNextOperation> {
         Ok(tokio::select! {
             biased;
-            _ = ctrl_c() => self.handle_manual_shutdown(),
-            notification = executor_status_listener.recv() => self
-                .handle_executor_status_notification(notification?),
+            _ = ctrl_c() => Self::handle_manual_shutdown(),
+            notification = executor_status_listener.recv() => Self::
+                handle_executor_status_notification(notification?),
             notification = workflow_run_cancel_listener.recv() => self
                 .handle_workflow_run_cancel_notification(notification?).await?,
             workflow_run_id = self.next_workflow_run() => {
@@ -251,13 +257,13 @@ where
     ) -> EmResult<ExecutorNextOperation> {
         Ok(tokio::select! {
             biased;
-            _ = ctrl_c() => self.handle_manual_shutdown(),
-            notification = executor_status_listener.recv() => self
-                .handle_executor_status_notification(notification?),
+            _ = ctrl_c() => Self::handle_manual_shutdown(),
+            notification = executor_status_listener.recv() => Self::
+                handle_executor_status_notification(notification?),
             notification = workflow_run_cancel_listener.recv() => self
                 .handle_workflow_run_cancel_notification(notification?).await?,
-            notification = workflow_run_scheduled_listener.recv() => self
-                .handle_workflow_run_scheduled_notification(notification)?,
+            notification = workflow_run_scheduled_listener.recv() => Self::
+                handle_workflow_run_scheduled_notification(notification)?,
         })
     }
 
@@ -300,7 +306,7 @@ where
 
     /// Handle [JoinError] returned when a tokio task does not complete successfully when joined.
     /// Simply logs and discards the error.
-    fn handle_join_error(&self, workflow_run_id: &WorkflowRunId, error: JoinError) {
+    fn handle_join_error(workflow_run_id: &WorkflowRunId, error: &JoinError) {
         if error.is_cancelled() {
             warn!("Workflow run = {} canceled\n{}", workflow_run_id, error);
             return;
@@ -332,7 +338,7 @@ where
         }
 
         if let Err(error) = handle.await {
-            self.handle_join_error(&workflow_run_id, error)
+            Self::handle_join_error(&workflow_run_id, &error)
         }
         self.wr_service.cancel(&workflow_run_id).await?;
         Ok(ExecutorNextOperation::Continue)
@@ -342,7 +348,6 @@ where
     /// received successfully, the executor is told to start the loop over again, exiting listen
     /// mode to handle new workflow runs.
     fn handle_workflow_run_scheduled_notification(
-        &self,
         result: EmResult<WorkflowRunScheduledMessage>,
     ) -> EmResult<ExecutorNextOperation> {
         match result {
@@ -361,8 +366,7 @@ where
     /// an [ExecutorNotificationSignal], returning a [ExecutorNextOperation::Break] signal if the
     /// notification payload matches a [ExecutorNotificationSignal::Cancel] or
     /// [ExecutorNotificationSignal::Shutdown] signal.
-    fn handle_executor_status_notification(
-        &self,
+    const fn handle_executor_status_notification(
         status_update: ExecutorStatusUpdate,
     ) -> ExecutorNextOperation {
         match &status_update {

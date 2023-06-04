@@ -2,6 +2,7 @@ pub mod roles;
 pub mod users;
 
 #[cfg(test)]
+#[allow(clippy::expect_used)]
 mod test {
     use common::database::{
         connection::ConnectionBuilder, postgres::connection::PgConnectionBuilder,

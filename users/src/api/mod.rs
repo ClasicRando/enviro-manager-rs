@@ -18,6 +18,11 @@ use crate::service::{roles::RoleService, users::UserService};
 /// you must have created a [ConnectionBuilder], [RoleService] and [UserService] for your desired
 /// [Database] implementation. Each component depends of a [Database] type so the system cannot
 /// contain disjointed service implementations to operate.
+/// # Errors
+/// This function will return an error if:
+/// - the [Database] connection pool cannot be created
+/// - there is no 'REDIS_CONNECTION' environment variable
+/// - the server's `run` method returns an error
 pub async fn spawn_api_server<A, D, R, U>(
     address: A,
     options: D::ConnectionOptions,

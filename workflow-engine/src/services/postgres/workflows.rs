@@ -1,15 +1,12 @@
-use common::{api::ApiRequestValidator, error::EmResult, database::postgres::Postgres};
+use common::{api::ApiRequestValidator, database::postgres::Postgres, error::EmResult};
 use sqlx::{
     postgres::{PgHasArrayType, PgTypeInfo},
     PgPool,
 };
 
-use crate::{
-    services::workflows::{
-        Workflow, WorkflowDeprecationRequest, WorkflowId, WorkflowRequest,
-        WorkflowRequestValidator, WorkflowTask, WorkflowTaskRequest,
-    },
-    WorkflowsService,
+use crate::services::workflows::{
+    Workflow, WorkflowDeprecationRequest, WorkflowId, WorkflowRequest, WorkflowRequestValidator,
+    WorkflowTask, WorkflowTaskRequest, WorkflowsService,
 };
 
 impl PgHasArrayType for WorkflowTask {

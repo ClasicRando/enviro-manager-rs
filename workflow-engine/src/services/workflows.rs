@@ -11,12 +11,19 @@ use crate::services::tasks::TaskId;
 #[derive(sqlx::Type, Serialize, Deserialize, Debug)]
 #[sqlx(type_name = "workflow_task")]
 pub struct WorkflowTask {
+    /// Order of a task within a workflow run
     pub(crate) task_order: i32,
+    /// ID of the task to be executed
     pub(crate) task_id: TaskId,
+    /// Name of the task
     pub(crate) name: String,
+    /// Short description of the task
     pub(crate) description: String,
+    /// Optional parameters passed to the task executor to allow for custom behaviour
     pub(crate) parameters: Option<Value>,
+    /// Name of the task service that executes this task
     pub(crate) service_name: String,
+    /// Url to be called as per the task execution
     pub(crate) url: String,
 }
 
@@ -25,7 +32,9 @@ pub struct WorkflowTask {
 #[derive(sqlx::Type, Deserialize, Debug)]
 #[sqlx(type_name = "workflow_task_request")]
 pub struct WorkflowTaskRequest {
+    /// ID of the task to be executed
     pub(crate) task_id: TaskId,
+    /// Optional parameters passed to the task executor to allow for custom behaviour
     pub(crate) parameters: Option<Value>,
 }
 
@@ -33,7 +42,9 @@ pub struct WorkflowTaskRequest {
 /// and tasks found within the workflow.
 #[derive(Deserialize, Debug)]
 pub struct WorkflowRequest {
+    /// Name of the workflow to create
     pub(crate) name: String,
+    /// Tasks that are run as part of this new workflow
     pub(crate) tasks: Vec<WorkflowTaskRequest>,
 }
 
@@ -55,7 +66,9 @@ impl ApiRequestValidator for WorkflowRequestValidator {
 /// the `workflow_id` as well as an optional `new_workflow_id` that replaces the old workflow.
 #[derive(Deserialize, Debug)]
 pub struct WorkflowDeprecationRequest {
+    /// ID of the workflow to deprecate
     pub(crate) workflow_id: WorkflowId,
+    /// Optional ID of the workflow to replace this deprecated workflow
     pub(crate) new_workflow_id: Option<WorkflowId>,
 }
 
@@ -63,8 +76,11 @@ pub struct WorkflowDeprecationRequest {
 /// tasks packed into an array.
 #[derive(sqlx::FromRow, Serialize, Deserialize, Debug)]
 pub struct Workflow {
+    /// ID of the workflow
     pub(crate) workflow_id: WorkflowId,
+    /// Name of the workflow
     pub(crate) name: String,
+    /// Tasks that are executed as part of this workflow
     pub(crate) tasks: Vec<WorkflowTask>,
 }
 

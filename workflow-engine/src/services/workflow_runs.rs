@@ -1,10 +1,14 @@
 use std::str::FromStr;
 
 use chrono::NaiveDateTime;
-use common::{error::{EmError, EmResult}, database::Database, database::listener::ChangeListener};
+use common::{
+    database::{listener::ChangeListener, Database},
+    error::{EmError, EmResult},
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::tasks::TaskId;
 use crate::{
     executor::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage},
     services::{
@@ -30,39 +34,58 @@ pub enum WorkflowRunStatus {
 /// Task information for entries under a [WorkflowRun]
 #[derive(Serialize)]
 pub struct WorkflowRunTask {
+    /// Order of a task within a workflow run
     pub(crate) task_order: i32,
-    pub(crate) task_id: i64,
+    /// ID of the task to be executed
+    pub(crate) task_id: TaskId,
+    /// Name of the task
     pub(crate) name: String,
+    /// Short description of the task
     pub(crate) description: String,
+    /// Status of the task
     pub(crate) task_status: TaskStatus,
+    /// Optional parameters passed to the task executor to allow for custom behaviour
     pub(crate) parameters: Option<Value>,
+    /// Optional output message for the task
     pub(crate) output: Option<String>,
+    /// Optional list of task rules for the workflow run task
     pub(crate) rules: Option<Vec<TaskRule>>,
+    /// Start of the task execution
     pub(crate) task_start: Option<NaiveDateTime>,
+    /// End of the task execution
     pub(crate) task_end: Option<NaiveDateTime>,
+    /// Optional progress value passed back from the task executor
     pub(crate) progress: Option<i16>,
 }
 
 /// Workflow run data as fetched from `workflow.v_workflow_runs`
 #[derive(sqlx::FromRow, Serialize)]
 pub struct WorkflowRun {
+    /// ID of the workflow run
     pub(crate) workflow_run_id: WorkflowRunId,
+    /// ID of the workflow that is executed for this workflow run
     pub(crate) workflow_id: i64,
+    /// Status of the workflow run
     pub(crate) status: WorkflowRunStatus,
+    /// Optional ID of the executor that owns this workflow run, [None] if not currently running
     pub(crate) executor_id: Option<i64>,
-    pub(crate) progress: i16,
+    /// Optional Progress of the workflow run
+    pub(crate) progress: Option<i16>,
+    /// Tasks that are part of this workflow run
     pub(crate) tasks: Vec<WorkflowRunTask>,
 }
 
 /// Workflow run data as fetched from the function `executor.all_executor_workflows`. Contains the
 /// `workflow_run_id`, `status` of the workflow run and `is_valid` to denote if the workflow run is
-/// valid when an [Executor][crate::executor::Executor] checks owned workflow runs. Valid workflow
-/// runs are when there are only `task_queue` records for the workflow run that are 'Waiting' or
-/// 'Complete'
+/// valid when an [Executor][crate::executor::Executor] checks owned workflow runs.
 #[derive(sqlx::FromRow)]
 pub struct ExecutorWorkflowRun {
+    /// ID of the workflow run
     pub(crate) workflow_run_id: WorkflowRunId,
+    /// Status of the workflow run
     pub(crate) status: WorkflowRunStatus,
+    /// Flag indicating if the workflow run is valid. Valid workflow runs are when there are only
+    /// `task_queue` records for the workflow run that are 'Waiting' or 'Complete'
     pub(crate) is_valid: bool,
 }
 
@@ -95,7 +118,7 @@ impl std::fmt::Display for WorkflowRunId {
 #[async_trait::async_trait]
 pub trait WorkflowRunsService
 where
-    Self: Clone + Send + Sync + 'static
+    Self: Clone + Send + Sync + 'static,
 {
     type CancelListener: ChangeListener<Message = WorkflowRunCancelMessage>;
     type Database: Database;
