@@ -52,6 +52,7 @@ use crate::error::EmResult;
 
 pub mod api;
 pub mod database;
+pub mod email;
 pub mod error;
 
 /// Returns a [PathBuf] pointing to the directory of the current package. Utilizes the
