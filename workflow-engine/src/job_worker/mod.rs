@@ -1,13 +1,10 @@
-use std::{collections::HashMap, env, str::FromStr};
+use std::{collections::HashMap, str::FromStr};
 
 use chrono::{NaiveDateTime, Utc};
 use common::{
     database::listener::ChangeListener,
+    email::EmailService,
     error::{EmError, EmResult},
-};
-use lettre::{
-    transport::smtp::authentication::Credentials, AsyncSmtpTransport, AsyncTransport, Message,
-    Tokio1Executor,
 };
 use log::{error, info, warn};
 use tokio::{
@@ -42,16 +39,17 @@ impl FromStr for NotificationAction {
 
 /// Main unit of the recurring job run process. An instance of the worker is meant to be created
 /// and run as the lifecycle of the instance (dropped at the end of the  method).
-pub struct JobWorker<J> {
-    service: J,
+pub struct JobWorker<J, E> {
+    job_service: J,
     jobs: HashMap<JobId, NaiveDateTime>,
     next_job: JobId,
-    mailer: AsyncSmtpTransport<Tokio1Executor>,
+    email_service: E,
 }
 
-impl<J> JobWorker<J>
+impl<J, E> JobWorker<J, E>
 where
     J: JobService,
+    E: EmailService,
 {
     /// Create a new job worker, initializing with a reference to a [JobService] and creating a
     /// mailer to send job related emails to maintainers.
@@ -61,19 +59,12 @@ where
     /// - CLIPPY_USERNAME -> email service username
     /// - CLIPPY_PASSWORD -> email service password
     /// - CLIPPY_RELAY -> email service relay
-    pub fn new(service: J) -> EmResult<Self> {
-        let username = env::var("CLIPPY_USERNAME")?;
-        let password = env::var("CLIPPY_PASSWORD")?;
-        let relay = env::var("CLIPPY_RELAY")?;
-        let credentials = Credentials::from((username, password));
-        let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(&relay)?
-            .credentials(credentials)
-            .build();
+    pub fn new(job_service: J, email_service: E) -> EmResult<Self> {
         Ok(Self {
-            service,
+            job_service,
             jobs: HashMap::new(),
             next_job: 0.into(),
-            mailer,
+            email_service,
         })
     }
 
@@ -88,7 +79,7 @@ where
     /// - handling the job listener notification
     /// - running the next job
     pub async fn run(mut self) -> EmResult<()> {
-        let mut job_channel = self.service.listener().await?;
+        let mut job_channel = self.job_service.listener().await?;
         self.load_jobs().await?;
         loop {
             let next_run = self
@@ -128,7 +119,7 @@ where
     /// first available job will be queued as the next job.
     async fn load_jobs(&mut self) -> EmResult<()> {
         info!("Requesting new job queue");
-        let jobs = self.service.read_queued().await?;
+        let jobs = self.job_service.read_queued().await?;
         self.jobs.clear();
         self.next_job = jobs.get(0).map(|j| j.job_id).unwrap_or(0.into());
         for job in jobs {
@@ -175,7 +166,7 @@ where
             return Ok(());
         }
         info!("Starting new job run for job_id = {}", self.next_job);
-        self.service.run_job(&self.next_job).await?;
+        self.job_service.run_job(&self.next_job).await?;
         Ok(())
     }
 
@@ -190,9 +181,9 @@ where
             );
             return Ok(());
         };
-        let job = self.service.read_one(job_id).await?;
+        let job = self.job_service.read_one(job_id).await?;
         info!("Completing run for job_id = {}", job_id);
-        let Err(error) = self.service.complete_job(job_id).await else {
+        let Err(error) = self.job_service.complete_job(job_id).await else {
             return Ok(())
         };
         self.send_error_email(job.maintainer(), format!("{error}"))
@@ -206,12 +197,10 @@ where
             "Sending error email to {} with message\n{}",
             maintainer, message
         );
-        let email = Message::builder()
-            .from("Clippy".parse()?)
-            .to(maintainer.parse()?)
-            .subject("Job Completion Error")
-            .body(message)?;
-        let _response = self.mailer.send(email).await?;
+        let _response = self
+            .email_service
+            .send_email(maintainer, "Job Completion Error", &message)
+            .await?;
         Ok(())
     }
 }

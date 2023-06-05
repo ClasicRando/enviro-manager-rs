@@ -1,5 +1,6 @@
 use common::{
     database::{connection::ConnectionBuilder, postgres::connection::PgConnectionBuilder},
+    email::ClippyEmailService,
     error::EmResult,
 };
 use log::{error, info};
@@ -21,7 +22,8 @@ async fn main() -> EmResult<()> {
     let pool = PgConnectionBuilder::create_pool(db_options()?, 20, 1).await?;
     let workflow_runs_service = PgWorkflowRunsService::create(&pool);
     let jobs_service = PgJobsService::create(&pool, &workflow_runs_service);
-    let worker = match JobWorker::new(jobs_service) {
+    let email_service = ClippyEmailService::new()?;
+    let worker = match JobWorker::new(jobs_service, email_service) {
         Ok(worker) => worker,
         Err(error) => {
             error!("{}", error);
