@@ -7,15 +7,16 @@ use actix_web::{
 use common::{database::Database, error::EmResult};
 
 pub mod executors;
-pub mod jobs;
-pub mod task_queue;
 pub mod tasks;
-pub mod workflow_runs;
 pub mod workflows;
 
-use crate::services::{
-    executors::ExecutorService, jobs::JobService, task_queue::TaskQueueService, tasks::TaskService,
-    workflow_runs::WorkflowRunsService, workflows::WorkflowsService,
+use crate::{
+    job::{api as jobs_api, service::JobService},
+    services::{executors::ExecutorService, tasks::TaskService, workflows::WorkflowsService},
+    workflow_run::{
+        api as workflow_runs_api,
+        service::{TaskQueueService, WorkflowRunsService},
+    },
 };
 
 /// Temp
@@ -66,16 +67,16 @@ where
                     "/executors/cancel/{executor_id}",
                     get().to(executors::cancel_executor::<E>),
                 )
-                .route("/jobs", get().to(jobs::jobs::<J>))
-                .route("/jobs/{job_id}", get().to(jobs::job::<J>))
-                .route("/jobs", post().to(jobs::create_job::<J>))
+                .route("/jobs", get().to(jobs_api::jobs::<J>))
+                .route("/jobs/{job_id}", get().to(jobs_api::job::<J>))
+                .route("/jobs", post().to(jobs_api::create_job::<J>))
                 .route(
                     "/task-queue/retry",
-                    post().to(task_queue::task_queue_retry::<Q>),
+                    post().to(workflow_runs_api::task_queue_retry::<Q>),
                 )
                 .route(
                     "/task-queue/complete",
-                    post().to(task_queue::task_queue_complete::<Q>),
+                    post().to(workflow_runs_api::task_queue_complete::<Q>),
                 )
                 .route("/tasks", get().to(tasks::tasks::<T>))
                 .route("/tasks/{task_id}", get().to(tasks::task::<T>))
@@ -83,23 +84,23 @@ where
                 .route("/tasks", post().to(tasks::create_task::<T>))
                 .route(
                     "/workflow_runs/{workflow_run_id}",
-                    get().to(workflow_runs::workflow_run::<R>),
+                    get().to(workflow_runs_api::workflow_run::<R>),
                 )
                 .route(
                     "/workflow_runs/init/{workflow_id}",
-                    get().to(workflow_runs::init_workflow_run::<R>),
+                    get().to(workflow_runs_api::init_workflow_run::<R>),
                 )
                 .route(
                     "/workflow_runs/cancel/{workflow_run_id}",
-                    get().to(workflow_runs::cancel_workflow_run::<R>),
+                    get().to(workflow_runs_api::cancel_workflow_run::<R>),
                 )
                 .route(
                     "/workflow_runs/schedule/{workflow_run_id}",
-                    get().to(workflow_runs::schedule_workflow_run::<R>),
+                    get().to(workflow_runs_api::schedule_workflow_run::<R>),
                 )
                 .route(
                     "/workflow_runs/restart/{workflow_run_id}",
-                    get().to(workflow_runs::restart_workflow_run::<R>),
+                    get().to(workflow_runs_api::restart_workflow_run::<R>),
                 )
                 .route("/workflows", get().to(workflows::workflows::<W>))
                 .route(

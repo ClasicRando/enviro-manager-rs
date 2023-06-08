@@ -2,10 +2,11 @@ use common::{database::postgres::Postgres, error::EmResult};
 use workflow_engine::{
     api,
     database::db_options,
+    job::service::postgres::PgJobsService,
     services::postgres::{
-        executors::PgExecutorService, jobs::PgJobsService, task_queue::PgTaskQueueService,
-        tasks::PgTasksService, workflow_runs::PgWorkflowRunsService, workflows::PgWorkflowsService,
+        executors::PgExecutorService, tasks::PgTasksService, workflows::PgWorkflowsService,
     },
+    workflow_run::service::postgres::{PgTaskQueueService, PgWorkflowRunsService},
 };
 
 #[tokio::main]
