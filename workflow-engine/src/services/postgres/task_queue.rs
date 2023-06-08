@@ -147,7 +147,7 @@ impl TaskQueueService for PgTaskQueueService {
         let result = sqlx::query_as(
             r#"
             select tq.workflow_run_id, tq.task_order, tq.task_id, tq.status, tq.parameters, tq.url
-            from task.v_task_queue_record tq
+            from workflow_run.v_task_queue_record tq
             where
                 tq.workflow_run_id = $1
                 and tq.task_order = $2"#,
@@ -172,7 +172,7 @@ impl TaskQueueService for PgTaskQueueService {
         task_order: &i32,
         rule: TaskRule,
     ) -> EmResult<()> {
-        sqlx::query("call task.append_task_rule($1,$2,$3)")
+        sqlx::query("call workflow_run.append_task_rule($1,$2,$3)")
             .bind(workflow_run_id)
             .bind(task_order)
             .bind(rule)
@@ -187,7 +187,7 @@ impl TaskQueueService for PgTaskQueueService {
         task_order: &i32,
         progress: i16,
     ) -> EmResult<()> {
-        sqlx::query("call task.set_task_progress($1,$2,$3)")
+        sqlx::query("call workflow_run.set_task_progress($1,$2,$3)")
             .bind(workflow_run_id)
             .bind(task_order)
             .bind(progress)
@@ -208,7 +208,7 @@ impl TaskQueueService for PgTaskQueueService {
 
         let mut transaction = self.pool.begin().await?;
 
-        let retry_result = sqlx::query("call task.retry_task($1,$2)")
+        let retry_result = sqlx::query("call workflow_run.retry_task($1,$2)")
             .bind(&request.workflow_run_id)
             .bind(request.task_order)
             .execute(&mut transaction)
@@ -233,7 +233,7 @@ impl TaskQueueService for PgTaskQueueService {
 
     async fn complete_task(&self, request: &TaskQueueRequest) -> EmResult<()> {
         let mut transaction = self.pool.begin().await?;
-        let complete_task_result = sqlx::query("call task.complete_task($1,$2)")
+        let complete_task_result = sqlx::query("call workflow_run.complete_task($1,$2)")
             .bind(&request.workflow_run_id)
             .bind(request.task_order)
             .execute(&mut transaction)
@@ -273,7 +273,7 @@ impl TaskQueueService for PgTaskQueueService {
         let fetch_result = sqlx::query_as(
             r#"
             select nt.workflow_run_id, nt.task_order, nt.task_id, nt.status, nt.parameters, nt.url
-            from task.next_task($1) nt
+            from workflow_run.next_task($1) nt
             where nt.task_order is not null"#,
         )
         .bind(workflow_run_id)
@@ -292,7 +292,7 @@ impl TaskQueueService for PgTaskQueueService {
             }
         };
 
-        let start_task_result = sqlx::query("call task.start_task_run($1,$2)")
+        let start_task_result = sqlx::query("call workflow_run.start_task_run($1,$2)")
             .bind(&task_queue_record.workflow_run_id)
             .bind(task_queue_record.task_order)
             .execute(&mut transaction)
@@ -310,7 +310,7 @@ impl TaskQueueService for PgTaskQueueService {
     }
 
     async fn fail_task_run(&self, record: &TaskQueueRecord, error: EmError) -> EmResult<()> {
-        sqlx::query("call task.fail_task_run($1,$2,$3)")
+        sqlx::query("call workflow_run.fail_task_run($1,$2,$3)")
             .bind(&record.workflow_run_id)
             .bind(record.task_order)
             .bind(error.to_string())
@@ -326,7 +326,7 @@ impl TaskQueueService for PgTaskQueueService {
         message: Option<String>,
     ) -> EmResult<()> {
         let mut transaction = self.pool.begin().await?;
-        let complete_result = sqlx::query("call task.complete_task_run($1,$2,$3,$4)")
+        let complete_result = sqlx::query("call workflow_run.complete_task_run($1,$2,$3,$4)")
             .bind(&record.workflow_run_id)
             .bind(record.task_order)
             .bind(is_paused)

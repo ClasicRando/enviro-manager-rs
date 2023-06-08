@@ -122,7 +122,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
     }
 
     async fn initialize(&self, workflow_id: &WorkflowId) -> EmResult<WorkflowRun> {
-        let workflow_run_id = sqlx::query_scalar("select workflow.initialize_workflow_run($1)")
+        let workflow_run_id = sqlx::query_scalar("select workflow_run.initialize_workflow_run($1)")
             .bind(workflow_id)
             .fetch_one(&self.pool)
             .await?;
@@ -135,8 +135,8 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             select
                 wr.workflow_run_id, wr.workflow_id, wr.status, wr.executor_id, wr.progress,
                 wr.tasks
-            from workflow.v_workflow_runs wr
-            where workflow_run_id = $1"#,
+            from workflow_run.v_workflow_runs wr
+            where wr.workflow_run_id = $1"#,
         )
         .bind(workflow_run_id)
         .fetch_optional(&self.pool)
@@ -157,7 +157,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
             select
                 wr.workflow_run_id, wr.workflow_id, wr.status, wr.executor_id, wr.progress,
                 wr.tasks
-            from workflow.v_workflow_runs wr"#,
+            from workflow_run.v_workflow_runs wr"#,
         )
         .fetch_all(&self.pool)
         .await?;
@@ -165,7 +165,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
     }
 
     async fn cancel(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
-        sqlx::query("call workflow.cancel_workflow_run($1)")
+        sqlx::query("call workflow_run.cancel_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
@@ -173,7 +173,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
     }
 
     async fn schedule(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
-        sqlx::query("call workflow.schedule_workflow_run($1)")
+        sqlx::query("call workflow_run.schedule_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
@@ -185,7 +185,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
         workflow_run_id: &WorkflowRunId,
         executor_id: &ExecutorId,
     ) -> EmResult<WorkflowRun> {
-        sqlx::query("call workflow.schedule_workflow_run($1,$2)")
+        sqlx::query("call workflow_run.schedule_workflow_run($1,$2)")
             .bind(workflow_run_id)
             .bind(executor_id)
             .execute(&self.pool)
@@ -194,7 +194,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
     }
 
     async fn restart(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
-        sqlx::query("call workflow.restart_workflow_run($1)")
+        sqlx::query("call workflow_run.restart_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
@@ -202,7 +202,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
     }
 
     async fn update_progress(&self, workflow_run_id: &WorkflowRunId) -> EmResult<()> {
-        sqlx::query("call workflow.update_progress($1)")
+        sqlx::query("call workflow_run.update_progress($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
@@ -210,7 +210,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
     }
 
     async fn complete(&self, workflow_run_id: &WorkflowRunId) -> EmResult<()> {
-        sqlx::query("call workflow.complete_workflow_run($1)")
+        sqlx::query("call workflow_run.complete_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
@@ -224,7 +224,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
         let result = sqlx::query_as(
             r#"
             select workflow_run_id, status, is_valid
-            from executor.executor_workflows($1)"#,
+            from workflow_run.executor_workflows($1)"#,
         )
         .bind(executor_id)
         .fetch_all(&self.pool)
@@ -233,7 +233,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
     }
 
     async fn start_move(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
-        sqlx::query("call workflow.start_workflow_run_move($1)")
+        sqlx::query("call workflow_run.start_workflow_run_move($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
@@ -241,7 +241,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
     }
 
     async fn complete_move(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
-        sqlx::query("call workflow.complete_workflow_run_move($1)")
+        sqlx::query("call workflow_run.complete_workflow_run_move($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;

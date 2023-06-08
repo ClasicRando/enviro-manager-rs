@@ -31,7 +31,7 @@ create table if not exists job.jobs (
     ),
     is_paused boolean not null default false,
     next_run timestamp without time zone not null check(next_run > now() at time zone 'UTC'),
-    current_workflow_run_id bigint references workflow.workflow_runs match simple
+    current_workflow_run_id bigint references workflow_run.workflow_runs match simple
         on delete restrict
         on update cascade
 );

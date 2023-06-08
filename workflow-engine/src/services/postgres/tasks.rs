@@ -21,7 +21,7 @@ impl TaskService for PgTasksService {
     }
 
     async fn create_task(&self, request: &TaskRequest) -> EmResult<Task> {
-        let task_id: TaskId = sqlx::query_scalar("select task.create_task($1,$2,$3,$4)")
+        let task_id: TaskId = sqlx::query_scalar("select workflow.create_task($1,$2,$3,$4)")
             .bind(&request.name)
             .bind(&request.description)
             .bind(request.task_service_id)
@@ -35,7 +35,7 @@ impl TaskService for PgTasksService {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
-            from task.v_tasks
+            from workflow.v_tasks
             where task_id = $1"#,
         )
         .bind(task_id)
@@ -55,7 +55,7 @@ impl TaskService for PgTasksService {
         let result = sqlx::query_as(
             r#"
             select task_id, name, description, url, task_service_name
-            from task.v_tasks"#,
+            from workflow.v_tasks"#,
         )
         .fetch_all(&self.pool)
         .await?;
@@ -63,7 +63,7 @@ impl TaskService for PgTasksService {
     }
 
     async fn update(&self, task_id: &TaskId, request: &TaskRequest) -> EmResult<Task> {
-        sqlx::query("call task.update_task($1,$2,$3,$4,$5)")
+        sqlx::query("call workflow.update_task($1,$2,$3,$4,$5)")
             .bind(task_id)
             .bind(&request.name)
             .bind(&request.description)

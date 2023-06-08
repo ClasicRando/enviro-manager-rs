@@ -35,14 +35,14 @@ create or replace trigger canceled_event
     before update of status
     on executor.executors
     for each row
-    when new.status = 'Canceled'::executor.executor_status
+    when (new.status = 'Canceled'::executor.executor_status)
     execute function executor.executor_updated_cancel();
 
 create or replace trigger shutdown_event
     before update of status
     on executor.executors
     for each row
-    when new.status = 'Shutdown'::executor.executor_status
+    when (new.status = 'Shutdown'::executor.executor_status)
     execute function executor.executor_updated_shutdown();
 
 call audit.audit_table('executor.executors');
@@ -63,5 +63,7 @@ comment on column executor.executors.client_addr is
 'IP address of the client connected as the executor';
 comment on column executor.executors.client_port is
 'Port of the client connected as the executor';
-comment on trigger status_event on executor.executors is
-'Trigger run during status updates to notify the required listeners of changes';
+comment on trigger canceled_event on executor.executors is
+'Trigger run during status update to canceled to notify the required listeners of changes';
+comment on trigger shutdown_event on executor.executors is
+'Trigger run during status update to shutdown to notify the required listeners of changes';

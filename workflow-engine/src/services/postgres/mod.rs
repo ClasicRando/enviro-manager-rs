@@ -26,8 +26,6 @@ pub(crate) mod test {
     #[rstest]
     #[case::clean_executors("executor/clean_executors.pgsql")]
     #[case::next_run_job_schedule("job/next_run_job_schedule.pgsql")]
-    #[case::are_valid_task_rules("task/are_valid_task_rules.pgsql")]
-    #[case::workflow_tasks("task/workflow_tasks.pgsql")]
     #[tokio::test]
     async fn database_test(database: PgPool, #[case] test_file: &str) -> EmResult<()> {
         common::database::postgres::test::run_db_test(&database, test_file).await

@@ -11,10 +11,10 @@ with w_tasks as (
                 wt.parameters,
                 t.task_service_name,
                 t.url
-            )::task.workflow_task
+            )::workflow.workflow_task
         ) tasks
-    from task.workflow_tasks wt
-    join task.v_tasks t
+    from workflow.workflow_tasks wt
+    join workflow.v_tasks t
     on wt.task_id = t.task_id
     group by wt.workflow_id
 )

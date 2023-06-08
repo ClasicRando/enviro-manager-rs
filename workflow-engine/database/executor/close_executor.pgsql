@@ -15,24 +15,24 @@ set
 where e.executor_id = $1;
 
 with workflow_runs as (
-    update workflow.workflow_runs wr
+    update workflow_run.workflow_runs wr
     set
-        status = 'Canceled'::workflow.workflow_run_status,
+        status = 'Canceled'::workflow_run.workflow_run_status,
         executor_id = null
     where
         wr.executor_id = $1
-        and wr.status = 'Running'::workflow.workflow_run_status
+        and wr.status = 'Running'::workflow_run.workflow_run_status
     returning workflow_run_id
 )
-update task.task_queue tq
+update workflow_run.task_queue tq
 set
-    status = 'Canceled'::task.task_status,
+    status = 'Canceled'::workflow_run.task_status,
     task_end = now() at time zone 'UTC',
     output = 'Task executor canceled workflow run'
 from workflow_runs wr
 where
     wr.workflow_run_id = tq.workflow_run_id
-    and tq.status = 'Running'::task.task_status;
+    and tq.status = 'Running'::workflow_run.task_status;
 $$;
 
 grant execute on procedure executor.close_executor to we_web;
