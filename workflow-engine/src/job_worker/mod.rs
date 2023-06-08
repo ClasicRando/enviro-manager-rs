@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
 use chrono::{NaiveDateTime, Utc};
 use common::{
@@ -20,20 +20,19 @@ use crate::services::jobs::{JobId, JobService};
 pub enum NotificationAction {
     LoadJobs,
     CompleteJob(JobId),
+    MalformedPayload(String),
 }
 
-impl FromStr for NotificationAction {
-    type Err = EmError;
-
-    fn from_str(s: &str) -> EmResult<Self> {
+impl<'m> From<&'m str> for NotificationAction {
+    fn from(s: &str) -> Self {
         if s.is_empty() {
-            return Ok(Self::LoadJobs);
+            return Self::LoadJobs;
         }
         let Ok(job_id) = s.parse::<i64>() else {
-            return Err(EmError::PayloadParseError(s.to_owned()))
+            return Self::MalformedPayload(s.to_owned())
         };
         info!("Received notification of \"{}\"", s);
-        Ok(Self::CompleteJob(job_id.into()))
+        Self::CompleteJob(job_id.into())
     }
 }
 
@@ -143,6 +142,9 @@ where
             NotificationAction::CompleteJob(job_id) => {
                 self.complete_job(&job_id).await?;
                 self.load_jobs().await?;
+            }
+            NotificationAction::MalformedPayload(payload) => {
+                error!("Received malformed payload, '{payload}'");
             }
         }
         Ok(())

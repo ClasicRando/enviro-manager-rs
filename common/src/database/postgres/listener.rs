@@ -1,16 +1,16 @@
-use std::{marker::PhantomData, str::FromStr};
+use std::marker::PhantomData;
 
 use log::error;
 use sqlx::postgres::PgListener;
 
 use crate::{
     database::{listener::ChangeListener, postgres::Postgres},
-    error::{EmError, EmResult},
+    error::EmResult,
 };
 
 pub struct PgChangeListener<M>
 where
-    M: FromStr<Err = EmError> + Send + Sync,
+    M: for<'m> From<&'m str> + Send + Sync,
 {
     listener: PgListener,
     marker: PhantomData<M>,
@@ -18,7 +18,7 @@ where
 
 impl<M> PgChangeListener<M>
 where
-    M: FromStr<Err = EmError> + Send + Sync,
+    M: for<'m> From<&'m str> + Send + Sync,
 {
     pub fn new(listener: PgListener) -> Self {
         Self {
@@ -30,7 +30,7 @@ where
 
 impl<M> ChangeListener for PgChangeListener<M>
 where
-    M: FromStr<Err = EmError> + Send + Sync,
+    M: for<'m> From<&'m str> + Send + Sync,
 {
     type Database = Postgres;
     type Message = M;
@@ -43,6 +43,6 @@ where
                 return Err(error.into());
             }
         };
-        notification.payload().parse()
+        Ok(notification.payload().into())
     }
 }
