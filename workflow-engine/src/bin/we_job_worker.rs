@@ -6,8 +6,10 @@ use common::{
 use log::{error, info};
 use workflow_engine::{
     database::db_options,
-    job::service::{postgres::PgJobsService, JobService},
-    job_worker::JobWorker,
+    job::{
+        service::{postgres::PgJobsService, JobService},
+        worker::JobWorker,
+    },
     workflow_run::service::{postgres::PgWorkflowRunsService, WorkflowRunsService},
 };
 

@@ -16,8 +16,8 @@ use crate::{
     job::{
         data::{Job, JobId, JobMin, JobRequest, JobRequestValidator, JobType, ScheduleEntry},
         service::JobService,
+        worker::NotificationAction,
     },
-    job_worker::NotificationAction,
     workflow::data::WorkflowId,
     workflow_run::{
         data::{WorkflowRun, WorkflowRunId, WorkflowRunStatus},

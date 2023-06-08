@@ -6,8 +6,11 @@ use common::{
     error::EmResult,
 };
 
-use super::data::{Job, JobId, JobMin, JobRequest};
-use crate::{job_worker::NotificationAction, workflow_run::service::WorkflowRunsService};
+use super::{
+    data::{Job, JobId, JobMin, JobRequest},
+    worker::NotificationAction,
+};
+use crate::workflow_run::service::WorkflowRunsService;
 
 /// Service for fetching and interacting with task data. Wraps a [PgPool] and provides
 /// interaction methods for the API and [JobWorker][crate::job_worker::JobWorker].

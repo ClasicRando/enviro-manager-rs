@@ -7,7 +7,7 @@ use workflow_engine::{
     database::db_options,
     executor::{
         service::{postgres::PgExecutorService, ExecutorService},
-        Executor,
+        worker::Executor,
     },
     workflow_run::service::{
         postgres::{PgTaskQueueService, PgWorkflowRunsService},
