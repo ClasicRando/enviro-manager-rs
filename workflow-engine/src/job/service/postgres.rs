@@ -18,7 +18,7 @@ use crate::{
         service::JobService,
     },
     job_worker::NotificationAction,
-    services::workflows::WorkflowId,
+    workflow::data::WorkflowId,
     workflow_run::{
         data::{WorkflowRun, WorkflowRunId, WorkflowRunStatus},
         service::{postgres::PgWorkflowRunsService, WorkflowRunsService},

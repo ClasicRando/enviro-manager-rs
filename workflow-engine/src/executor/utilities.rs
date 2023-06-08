@@ -4,7 +4,7 @@ use common::error::EmError;
 use log::warn;
 use tokio::task::JoinHandle;
 
-use crate::services::workflow_runs::WorkflowRunId;
+use crate::workflow_run::data::WorkflowRunId;
 
 /// Type alias for a workflow run worker result. Represents a tokio task [JoinHandle] returning a
 /// tuple of [WorkflowRunId] and an optional error if the workflow run failed.

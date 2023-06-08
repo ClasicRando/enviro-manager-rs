@@ -5,15 +5,13 @@ use common::{
 use log::{error, info};
 use workflow_engine::{
     database::db_options,
-    executor::Executor,
-    services::{
-        executors::ExecutorService,
-        postgres::{
-            executors::PgExecutorService, task_queue::PgTaskQueueService,
-            workflow_runs::PgWorkflowRunsService,
-        },
-        task_queue::TaskQueueService,
-        workflow_runs::WorkflowRunsService,
+    executor::{
+        service::{postgres::PgExecutorService, ExecutorService},
+        Executor,
+    },
+    workflow_run::service::{
+        postgres::{PgTaskQueueService, PgWorkflowRunsService},
+        TaskQueueService, WorkflowRunsService,
     },
 };
 

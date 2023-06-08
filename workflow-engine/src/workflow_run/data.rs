@@ -5,7 +5,7 @@ use common::error::EmError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::services::tasks::TaskId;
+use crate::workflow::data::TaskId;
 
 /// Status of a workflow run as found in the database as a simple Postgresql enum type
 #[derive(sqlx::Type, PartialEq, Eq, Serialize)]

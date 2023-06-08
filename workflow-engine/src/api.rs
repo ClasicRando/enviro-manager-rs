@@ -6,11 +6,9 @@ use actix_web::{
 };
 use common::{database::Database, error::EmResult};
 
-pub mod executors;
-
 use crate::{
+    executor::{api as executors_api, service::ExecutorService},
     job::{api as jobs_api, service::JobService},
-    services::executors::ExecutorService,
     workflow::{
         api as workflows_api,
         service::{TaskService, WorkflowsService},
@@ -60,14 +58,14 @@ where
                 .app_data(tasks_service_data.clone())
                 .app_data(workflow_runs_service_data.clone())
                 .app_data(workflows_service_data.clone())
-                .route("/executors", get().to(executors::active_executors::<E>))
+                .route("/executors", get().to(executors_api::active_executors::<E>))
                 .route(
                     "/executors/shutdown/{executor_id}",
-                    get().to(executors::shutdown_executor::<E>),
+                    get().to(executors_api::shutdown_executor::<E>),
                 )
                 .route(
                     "/executors/cancel/{executor_id}",
-                    get().to(executors::cancel_executor::<E>),
+                    get().to(executors_api::cancel_executor::<E>),
                 )
                 .route("/jobs", get().to(jobs_api::jobs::<J>))
                 .route("/jobs/{job_id}", get().to(jobs_api::job::<J>))

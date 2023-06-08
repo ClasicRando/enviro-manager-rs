@@ -8,7 +8,8 @@ use serde::{
 use sqlx::postgres::types::PgInterval;
 
 use crate::{
-    services::{executors::ExecutorId, workflows::WorkflowId},
+    executor::data::ExecutorId,
+    workflow::data::WorkflowId,
     workflow_run::data::{WorkflowRunId, WorkflowRunStatus},
 };
 

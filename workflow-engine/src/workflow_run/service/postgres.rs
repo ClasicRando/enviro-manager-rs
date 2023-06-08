@@ -20,8 +20,11 @@ use sqlx::{
 };
 
 use crate::{
-    executor::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage},
-    services::{executors::ExecutorId, tasks::TaskId, workflows::WorkflowId},
+    executor::{
+        data::ExecutorId,
+        utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage},
+    },
+    workflow::data::{TaskId, WorkflowId},
     workflow_run::{
         data::{
             ExecutorWorkflowRun, TaskQueueRecord, TaskQueueRequest, TaskResponse, TaskRule,

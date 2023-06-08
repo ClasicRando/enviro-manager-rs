@@ -1,9 +1,9 @@
 use common::error::{EmError, EmResult};
 use log::{error, info};
 
-use crate::services::{
-    task_queue::{TaskQueueRecord, TaskQueueService},
-    workflow_runs::{WorkflowRunId, WorkflowRunsService},
+use crate::workflow_run::{
+    data::{TaskQueueRecord, WorkflowRunId},
+    service::{TaskQueueService, WorkflowRunsService},
 };
 
 /// Container with the workflow run ID associated with the worker and the necessary services to

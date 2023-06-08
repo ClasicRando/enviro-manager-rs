@@ -1,7 +1,7 @@
 use common::api::{request::ApiRequest, ApiResponse, QueryApiFormat};
 
 use crate::{
-    services::workflows::WorkflowId,
+    workflow::data::WorkflowId,
     workflow_run::{
         data::{TaskQueueRequest, WorkflowRun, WorkflowRunId},
         service::{TaskQueueService, WorkflowRunsService},

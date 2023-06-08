@@ -2,8 +2,8 @@ use common::{database::postgres::Postgres, error::EmResult};
 use workflow_engine::{
     api,
     database::db_options,
+    executor::service::postgres::PgExecutorService,
     job::service::postgres::PgJobsService,
-    services::postgres::executors::PgExecutorService,
     workflow::service::postgres::{PgTasksService, PgWorkflowsService},
     workflow_run::service::postgres::{PgTaskQueueService, PgWorkflowRunsService},
 };

@@ -9,8 +9,11 @@ use super::data::{
     ExecutorWorkflowRun, TaskQueueRecord, TaskQueueRequest, TaskRule, WorkflowRun, WorkflowRunId,
 };
 use crate::{
-    executor::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage},
-    services::{executors::ExecutorId, workflows::WorkflowId},
+    executor::{
+        data::ExecutorId,
+        utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage},
+    },
+    workflow::data::WorkflowId,
 };
 
 #[async_trait::async_trait]

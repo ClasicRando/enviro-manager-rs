@@ -6,12 +6,9 @@ use common::{
 use log::{error, info};
 use workflow_engine::{
     database::db_options,
+    job::service::{postgres::PgJobsService, JobService},
     job_worker::JobWorker,
-    services::{
-        jobs::JobService,
-        postgres::{jobs::PgJobsService, workflow_runs::PgWorkflowRunsService},
-        workflow_runs::WorkflowRunsService,
-    },
+    workflow_run::service::{postgres::PgWorkflowRunsService, WorkflowRunsService},
 };
 
 #[tokio::main]

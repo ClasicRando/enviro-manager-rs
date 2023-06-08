@@ -1,6 +1,9 @@
 use common::api::{ApiResponse, QueryApiFormat};
 
-use crate::services::executors::{Executor, ExecutorId, ExecutorService};
+use crate::executor::{
+    data::{Executor, ExecutorId},
+    service::ExecutorService,
+};
 
 /// API endpoint to fetch all active executors
 pub async fn active_executors<E>(

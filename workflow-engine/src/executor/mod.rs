@@ -1,6 +1,9 @@
 //! Executor module for components of the Workflow Engine that belong to workflow and task
 //! execution.
 
+pub mod api;
+pub mod data;
+pub mod service;
 pub(crate) mod utilities;
 mod worker;
 
@@ -12,11 +15,14 @@ use tokio::{signal::ctrl_c, task::JoinError};
 use utilities::{ExecutorStatusUpdate, WorkflowRunWorkerResult};
 use worker::WorkflowRunWorker;
 
-use self::utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage};
-use crate::services::{
-    executors::{ExecutorId, ExecutorService, ExecutorStatus},
-    task_queue::TaskQueueService,
-    workflow_runs::{ExecutorWorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunsService},
+use self::{
+    data::{ExecutorId, ExecutorStatus},
+    service::ExecutorService,
+    utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage},
+};
+use crate::workflow_run::{
+    data::{ExecutorWorkflowRun, WorkflowRunId, WorkflowRunStatus},
+    service::{TaskQueueService, WorkflowRunsService},
 };
 
 /// Next operations available to an [Executor] after performing various checks on the status of
