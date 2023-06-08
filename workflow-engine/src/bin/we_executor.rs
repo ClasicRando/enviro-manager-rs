@@ -5,14 +5,8 @@ use common::{
 use log::{error, info};
 use workflow_engine::{
     database::db_options,
-    executor::{
-        service::{postgres::PgExecutorService, ExecutorService},
-        worker::Executor,
-    },
-    workflow_run::service::{
-        postgres::{PgTaskQueueService, PgWorkflowRunsService},
-        TaskQueueService, WorkflowRunsService,
-    },
+    executor::{service::postgres::PgExecutorService, worker::Executor},
+    workflow_run::service::postgres::{PgTaskQueueService, PgWorkflowRunsService},
 };
 
 #[tokio::main]
@@ -22,9 +16,9 @@ async fn main() -> EmResult<()> {
     info!("Initializing Executor");
     let options = db_options()?;
     let pool = Postgres::create_pool(options, 20, 1).await?;
-    let executor_service = PgExecutorService::create(&pool);
-    let wr_service = PgWorkflowRunsService::create(&pool);
-    let tq_service = PgTaskQueueService::create(&pool, &wr_service);
+    let executor_service = PgExecutorService::new(&pool);
+    let wr_service = PgWorkflowRunsService::new(&pool);
+    let tq_service = PgTaskQueueService::new(&pool, &wr_service);
     let executor = match Executor::new(&executor_service, &wr_service, &tq_service).await {
         Ok(executor) => executor,
         Err(error) => {

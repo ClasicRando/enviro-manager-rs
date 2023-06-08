@@ -25,6 +25,13 @@ pub struct PgExecutorService {
 }
 
 impl PgExecutorService {
+    /// Create a new instance of [PgExecutorService] using the data source provided
+    pub fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
+    }
+}
+
+impl PgExecutorService {
     /// Start a workflow run by executing the named procedure. Takes ownership of the `transaction`
     /// and completes the transaction before exiting.
     /// # Errors
@@ -65,10 +72,6 @@ impl PgExecutorService {
 impl ExecutorService for PgExecutorService {
     type Database = Postgres;
     type Listener = PgChangeListener<ExecutorStatusUpdate>;
-
-    fn create(pool: &PgPool) -> Self {
-        Self { pool: pool.clone() }
-    }
 
     async fn register_executor(&self) -> EmResult<ExecutorId> {
         let executor_id = sqlx::query_scalar("select executor.register_executor()")

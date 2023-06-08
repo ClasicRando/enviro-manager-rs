@@ -14,8 +14,7 @@ where
 {
     type Database: Database;
     type RequestValidator: ApiRequestValidator<Request = WorkflowRequest>;
-    /// Create a new [WorkflowsService] with the referenced pool as the data source
-    fn create(pool: &<Self::Database as Database>::ConnectionPool) -> Self;
+
     /// Create a new workflow using the `request` data to call the `workflow.create_workflow`
     /// procedure. Returns the new [Workflow] created.
     async fn create_workflow(&self, request: &WorkflowRequest) -> EmResult<Workflow>;
@@ -39,8 +38,6 @@ where
     type Database: Database;
     type RequestValidator: ApiRequestValidator<Request = TaskRequest>;
 
-    /// Create a new [TaskService] with the referenced pool as the data source
-    fn create(pool: &<Self::Database as Database>::ConnectionPool) -> Self;
     /// Create a new task with the data contained within `request`
     async fn create_task(&self, request: &TaskRequest) -> EmResult<Task>;
     /// Read a single task record from `task.v_tasks` for the specified `task_id`. Will return

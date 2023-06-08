@@ -21,10 +21,15 @@ use crate::{
 
 /// Temp
 /// # Errors
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 pub async fn spawn_api_server<A, D, E, J, Q, R, T, W>(
+    executor_service: E,
+    workflow_run_service: R,
+    task_queue_service: Q,
+    task_service: T,
+    workflow_service: W,
+    job_service: J,
     address: A,
-    options: D::ConnectionOptions,
 ) -> EmResult<()>
 where
     A: ToSocketAddrs,
@@ -36,19 +41,12 @@ where
     T: TaskService<Database = D> + Send + Sync + 'static,
     W: WorkflowsService<Database = D> + Send + Sync + 'static,
 {
-    let pool = D::create_pool(options, 20, 1).await?;
-    let executors_service = E::create(&pool);
-    let workflow_runs_service = R::create(&pool);
-    let task_queue_service = Q::create(&pool, &workflow_runs_service);
-    let tasks_service = T::create(&pool);
-    let workflows_service = W::create(&pool);
-    let jobs_service = J::create(&pool, &workflow_runs_service);
-    let executors_service_data = Data::new(executors_service);
-    let workflow_runs_service_data = Data::new(workflow_runs_service);
+    let executors_service_data = Data::new(executor_service);
+    let workflow_runs_service_data = Data::new(workflow_run_service);
     let task_queue_service_data = Data::new(task_queue_service);
-    let tasks_service_data = Data::new(tasks_service);
-    let workflows_service_data = Data::new(workflows_service);
-    let jobs_service_data = Data::new(jobs_service);
+    let tasks_service_data = Data::new(task_service);
+    let workflows_service_data = Data::new(workflow_service);
+    let jobs_service_data = Data::new(job_service);
     HttpServer::new(move || {
         App::new().service(
             actix_web::web::scope("/api/v1")

@@ -6,11 +6,8 @@ use common::{
 use log::{error, info};
 use workflow_engine::{
     database::db_options,
-    job::{
-        service::{postgres::PgJobsService, JobService},
-        worker::JobWorker,
-    },
-    workflow_run::service::{postgres::PgWorkflowRunsService, WorkflowRunsService},
+    job::{service::postgres::PgJobsService, worker::JobWorker},
+    workflow_run::service::postgres::PgWorkflowRunsService,
 };
 
 #[tokio::main]
@@ -19,8 +16,8 @@ async fn main() -> EmResult<()> {
 
     info!("Initializing Worker");
     let pool = PgConnectionBuilder::create_pool(db_options()?, 20, 1).await?;
-    let workflow_runs_service = PgWorkflowRunsService::create(&pool);
-    let jobs_service = PgJobsService::create(&pool, &workflow_runs_service);
+    let workflow_runs_service = PgWorkflowRunsService::new(&pool);
+    let jobs_service = PgJobsService::new(&pool, &workflow_runs_service);
     let email_service = ClippyEmailService::new()?;
     let worker = match JobWorker::new(jobs_service, email_service) {
         Ok(worker) => worker,

@@ -1,4 +1,7 @@
-use common::{database::postgres::Postgres, error::EmResult};
+use common::{
+    database::{postgres::Postgres, Database},
+    error::EmResult,
+};
 use workflow_engine::{
     api,
     database::db_options,
@@ -11,16 +14,24 @@ use workflow_engine::{
 #[tokio::main]
 async fn main() -> EmResult<()> {
     log4rs::init_file("workflow-engine/api_server_log.yml", Default::default()).unwrap();
-    api::spawn_api_server::<
-        (&str, u16),
-        Postgres,
-        PgExecutorService,
-        PgJobsService,
-        PgTaskQueueService,
-        PgWorkflowRunsService,
-        PgTasksService,
-        PgWorkflowsService,
-    >(("127.0.0.1", 8080), db_options()?)
+    let options = db_options()?;
+    let pool = Postgres::create_pool(options, 20, 1).await?;
+
+    let executor_service = PgExecutorService::new(&pool);
+    let workflow_runs_service = PgWorkflowRunsService::new(&pool);
+    let task_queue_service = PgTaskQueueService::new(&pool, &workflow_runs_service);
+    let task_service = PgTasksService::new(&pool);
+    let workflow_service = PgWorkflowsService::new(&pool);
+    let job_service = PgJobsService::new(&pool, &workflow_runs_service);
+    api::spawn_api_server(
+        executor_service,
+        workflow_runs_service,
+        task_queue_service,
+        task_service,
+        workflow_service,
+        job_service,
+        ("127.0.0.1", 8080),
+    )
     .await?;
     Ok(())
 }

@@ -24,7 +24,6 @@ where
     type Database: Database;
     type Listener: ChangeListener<Message = ExecutorStatusUpdate>;
 
-    fn create(pool: &<Self::Database as Database>::ConnectionPool) -> Self;
     /// Register a new executor with the database. Creates a record for future processes to
     /// attribute workflow runs to the new executor.
     async fn register_executor(&self) -> EmResult<ExecutorId>;

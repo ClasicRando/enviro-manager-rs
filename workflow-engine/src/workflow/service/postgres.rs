@@ -34,13 +34,16 @@ pub struct PgWorkflowsService {
     pool: PgPool,
 }
 
+impl PgWorkflowsService {
+    /// Create a new [PgWorkflowsService] with the referenced pool as the data source
+    pub fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
+    }
+}
+
 impl WorkflowsService for PgWorkflowsService {
     type Database = Postgres;
     type RequestValidator = WorkflowRequestValidator;
-
-    fn create(pool: &PgPool) -> Self {
-        Self { pool: pool.clone() }
-    }
 
     async fn create_workflow(&self, request: &WorkflowRequest) -> EmResult<Workflow> {
         Self::RequestValidator::validate(request)?;
@@ -96,13 +99,16 @@ pub struct PgTasksService {
     pool: PgPool,
 }
 
+impl PgTasksService {
+    /// Create a new [PgTasksService] with the referenced pool as the data source
+    pub fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
+    }
+}
+
 impl TaskService for PgTasksService {
     type Database = Postgres;
     type RequestValidator = TaskRequestValidator;
-
-    fn create(pool: &PgPool) -> Self {
-        Self { pool: pool.clone() }
-    }
 
     async fn create_task(&self, request: &TaskRequest) -> EmResult<Task> {
         let task_id: TaskId = sqlx::query_scalar("select workflow.create_task($1,$2,$3,$4)")

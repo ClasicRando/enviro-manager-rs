@@ -25,8 +25,6 @@ where
     type Database: Database;
     type ScheduledListener: ChangeListener<Message = WorkflowRunScheduledMessage>;
 
-    /// Create a new [WorkflowRunsService] with the referenced pool as the data source
-    fn create(pool: &<Self::Database as Database>::ConnectionPool) -> Self;
     /// Initialize a new workflow run for the specified `workflow_id`. Returns the new [WorkflowRun]
     /// instance.
     async fn initialize(&self, workflow_id: &WorkflowId) -> EmResult<WorkflowRun>;
@@ -95,11 +93,6 @@ where
     type Database: Database;
     type WorkflowRunService: WorkflowRunsService<Database = Self::Database>;
 
-    /// Create a new [TaskQueueService] with the referenced pool as the data source
-    fn create(
-        pool: &<Self::Database as Database>::ConnectionPool,
-        workflow_runs_service: &Self::WorkflowRunService,
-    ) -> Self;
     /// Read a single task record from `task.task_queue` for the specified `request`data. Will
     /// return [Err] when the ids in the `request` do not match a record.
     async fn read_one(&self, request: &TaskQueueRequest) -> EmResult<TaskQueueRecord>;

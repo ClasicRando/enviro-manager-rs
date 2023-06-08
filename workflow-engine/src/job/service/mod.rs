@@ -23,11 +23,6 @@ where
     type Listener: ChangeListener<Message = NotificationAction>;
     type WorkflowRunService: WorkflowRunsService<Database = Self::Database>;
 
-    /// Create a new [JobService] with the referenced pool as the data source
-    fn create(
-        pool: &<Self::Database as Database>::ConnectionPool,
-        workflow_runs_service: &Self::WorkflowRunService,
-    ) -> Self;
     /// Create a new job with the data contained within `request`. Branches to specific calls for
     /// [JobType::Scheduled] and [JobType::Interval].
     async fn create_job(&self, request: &JobRequest) -> EmResult<Job>;

@@ -32,6 +32,14 @@ pub struct PgJobsService {
 }
 
 impl PgJobsService {
+    /// Create a new [JobService] with the referenced pool as the data source
+    pub fn new(pool: &PgPool, workflow_runs_service: &PgWorkflowRunsService) -> Self {
+        Self {
+            pool: pool.clone(),
+            workflow_runs_service: workflow_runs_service.clone(),
+        }
+    }
+
     /// Create a new interval job using the specified details from the parameters
     async fn create_interval_job(
         &self,
@@ -72,13 +80,6 @@ impl JobService for PgJobsService {
     type Database = Postgres;
     type Listener = PgChangeListener<NotificationAction>;
     type WorkflowRunService = PgWorkflowRunsService;
-
-    fn create(pool: &PgPool, workflow_runs_service: &PgWorkflowRunsService) -> Self {
-        Self {
-            pool: pool.clone(),
-            workflow_runs_service: workflow_runs_service.clone(),
-        }
-    }
 
     async fn create_job(&self, request: &JobRequest) -> EmResult<Job> {
         Self::CreateRequestValidator::validate(request)?;

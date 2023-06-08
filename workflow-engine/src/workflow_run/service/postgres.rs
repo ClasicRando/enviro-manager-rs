@@ -119,15 +119,18 @@ pub struct PgWorkflowRunsService {
     pool: PgPool,
 }
 
+impl PgWorkflowRunsService {
+    /// Create a new [PgWorkflowRunsService] with the referenced pool as the data source
+    pub fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
+    }
+}
+
 #[async_trait::async_trait]
 impl WorkflowRunsService for PgWorkflowRunsService {
     type CancelListener = PgChangeListener<WorkflowRunCancelMessage>;
     type Database = Postgres;
     type ScheduledListener = PgChangeListener<WorkflowRunScheduledMessage>;
-
-    fn create(pool: &PgPool) -> Self {
-        Self { pool: pool.clone() }
-    }
 
     async fn initialize(&self, workflow_id: &WorkflowId) -> EmResult<WorkflowRun> {
         let workflow_run_id = sqlx::query_scalar("select workflow_run.initialize_workflow_run($1)")
@@ -330,6 +333,14 @@ pub struct PgTaskQueueService {
 }
 
 impl PgTaskQueueService {
+    /// Create a new [PgTaskQueueService] with the referenced pool as the data source
+    pub fn new(pool: &PgPool, workflow_runs_service: &PgWorkflowRunsService) -> Self {
+        Self {
+            pool: pool.clone(),
+            workflow_runs_service: workflow_runs_service.clone(),
+        }
+    }
+
     /// Process a response `message` from a remote task run. The expected format is of MessagePack
     /// and the contents are parsed to a [TaskResponse] variant. If the message is a
     /// [TaskResponse::Done] message, the contents are returned as a tuple. Otherwise, a [None]
@@ -389,13 +400,6 @@ impl PgTaskQueueService {
 impl TaskQueueService for PgTaskQueueService {
     type Database = Postgres;
     type WorkflowRunService = PgWorkflowRunsService;
-
-    fn create(pool: &PgPool, workflow_runs_service: &PgWorkflowRunsService) -> Self {
-        Self {
-            pool: pool.clone(),
-            workflow_runs_service: workflow_runs_service.clone(),
-        }
-    }
 
     async fn read_one(&self, request: &TaskQueueRequest) -> EmResult<TaskQueueRecord> {
         let result = sqlx::query_as(
