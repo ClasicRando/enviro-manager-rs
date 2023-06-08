@@ -3,9 +3,8 @@ use workflow_engine::{
     api,
     database::db_options,
     job::service::postgres::PgJobsService,
-    services::postgres::{
-        executors::PgExecutorService, tasks::PgTasksService, workflows::PgWorkflowsService,
-    },
+    services::postgres::executors::PgExecutorService,
+    workflow::service::postgres::{PgTasksService, PgWorkflowsService},
     workflow_run::service::postgres::{PgTaskQueueService, PgWorkflowRunsService},
 };
 

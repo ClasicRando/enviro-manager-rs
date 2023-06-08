@@ -50,4 +50,5 @@ pub mod executor;
 pub mod job;
 pub mod job_worker;
 pub mod services;
+pub mod workflow;
 pub mod workflow_run;
