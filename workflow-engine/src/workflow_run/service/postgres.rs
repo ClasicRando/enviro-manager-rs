@@ -31,7 +31,7 @@ use crate::{
     workflow_run::{
         data::{
             ExecutorWorkflowRun, TaskQueueRecord, TaskQueueRequest, TaskResponse, TaskRule,
-            TaskStatus, WorkflowRun, WorkflowRunId, WorkflowRunTask,
+            TaskStatus, WorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunTask,
         },
         service::{TaskQueueService, WorkflowRunsService},
     },
@@ -223,6 +223,15 @@ impl WorkflowRunsService for PgWorkflowRunsService {
     }
 
     async fn restart(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {
+        let workflow_run = self.read_one(workflow_run_id).await?;
+        if workflow_run.status == WorkflowRunStatus::Running {
+            return Err(
+                "Cannot restart a workflow run that is in progress. Please cancel the workflow \
+                 run before restarting"
+                    .into(),
+            );
+        }
+
         sqlx::query("call workflow_run.restart_workflow_run($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
