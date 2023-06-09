@@ -291,9 +291,9 @@ where
     ) -> WorkflowRunWorkerResult {
         let wr_service = self.wr_service.clone();
         let tq_service = self.tq_service.clone();
-        let workflow_run_id = workflow_run_id.clone();
+        let workflow_run_id = *workflow_run_id;
         tokio::spawn(async move {
-            let worker = WorkflowRunWorker::new(workflow_run_id.clone(), wr_service, tq_service);
+            let worker = WorkflowRunWorker::new(workflow_run_id, wr_service, tq_service);
             let worker_result = worker.run().await;
 
             let mut err = None;
