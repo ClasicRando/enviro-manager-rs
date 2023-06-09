@@ -1,9 +1,10 @@
 use common::api::{request::ApiRequest, ApiResponse, QueryApiFormat};
 
+use super::data::WorkflowUpdateRequest;
 use crate::workflow::{
     data::{
-        Task, TaskId, TaskRequest, Workflow, WorkflowDeprecationRequest, WorkflowId,
-        WorkflowRequest,
+        Task, TaskId, TaskRequest, Workflow, WorkflowCreateRequest, WorkflowDeprecationRequest,
+        WorkflowId,
     },
     service::{TaskService, WorkflowsService},
 };
@@ -35,18 +36,14 @@ where
 {
     let format = query.into_inner();
     match service.read_one(&workflow_id).await {
-        Ok(Some(workflow)) => ApiResponse::success(workflow, format.f),
-        Ok(None) => ApiResponse::failure(
-            format!("Could not find record for workflow_id = {}", workflow_id),
-            format.f,
-        ),
+        Ok(workflow) => ApiResponse::success(workflow, format.f),
         Err(error) => ApiResponse::error(error, format.f),
     }
 }
 
 /// API endpoint to create a new workflow using encoded data from `workflow`
 pub async fn create_workflow<W>(
-    api_request: ApiRequest<WorkflowRequest>,
+    api_request: ApiRequest<WorkflowCreateRequest>,
     service: actix_web::web::Data<W>,
     query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<Workflow>
@@ -56,6 +53,23 @@ where
     let format = query.into_inner();
     let request = api_request.into_inner();
     match service.create_workflow(&request).await {
+        Ok(workflow) => ApiResponse::success(workflow, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
+    }
+}
+
+/// API endpoint to update an existing workflow using encoded data from `workflow`
+pub async fn update_workflow<W>(
+    api_request: ApiRequest<WorkflowUpdateRequest>,
+    service: actix_web::web::Data<W>,
+    query: actix_web::web::Query<QueryApiFormat>,
+) -> ApiResponse<Workflow>
+where
+    W: WorkflowsService,
+{
+    let format = query.into_inner();
+    let request = api_request.into_inner();
+    match service.update_workflow(&request).await {
         Ok(workflow) => ApiResponse::success(workflow, format.f),
         Err(error) => ApiResponse::error(error, format.f),
     }

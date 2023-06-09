@@ -1,6 +1,6 @@
 use common::{
     api::ApiRequestValidator,
-    database::postgres::Postgres,
+    database::{connection::finalize_transaction, postgres::Postgres},
     error::{EmError, EmResult},
 };
 use sqlx::{
@@ -10,8 +10,9 @@ use sqlx::{
 
 use crate::workflow::{
     data::{
-        Task, TaskId, TaskRequest, TaskRequestValidator, Workflow, WorkflowDeprecationRequest,
-        WorkflowId, WorkflowRequest, WorkflowRequestValidator, WorkflowTask, WorkflowTaskRequest,
+        Task, TaskId, TaskRequest, TaskRequestValidator, Workflow, WorkflowCreateRequest,
+        WorkflowCreateRequestValidator, WorkflowDeprecationRequest, WorkflowId, WorkflowTask,
+        WorkflowTaskRequest, WorkflowUpdateRequest, WorkflowUpdateRequestValidator,
     },
     service::{TaskService, WorkflowsService},
 };
@@ -42,25 +43,28 @@ impl PgWorkflowsService {
 }
 
 impl WorkflowsService for PgWorkflowsService {
+    type CreateRequestValidator = WorkflowCreateRequestValidator;
     type Database = Postgres;
-    type RequestValidator = WorkflowRequestValidator;
+    type UpdateRequestValidator = WorkflowUpdateRequestValidator;
 
-    async fn create_workflow(&self, request: &WorkflowRequest) -> EmResult<Workflow> {
-        Self::RequestValidator::validate(request)?;
-        let workflow_id = sqlx::query_scalar("select workflow.create_workflow($1,$2)")
+    async fn create_workflow(&self, request: &WorkflowCreateRequest) -> EmResult<Workflow> {
+        Self::CreateRequestValidator::validate(request)?;
+        let mut transaction = self.pool.begin().await?;
+        let workflow_id = sqlx::query_scalar("select workflow.create_workflow($1)")
             .bind(&request.name)
-            .bind(&request.tasks)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut transaction)
             .await?;
-        match self.read_one(&workflow_id).await {
-            Ok(Some(workflow)) => Ok(workflow),
-            Ok(None) => Err(sqlx::Error::RowNotFound.into()),
-            Err(error) => Err(error),
-        }
+        let result = sqlx::query("call workflow.set_workflow_tasks($1,$2)")
+            .bind(workflow_id)
+            .bind(&request.tasks)
+            .execute(&mut transaction)
+            .await;
+        finalize_transaction(result, transaction).await?;
+        self.read_one(&workflow_id).await
     }
 
-    async fn read_one(&self, workflow_id: &WorkflowId) -> EmResult<Option<Workflow>> {
-        let result = sqlx::query_as(
+    async fn read_one(&self, workflow_id: &WorkflowId) -> EmResult<Workflow> {
+        sqlx::query_as(
             r#"
             select w.workflow_id, w.name, w.tasks
             from workflow.v_workflows w
@@ -68,8 +72,15 @@ impl WorkflowsService for PgWorkflowsService {
         )
         .bind(workflow_id)
         .fetch_optional(&self.pool)
-        .await?;
-        Ok(result)
+        .await?
+        .map_or_else(
+            || {
+                Err(EmError::MissingRecord {
+                    pk: workflow_id.to_string(),
+                })
+            },
+            Ok,
+        )
     }
 
     async fn read_many(&self) -> EmResult<Vec<Workflow>> {
@@ -81,6 +92,38 @@ impl WorkflowsService for PgWorkflowsService {
         .fetch_all(&self.pool)
         .await?;
         Ok(result)
+    }
+
+    async fn update_workflow(&self, request: &WorkflowUpdateRequest) -> EmResult<Workflow> {
+        Self::UpdateRequestValidator::validate(request)?;
+        let mut transaction = self.pool.begin().await?;
+
+        if let Some(new_name) = &request.name {
+            let result = sqlx::query("call workflow.update_workflow($1,$2)")
+                .bind(request.workflow_id)
+                .bind(new_name)
+                .execute(&mut transaction)
+                .await;
+            if let Err(error) = result {
+                transaction.rollback().await?;
+                return Err(error.into());
+            }
+        }
+
+        if let Some(tasks) = &request.tasks {
+            let result = sqlx::query("call workflow.set_workflow_tasks($1,$2)")
+                .bind(request.workflow_id)
+                .bind(tasks)
+                .execute(&mut transaction)
+                .await;
+            if let Err(error) = result {
+                transaction.rollback().await?;
+                return Err(error.into());
+            }
+        }
+
+        transaction.commit().await?;
+        self.read_one(&request.workflow_id).await
     }
 
     async fn deprecate(&self, request: &WorkflowDeprecationRequest) -> EmResult<WorkflowId> {

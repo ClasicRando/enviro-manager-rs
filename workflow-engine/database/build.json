@@ -349,9 +349,7 @@
             "name": "workflow/create_workflow.pgsql",
             "dependencies": [
                 "schema.pgsql",
-                "workflow/workflows.pgsql",
-                "workflow/workflow_tasks.pgsql",
-                "workflow/workflow_task_request.pgsql"
+                "workflow/workflows.pgsql"
             ]
         },
         {
@@ -506,6 +504,22 @@
                 "workflow_run/task_status.pgsql",
                 "workflow_run/workflow_runs.pgsql",
                 "workflow_run/workflow_run_status.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/set_workflow_tasks.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflows.pgsql",
+                "workflow/workflow_tasks.pgsql",
+                "workflow/workflow_task_request.pgsql"
+            ]
+        },
+        {
+            "name": "workflow/update_workflow.pgsql",
+            "dependencies": [
+                "schema.pgsql",
+                "workflow/workflows.pgsql"
             ]
         }
     ]

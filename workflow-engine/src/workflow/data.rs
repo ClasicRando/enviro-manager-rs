@@ -25,8 +25,7 @@ pub struct WorkflowTask {
     pub(crate) url: String,
 }
 
-/// Task information required to create a `task.workflow_tasks` entry. 1 or more entries can be
-/// found within the [WorkflowRequest] type used by the API.
+/// Task information required to create a `task.workflow_tasks` entry
 #[derive(sqlx::Type, Deserialize, Debug)]
 #[sqlx(type_name = "workflow_task_request")]
 pub struct WorkflowTaskRequest {
@@ -39,22 +38,60 @@ pub struct WorkflowTaskRequest {
 /// API request body when attempting to create a new `workflow.workflows` entry. Defines the name
 /// and tasks found within the workflow.
 #[derive(Deserialize, Debug)]
-pub struct WorkflowRequest {
+pub struct WorkflowCreateRequest {
     /// Name of the workflow to create
     pub(crate) name: String,
     /// Tasks that are run as part of this new workflow
     pub(crate) tasks: Vec<WorkflowTaskRequest>,
 }
 
-pub struct WorkflowRequestValidator;
+pub struct WorkflowCreateRequestValidator;
 
-impl ApiRequestValidator for WorkflowRequestValidator {
+impl ApiRequestValidator for WorkflowCreateRequestValidator {
     type ErrorMessage = &'static str;
-    type Request = WorkflowRequest;
+    type Request = WorkflowCreateRequest;
 
     fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage> {
         if request.name.trim().is_empty() {
             return Err("Request 'name' cannot be empty or whitespace");
+        }
+        Ok(())
+    }
+}
+
+/// API request body when attempting to update an existing `workflow.workflows` entry. Points to a
+/// workflow with it's ID and defines the name and tasks found within the workflow.
+#[derive(Deserialize, Debug)]
+pub struct WorkflowUpdateRequest {
+    /// ID of the workflow to update
+    pub(crate) workflow_id: WorkflowId,
+    /// New name of the workflow. [None] if no change should occur
+    #[serde(default)]
+    pub(crate) name: Option<String>,
+    /// Tasks that are run as part of this new workflow
+    #[serde(default)]
+    pub(crate) tasks: Option<Vec<WorkflowTaskRequest>>,
+}
+
+pub struct WorkflowUpdateRequestValidator;
+
+impl ApiRequestValidator for WorkflowUpdateRequestValidator {
+    type ErrorMessage = &'static str;
+    type Request = WorkflowUpdateRequest;
+
+    fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage> {
+        if request.name.is_none() && request.tasks.is_none() {
+            return Err("Update request must have a new name or list of tasks");
+        }
+        if let Some(name) = &request.name {
+            if name.trim().is_empty() {
+                return Err("Update request 'name' cannot be empty or whitespace");
+            }
+        }
+        if let Some(tasks) = &request.tasks {
+            if tasks.is_empty() {
+                return Err("Update request 'tasks' cannot be an empty collection");
+            }
         }
         Ok(())
     }

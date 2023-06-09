@@ -1,7 +1,7 @@
 use std::net::ToSocketAddrs;
 
 use actix_web::{
-    web::{get, post, Data},
+    web::{get, patch, post, Data},
     App, HttpServer,
 };
 use common::{database::Database, error::EmResult};
@@ -106,6 +106,10 @@ where
                     get().to(workflows_api::workflow::<W>),
                 )
                 .route("/workflows", post().to(workflows_api::create_workflow::<W>))
+                .route(
+                    "/workflows",
+                    patch().to(workflows_api::update_workflow::<W>),
+                )
                 .route(
                     "/workflows/deprecate",
                     post().to(workflows_api::deprecate_workflow::<W>),
