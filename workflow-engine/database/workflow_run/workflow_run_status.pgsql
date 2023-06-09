@@ -8,6 +8,8 @@ create type workflow_run.workflow_run_status as enum (
     'Canceled'
 );
 
+grant usage on type workflow_run.workflow_run_status to we_web;
+
 comment on type workflow_run.workflow_run_status IS $$
 Various states that dictate the lifecycle of a workflow_run. Starts with 'Waiting', 'Scheduled' when
 ready to execute, 'Running' when picked up by an executor then 'Paused'/'Failed'/'Complete'/

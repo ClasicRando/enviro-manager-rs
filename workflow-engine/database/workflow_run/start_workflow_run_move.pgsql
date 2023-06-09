@@ -1,6 +1,7 @@
 create or replace procedure workflow_run.start_workflow_run_move(
     workflow_run_id bigint
 )
+security definer
 language sql
 as $$
 update workflow_run.task_queue tq
@@ -18,6 +19,8 @@ where
         for update skip locked
     );
 $$;
+
+grant execute on procedure workflow_run.start_workflow_run_move to we_web;
 
 comment on procedure workflow_run.start_workflow_run_move IS $$
 Starts the process of transitioning the workflow run to a new executor (or to the 'Scheduled' pool

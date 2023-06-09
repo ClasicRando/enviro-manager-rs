@@ -13,6 +13,8 @@ create type workflow_run.workflow_run_task as
     progress smallint
 );
 
+grant usage on type workflow_run.workflow_run_task to we_web;
+
 comment on type workflow_run.workflow_run_task IS $$
 Container for information about a workflow run workflow_run. Joins data from workflow_runs and tasks
 $$;

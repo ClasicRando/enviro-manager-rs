@@ -2,6 +2,7 @@ create or replace procedure workflow_run.schedule_workflow_run(
     workflow_run_id bigint,
     executor_id bigint default null
 )
+security definer
 language sql
 as $$
 update workflow_run.workflow_runs wr
@@ -12,6 +13,8 @@ where
     wr.workflow_run_id = $1
     and wr.status = 'Waiting'::workflow_run.workflow_run_status;
 $$;
+
+grant execute on procedure workflow_run.schedule_workflow_run to we_web;
 
 comment on procedure workflow_run.schedule_workflow_run IS $$
 Set workflow run to scheduled with an optional executor_id specified as the intended runner. If not

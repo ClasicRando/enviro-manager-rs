@@ -2,6 +2,7 @@ create or replace procedure workflow_run.complete_workflow_run_move(
     workflow_run_id bigint
 )
 language sql
+security definer
 as $$
 begin;
 update workflow_run.task_queue tq
@@ -24,6 +25,8 @@ set status = 'Scheduled'::workflow_run.workflow_run_status
 where wr.workflow_run_id = $1;
 commit;
 $$;
+
+grant execute on procedure workflow_run.complete_workflow_run_move to we_web;
 
 comment on procedure workflow_run.complete_workflow_run_move IS $$
 Finish the transition of a workflow run to another executor. Sets the first 'Paused' task to

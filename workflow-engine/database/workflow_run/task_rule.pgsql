@@ -5,6 +5,8 @@ create type workflow_run.task_rule as
     message text
 );
 
+grant usage on type workflow_run.task_rule to we_web;
+
 comment on type workflow_run.task_rule IS $$
 Describes rules checked during task execution.
 
