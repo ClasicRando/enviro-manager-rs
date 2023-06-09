@@ -18,10 +18,10 @@ async fn main() -> EmResult<()> {
     let pool = Postgres::create_pool(options, 20, 1).await?;
 
     let executor_service = PgExecutorService::new(&pool);
-    let workflow_runs_service = PgWorkflowRunsService::new(&pool);
-    let task_queue_service = PgTaskQueueService::new(&pool, &workflow_runs_service);
     let task_service = PgTasksService::new(&pool);
     let workflow_service = PgWorkflowsService::new(&pool);
+    let workflow_runs_service = PgWorkflowRunsService::new(&pool, &workflow_service);
+    let task_queue_service = PgTaskQueueService::new(&pool, &workflow_runs_service);
     let job_service = PgJobsService::new(&pool, &workflow_runs_service);
     api::spawn_api_server(
         executor_service,

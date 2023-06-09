@@ -24,7 +24,10 @@ use crate::{
         data::ExecutorId,
         utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage},
     },
-    workflow::data::{TaskId, WorkflowId},
+    workflow::{
+        data::{TaskId, WorkflowId},
+        service::{postgres::PgWorkflowsService, WorkflowsService},
+    },
     workflow_run::{
         data::{
             ExecutorWorkflowRun, TaskQueueRecord, TaskQueueRequest, TaskResponse, TaskRule,
@@ -117,12 +120,16 @@ impl PgHasArrayType for WorkflowRunTask {
 #[derive(Clone)]
 pub struct PgWorkflowRunsService {
     pool: PgPool,
+    workflow_service: PgWorkflowsService,
 }
 
 impl PgWorkflowRunsService {
     /// Create a new [PgWorkflowRunsService] with the referenced pool as the data source
-    pub fn new(pool: &PgPool) -> Self {
-        Self { pool: pool.clone() }
+    pub fn new(pool: &PgPool, workflow_service: &PgWorkflowsService) -> Self {
+        Self {
+            pool: pool.clone(),
+            workflow_service: workflow_service.clone(),
+        }
     }
 }
 
@@ -131,12 +138,23 @@ impl WorkflowRunsService for PgWorkflowRunsService {
     type CancelListener = PgChangeListener<WorkflowRunCancelMessage>;
     type Database = Postgres;
     type ScheduledListener = PgChangeListener<WorkflowRunScheduledMessage>;
+    type WorkflowService = PgWorkflowsService;
 
     async fn initialize(&self, workflow_id: &WorkflowId) -> EmResult<WorkflowRun> {
-        let workflow_run_id = sqlx::query_scalar("select workflow_run.initialize_workflow_run($1)")
-            .bind(workflow_id)
-            .fetch_one(&self.pool)
-            .await?;
+        let workflow = self.workflow_service.read_one(workflow_id).await?;
+        if workflow.is_deprecated {
+            return Err(EmError::Generic(format!(
+                "Cannot initialize a workflow_run with a deprecated workflow. Consider using \
+                 workflow_id = {:?}",
+                workflow.new_workflow
+            )));
+        }
+
+        let workflow_run_id =
+            sqlx::query_scalar("call workflow_run.initialize_workflow_run($1,null)")
+                .bind(workflow_id)
+                .fetch_one(&self.pool)
+                .await?;
         self.read_one(&workflow_run_id).await
     }
 

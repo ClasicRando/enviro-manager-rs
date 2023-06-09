@@ -18,7 +18,7 @@ with w_tasks as (
     on wt.task_id = t.task_id
     group by wt.workflow_id
 )
-select w.workflow_id, w.name, wt.tasks
+select w.workflow_id, w.name, w.is_deprecated, w.new_workflow, wt.tasks
 from workflow.workflows w
 join w_tasks wt
 on w.workflow_id = wt.workflow_id;

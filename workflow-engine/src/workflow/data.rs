@@ -115,6 +115,11 @@ pub struct Workflow {
     pub(crate) workflow_id: WorkflowId,
     /// Name of the workflow
     pub(crate) name: String,
+    /// Flag denoting if the workflow is deprecated and should be replaced by the `new_workflow`
+    /// value
+    pub(crate) is_deprecated: bool,
+    /// Pointer to the new workflow that should replaced this deprecated workflow
+    pub(crate) new_workflow: Option<WorkflowId>,
     /// Tasks that are executed as part of this workflow
     pub(crate) tasks: Vec<WorkflowTask>,
 }

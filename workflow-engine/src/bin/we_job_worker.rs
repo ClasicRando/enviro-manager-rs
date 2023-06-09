@@ -7,6 +7,7 @@ use log::{error, info};
 use workflow_engine::{
     database::db_options,
     job::{service::postgres::PgJobsService, worker::JobWorker},
+    workflow::service::postgres::PgWorkflowsService,
     workflow_run::service::postgres::PgWorkflowRunsService,
 };
 
@@ -16,7 +17,8 @@ async fn main() -> EmResult<()> {
 
     info!("Initializing Worker");
     let pool = PgConnectionBuilder::create_pool(db_options()?, 20, 1).await?;
-    let workflow_runs_service = PgWorkflowRunsService::new(&pool);
+    let workflow_service = PgWorkflowsService::new(&pool);
+    let workflow_runs_service = PgWorkflowRunsService::new(&pool, &workflow_service);
     let jobs_service = PgJobsService::new(&pool, &workflow_runs_service);
     let email_service = ClippyEmailService::new()?;
     let worker = match JobWorker::new(jobs_service, email_service) {

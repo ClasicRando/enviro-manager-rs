@@ -6,6 +6,7 @@ use log::{error, info};
 use workflow_engine::{
     database::db_options,
     executor::{service::postgres::PgExecutorService, worker::Executor},
+    workflow::service::postgres::PgWorkflowsService,
     workflow_run::service::postgres::{PgTaskQueueService, PgWorkflowRunsService},
 };
 
@@ -17,7 +18,8 @@ async fn main() -> EmResult<()> {
     let options = db_options()?;
     let pool = Postgres::create_pool(options, 20, 1).await?;
     let executor_service = PgExecutorService::new(&pool);
-    let wr_service = PgWorkflowRunsService::new(&pool);
+    let workflow_service = PgWorkflowsService::new(&pool);
+    let wr_service = PgWorkflowRunsService::new(&pool, &workflow_service);
     let tq_service = PgTaskQueueService::new(&pool, &wr_service);
     let executor = match Executor::new(&executor_service, &wr_service, &tq_service).await {
         Ok(executor) => executor,

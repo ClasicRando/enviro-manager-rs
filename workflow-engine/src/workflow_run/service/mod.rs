@@ -13,7 +13,7 @@ use crate::{
         data::ExecutorId,
         utilities::{WorkflowRunCancelMessage, WorkflowRunScheduledMessage},
     },
-    workflow::data::WorkflowId,
+    workflow::{data::WorkflowId, service::WorkflowsService},
 };
 
 #[async_trait::async_trait]
@@ -24,6 +24,7 @@ where
     type CancelListener: ChangeListener<Message = WorkflowRunCancelMessage>;
     type Database: Database;
     type ScheduledListener: ChangeListener<Message = WorkflowRunScheduledMessage>;
+    type WorkflowService: WorkflowsService;
 
     /// Initialize a new workflow run for the specified `workflow_id`. Returns the new [WorkflowRun]
     /// instance.

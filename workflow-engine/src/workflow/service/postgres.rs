@@ -66,7 +66,7 @@ impl WorkflowsService for PgWorkflowsService {
     async fn read_one(&self, workflow_id: &WorkflowId) -> EmResult<Workflow> {
         sqlx::query_as(
             r#"
-            select w.workflow_id, w.name, w.tasks
+            select w.workflow_id, w.name, w.is_deprecated, w.new_workflow, w.tasks
             from workflow.v_workflows w
             where w.workflow_id = $1"#,
         )
@@ -86,7 +86,7 @@ impl WorkflowsService for PgWorkflowsService {
     async fn read_many(&self) -> EmResult<Vec<Workflow>> {
         let result = sqlx::query_as(
             r#"
-            select w.workflow_id, w.name, w.tasks
+            select w.workflow_id, w.name, w.is_deprecated, w.new_workflow, w.tasks
             from workflow.v_workflows w"#,
         )
         .fetch_all(&self.pool)
