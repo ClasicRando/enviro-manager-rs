@@ -240,7 +240,7 @@ impl WorkflowRunsService for PgWorkflowRunsService {
     }
 
     async fn update_progress(&self, workflow_run_id: &WorkflowRunId) -> EmResult<()> {
-        sqlx::query("call workflow_run.update_progress($1)")
+        sqlx::query("call workflow_run.set_workflow_run_progress($1)")
             .bind(workflow_run_id)
             .execute(&self.pool)
             .await?;
