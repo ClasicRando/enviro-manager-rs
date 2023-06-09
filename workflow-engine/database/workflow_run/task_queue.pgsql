@@ -25,7 +25,7 @@ create table if not exists workflow_run.task_queue (
     status workflow_run.task_status not null default 'Waiting'::workflow_run.task_status,
     parameters jsonb,
     output text check(data_check.check_not_blank_or_empty(output)),
-    rules workflow_run.task_rule[] check(workflow_run.are_valid_task_rules(rules)),
+    rules workflow_run.task_rule[],
     task_start timestamp without time zone,
     task_end timestamp without time zone,
     progress smallint check(case when progress is not null then progress between 0 and 100 else true end),

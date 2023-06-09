@@ -9,13 +9,6 @@
             "dependencies": []
         },
         {
-            "name": "workflow_run/are_valid_task_rules.pgsql",
-            "dependencies": [
-                "schema.pgsql",
-                "workflow_run/task_rule.pgsql"
-            ]
-        },
-        {
             "name": "workflow/workflows.pgsql",
             "dependencies": [
                 "schema.pgsql"

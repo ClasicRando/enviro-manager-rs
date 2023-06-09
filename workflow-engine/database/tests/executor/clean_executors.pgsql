@@ -6,11 +6,11 @@ begin
         e.executor_id,
         e.pid in (select pid from pg_stat_activity) is_alive,
         count(distinct wr.workflow_run_id) wr_count,
-        count(0) filter (where tq.status = 'Canceled'::task.task_status) cancel_status,
-        count(0) filter (where tq.status = 'Running'::task.task_status) running_status
+        count(0) filter (where tq.status = 'Canceled'::workflow_run.task_status) cancel_status,
+        count(0) filter (where tq.status = 'Running'::workflow_run.task_status) running_status
     from executor.executors e
-    join workflow.workflow_runs wr on e.executor_id = wr.executor_id
-    join task.task_queue tq on wr.workflow_run_id = tq.workflow_run_id
+    join workflow_run.workflow_runs wr on e.executor_id = wr.executor_id
+    join workflow_run.task_queue tq on wr.workflow_run_id = tq.workflow_run_id
     where e.status = 'Active'::executor.executor_status
     group by e.executor_id, e.pid;
 
@@ -21,11 +21,11 @@ begin
         e.executor_id,
         e.pid in (select pid from pg_stat_activity) is_alive,
         count(distinct wr.workflow_run_id)
-            filter (where wr.status = 'Canceled'::workflow.workflow_run_status) wr_cancelled_count,
-        count(0) filter (where tq.status = 'Canceled'::task.task_status) cancel_status
+            filter (where wr.status = 'Canceled'::workflow_run.workflow_run_status) wr_cancelled_count,
+        count(0) filter (where tq.status = 'Canceled'::workflow_run.task_status) cancel_status
     from executor.executors e
-    join workflow.workflow_runs wr on e.executor_id = wr.executor_id
-    join task.task_queue tq on wr.workflow_run_id = tq.workflow_run_id
+    join workflow_run.workflow_runs wr on e.executor_id = wr.executor_id
+    join workflow_run.task_queue tq on wr.workflow_run_id = tq.workflow_run_id
     where e.status = 'Active'::executor.executor_status
     group by e.executor_id, e.pid;
 

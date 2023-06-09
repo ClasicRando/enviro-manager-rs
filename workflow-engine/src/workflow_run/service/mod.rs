@@ -97,19 +97,9 @@ where
     /// return [Err] when the ids in the `request` do not match a record.
     async fn read_one(&self, request: &TaskQueueRequest) -> EmResult<TaskQueueRecord>;
     /// Append the task `rule` data to the specified `task_queue` record
-    async fn append_task_rule(
-        &self,
-        workflow_run_id: &WorkflowRunId,
-        task_order: &i32,
-        rule: TaskRule,
-    ) -> EmResult<()>;
+    async fn append_task_rule(&self, request: &TaskQueueRequest, rule: &TaskRule) -> EmResult<()>;
     /// Update the specified `task_queue` record with the new progress value
-    async fn set_task_progress(
-        &self,
-        workflow_run_id: &WorkflowRunId,
-        task_order: &i32,
-        progress: i16,
-    ) -> EmResult<()>;
+    async fn set_task_progress(&self, request: &TaskQueueRequest, progress: i16) -> EmResult<()>;
     /// Retry the specified `task_queue` record. Note, the record must be in the 'Failed' or
     /// 'Rule Broken' state to qualify for a retry.
     async fn retry_task(&self, request: &TaskQueueRequest) -> EmResult<()>;

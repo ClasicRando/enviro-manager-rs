@@ -80,7 +80,7 @@ pub struct ExecutorWorkflowRun {
 
 /// Wrapper for a `workflow_run_id` value. Made to ensure data passed as the id of a workflow run is
 /// correct and not just any i64 value.
-#[derive(sqlx::Type, Eq, PartialEq, Hash, Clone, Serialize, Deserialize, Debug)]
+#[derive(sqlx::Type, Eq, PartialEq, Hash, Clone, Copy, Serialize, Deserialize, Debug)]
 #[sqlx(transparent)]
 pub struct WorkflowRunId(i64);
 
