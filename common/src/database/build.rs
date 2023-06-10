@@ -1,9 +1,9 @@
 use std::{collections::HashSet, path::Path};
 
+use log::error;
 use serde::Deserialize;
-use sqlx::PgPool;
 
-use crate::{error::EmResult, execute_anonymous_block, package_dir, read_file, workspace_dir};
+use crate::{database::Database, error::EmResult, read_file, workspace_dir};
 
 /// Database builder object defining the common database dependencies and the schema entries
 /// required.
@@ -42,13 +42,17 @@ impl DbBuild {
 
     /// Run the database build operations by building the common schema requirements then
     /// proceeding to run each [DbBuildEntry] to completion.
-    async fn run<P: AsRef<Path> + Send + Sync>(&self, directory: P, pool: &PgPool) -> EmResult<()> {
+    pub(crate) async fn run<B, P>(&self, directory: P, builder: &B) -> EmResult<()>
+    where
+        B: DatabaseBuilder,
+        P: AsRef<Path> + Send + Sync,
+    {
         for dep in &self.common_dependencies {
-            build_common_schema(dep, pool).await?
+            build_common_schema(dep, builder).await?
         }
 
         for entry in self.entries_ordered() {
-            entry.run(directory.as_ref(), pool).await?;
+            entry.run(directory.as_ref(), builder).await?;
         }
         Ok(())
     }
@@ -79,11 +83,14 @@ impl DbBuildEntry {
     /// Run the build entry by fetching the entries file contents (relative path to the
     /// `directory` passed) and executing the entry's contents as an anonymous block against the
     /// `pool`.
-    async fn run(&self, directory: &Path, pool: &PgPool) -> EmResult<()> {
+    async fn run<B>(&self, directory: &Path, builder: &B) -> EmResult<()>
+    where
+        B: DatabaseBuilder,
+    {
         let path = directory.join(&self.name);
         let block = read_file(&path).await?;
-        if let Err(error) = execute_anonymous_block(&block, pool).await {
-            return Err(format!("Error running schema build {:?}. {}", self.name, error).into());
+        if let Err(error) = builder.execute_anonymous_block(&block).await {
+            return Err(format!("Error running schema build {:?}. {error}", self.name).into());
         };
         Ok(())
     }
@@ -142,28 +149,68 @@ impl<'e> Iterator for OrderIter<'e> {
 
 /// Build the common `schema` by name. Extracts a [DbBuild] instance from the specified `schema`
 /// directory, building each entry in order as required by dependency hierarchy.
-async fn build_common_schema(schema: &str, pool: &PgPool) -> EmResult<()> {
+async fn build_common_schema<B>(schema: &str, builder: &B) -> EmResult<()>
+where
+    B: DatabaseBuilder,
+{
     let schema_directory = workspace_dir()?.join("common-database").join(schema);
     let db_build = DbBuild::new(&schema_directory).await?;
 
     for entry in db_build.entries_ordered() {
-        entry.run(&schema_directory, pool).await?;
+        entry.run(&schema_directory, builder).await?;
     }
     Ok(())
 }
 
-/// Build the database as specified by the `database` directory of the current package. Build order
-/// and units are found using the 'build.json' file in the `database` directory. See [DbBuild] for
-/// expected JSON structure.
-/// # Errors
-/// This function returns an error when:
-/// - the package directory cannot be found
-/// - an error occurs reading the 'build.json' file
-/// - an error occurs during the database build
-pub async fn build_database(pool: &PgPool) -> EmResult<()> {
-    let database_directory = package_dir()?.join("database");
-    let db_build = DbBuild::new(&database_directory).await?;
+/// Behaviour to allow for database to be populated with all the required objects. This type should
+/// be implemented for every [Database] implementation once and only utilized as a generic
+/// parameter to [build_database].
+pub trait DatabaseBuilder
+where
+    Self: Send + Sync,
+{
+    /// Database variation that will store the database objects
+    type Database: Database;
+    /// Create a new instance of the [DatabaseBuilder] using the [Database]'s connection pool type
+    fn create(pool: <Self::Database as Database>::ConnectionPool) -> Self;
+    /// Build the database. This operation is intended to be executed against a populated database
+    /// so the scripts should account for existing objects that cannot be replaced with new
+    /// versions. Deployments for objects that need to be altered should be handled manually... for
+    /// now. Any errors that would otherwise be returned during this stage should be handled as if
+    /// this function is a terminal operations of a script (i.e. log and exit early).
+    async fn build_database(&self);
+    /// Refresh the current database to a clean instance with no entities existing.
+    /// # Errors
+    /// This function will return an error if the refresh actions returns database errors.
+    async fn refresh_database(&self) -> EmResult<()>;
+    /// Execute the provided `block` of SQL code against the [DatabaseBuilder]. If the block does
+    /// not match the required formatting to be an anonymous block, the code is wrapped in the
+    /// required code to ensure the execution can be completed.
+    /// # Errors
+    /// This function will return an error if executing the SQL query `block` returns an error from
+    /// the database.
+    async fn execute_anonymous_block(&self, block: &str) -> EmResult<()>;
+}
 
-    db_build.run(&database_directory, pool).await?;
-    Ok(())
+/// Execute a build against the database specified by the connection `options` provided. All
+/// messages will be logged using the configuration specified by `log_config_path`.
+pub async fn build_database<B, D, P>(log_config_path: P, options: D::ConnectionOptions)
+where
+    B: DatabaseBuilder<Database = D>,
+    D: Database,
+    P: AsRef<Path>,
+{
+    if let Err(error) = log4rs::init_file(log_config_path, Default::default()) {
+        error!("Could not initialize log4rs. {error}");
+        return;
+    }
+    let pool = match D::create_pool(options, 1, 1).await {
+        Ok(inner) => inner,
+        Err(error) => {
+            error!("Could not create a connection pool for database building. {error}");
+            return;
+        }
+    };
+    let builder = B::create(pool);
+    builder.build_database().await
 }

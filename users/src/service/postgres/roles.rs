@@ -23,10 +23,10 @@ impl<'r> Decode<'r, Postgres> for Role {
         let name = match value {
             "admin" => RoleName::Admin,
             "add-role" => RoleName::AddRole,
-            _ => return Err(format!("invalid value {:?} for role name", value).into()),
+            _ => return Err(format!("invalid value {value:?} for role name").into()),
         };
         let description = name.description();
-        Ok(Role {
+        Ok(Self {
             name,
             description: description.to_owned(),
         })

@@ -1,6 +1,7 @@
 create or replace procedure executor.shutdown_executor(
     executor_id bigint
 )
+security definer
 language sql
 as $$
 update executor.executors e
@@ -9,6 +10,8 @@ where
     e.executor_id = $1
     and e.status = 'Active'::executor.executor_status;
 $$;
+
+grant execute on procedure executor.shutdown_executor to we_web;
 
 comment on procedure executor.shutdown_executor IS $$
 Set the status of an executor to 'Shutdown' which sends a notification to the executor to perform

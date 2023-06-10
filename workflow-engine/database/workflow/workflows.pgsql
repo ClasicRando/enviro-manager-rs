@@ -12,8 +12,6 @@ create table if not exists workflow.workflows (
 
 call audit.audit_table('workflow.workflows');
 
-revoke all on workflow.workflows from public;
-
 comment on table workflow.workflows is
 'All workflows able to be executed by the workflow engine. Tasks are identified in a child table';
 comment on column workflow.workflows.workflow_id is

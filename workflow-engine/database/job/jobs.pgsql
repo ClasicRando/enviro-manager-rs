@@ -25,13 +25,13 @@ create table if not exists job.jobs (
     job_schedule job.schedule_entry[] check(
         case
             when job_type = 'Scheduled'::job.job_type
-                then job.valid_job_schedule(job_schedule)
+                then job_schedule is not null and job_schedule != '{}'
             else job_schedule is null
         end
     ),
     is_paused boolean not null default false,
     next_run timestamp without time zone not null check(next_run > now() at time zone 'UTC'),
-    current_workflow_run_id bigint references workflow.workflow_runs match simple
+    current_workflow_run_id bigint references workflow_run.workflow_runs match simple
         on delete restrict
         on update cascade
 );
@@ -44,8 +44,6 @@ create trigger job_change_trig
     execute function job.job_change();
 
 call audit.audit_table('job.jobs');
-
-revoke all on job.jobs from public;
 
 comment on table job.jobs is
 'Jobs to be run periodically as defined by the jobs''s schedule/interval';

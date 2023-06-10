@@ -2,5 +2,8 @@
 /Cargo.lock
 /log
 .vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
 .env
 .idea/*
+scratch.txt

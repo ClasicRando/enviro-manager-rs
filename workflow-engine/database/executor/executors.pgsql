@@ -1,14 +1,19 @@
-create or replace function executor.executor_status()
+create or replace function executor.executor_updated_cancel()
 returns trigger
 language plpgsql
-volatile
 as $$
 begin
-    if new.status = 'Canceled'::executor.executor_status then
-        perform pg_notify('exec_status_'||new.executor_id, 'cancel');
-    elsif new.status = 'Shutdown'::executor.executor_status then
-        perform pg_notify('exec_status_'||new.executor_id, 'shutdown');
-    end if;
+    perform pg_notify('exec_status_'||new.executor_id, 'cancel');
+    return new;
+end;
+$$;
+
+create or replace function executor.executor_updated_shutdown()
+returns trigger
+language plpgsql
+as $$
+begin
+    perform pg_notify('exec_status_'||new.executor_id, 'shutdown');
     return new;
 end;
 $$;
@@ -26,16 +31,23 @@ create table if not exists executor.executors (
     error_message text
 );
 
-drop trigger if exists status_event on executor.executors;
-create trigger status_event
+create or replace trigger canceled_event
     before update of status
     on executor.executors
     for each row
-    execute function executor.executor_status();
+    when (new.status = 'Canceled'::executor.executor_status)
+    execute function executor.executor_updated_cancel();
+
+create or replace trigger shutdown_event
+    before update of status
+    on executor.executors
+    for each row
+    when (new.status = 'Shutdown'::executor.executor_status)
+    execute function executor.executor_updated_shutdown();
 
 call audit.audit_table('executor.executors');
 
-revoke all on executor.executors from public;
+revoke all on executor.executors from we_web;
 
 comment on table executor.executors is
 'Executors registered as working to complete workflow runs';
@@ -51,5 +63,7 @@ comment on column executor.executors.client_addr is
 'IP address of the client connected as the executor';
 comment on column executor.executors.client_port is
 'Port of the client connected as the executor';
-comment on trigger status_event on executor.executors is
-'Trigger run during status updates to notify the required listeners of changes';
+comment on trigger canceled_event on executor.executors is
+'Trigger run during status update to canceled to notify the required listeners of changes';
+comment on trigger shutdown_event on executor.executors is
+'Trigger run during status update to shutdown to notify the required listeners of changes';

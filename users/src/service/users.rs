@@ -1,10 +1,10 @@
 use common::{
     api::ApiRequestValidator,
+    database::Database,
     error::{EmError, EmResult},
 };
 use lazy_regex::regex;
 use serde::{Deserialize, Serialize};
-use sqlx::{Database, Pool};
 use uuid::Uuid;
 
 use super::roles::Role;
@@ -25,6 +25,8 @@ impl User {
     /// Checks the current roles of the [User] against the `role` name provided. If any of the roles
     /// match or the user is an admin, return [Ok]. Otherwise, return an [EmError::MissingPrivilege]
     /// error.
+    /// # Errors
+    /// This function will return an error if the user does not have the `role` provided
     pub fn check_role(&self, role: RoleName) -> EmResult<()> {
         if self
             .roles
@@ -86,19 +88,22 @@ pub struct CreateUserRequest {
 pub struct CreateUserRequestValidator;
 
 impl ApiRequestValidator for CreateUserRequestValidator {
+    type ErrorMessage = String;
     type Request = CreateUserRequest;
 
-    fn validate(request: &Self::Request) -> EmResult<()> {
+    fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage> {
         if request.first_name.trim().is_empty() {
-            Err((request, "first_name cannot be empty or whitespace"))?;
+            Err("first_name cannot be empty or whitespace")?;
         }
         if request.last_name.trim().is_empty() {
-            Err((request, "last_name cannot be empty or whitespace"))?;
+            Err("last_name cannot be empty or whitespace")?;
         }
         if request.username.trim().is_empty() {
-            Err((request, "username cannot be empty or whitespace"))?;
+            Err("username cannot be empty or whitespace")?;
         }
-        validate_password(&request.password)?;
+        if let Err(error) = validate_password(&request.password) {
+            Err(format!("{error}"))?
+        }
         Ok(())
     }
 }
@@ -107,10 +112,10 @@ impl ApiRequestValidator for CreateUserRequestValidator {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UpdateUserRequest {
     /// Username of the user to updated. Required to verify user before updating.
-    #[serde(flatten)]
+    // #[serde(flatten)]
     pub(crate) validate_user: ValidateUserRequest,
     /// Update variation the is required to be performed
-    #[serde(flatten)]
+    // #[serde(flatten)]
     pub(crate) update_type: UpdateUserType,
 }
 
@@ -128,16 +133,17 @@ impl UpdateUserRequest {
 pub struct UpdateUserRequestValidator;
 
 impl ApiRequestValidator for UpdateUserRequestValidator {
+    type ErrorMessage = String;
     type Request = UpdateUserRequest;
 
-    fn validate(request: &Self::Request) -> EmResult<()> {
+    fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage> {
         if request.validate_user.username.trim().is_empty() {
-            Err((request, "username cannot be empty or whitespace"))?;
+            Err("username cannot be empty or whitespace")?;
         }
         match &request.update_type {
             UpdateUserType::Username { new_username } => {
                 if new_username.trim().is_empty() {
-                    Err((request, "new_username cannot be empty or whitespace"))?;
+                    Err("new_username cannot be empty or whitespace")?;
                 }
             }
             UpdateUserType::FullName {
@@ -145,14 +151,16 @@ impl ApiRequestValidator for UpdateUserRequestValidator {
                 new_last_name,
             } => {
                 if new_first_name.trim().is_empty() {
-                    Err((request, "new_first_name cannot be empty or whitespace"))?;
+                    Err("new_first_name cannot be empty or whitespace")?;
                 }
                 if new_last_name.trim().is_empty() {
-                    Err((request, "new_last_name cannot be empty or whitespace"))?;
+                    Err("new_last_name cannot be empty or whitespace")?;
                 }
             }
             UpdateUserType::ResetPassword { new_password } => {
-                validate_password(new_password)?;
+                if let Err(error) = validate_password(new_password) {
+                    Err(format!("{error}"))?
+                }
             }
         }
         Ok(())
@@ -168,16 +176,19 @@ impl UpdateUserRequest {
 
 /// User update type variations
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
+#[serde(tag = "type")]
 pub enum UpdateUserType {
     /// User is attempting to update the user's username to a new value
+    #[serde(rename = "username")]
     Username { new_username: String },
     /// User is attempting to update the user's first and last name
+    #[serde(rename = "full-name")]
     FullName {
         new_first_name: String,
         new_last_name: String,
     },
     /// User is attempting to update the user's password to a new value
+    #[serde(rename = "reset-password")]
     ResetPassword { new_password: String },
 }
 
@@ -225,7 +236,7 @@ where
     type UpdateRequestValidator: ApiRequestValidator<Request = UpdateUserRequest>;
 
     /// Create new instance of a [UserService]
-    fn create(pool: &Pool<Self::Database>) -> Self;
+    fn create(pool: &<Self::Database as Database>::ConnectionPool) -> Self;
     /// Create a new [User]. The user specified in `request` must have the 'admin' role to perform
     /// this action. Returns the newly created [User]
     async fn create_user(&self, current_uid: &Uuid, request: &CreateUserRequest) -> EmResult<User>;
@@ -250,6 +261,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 pub(crate) mod test {
     use std::str::FromStr;
 
@@ -275,10 +287,10 @@ pub(crate) mod test {
         roles: &[&str],
     ) -> CreateUserRequest {
         CreateUserRequest {
-            first_name: first_name.to_string(),
-            last_name: last_name.to_string(),
-            username: username.to_string(),
-            password: password.to_string(),
+            first_name: first_name.to_owned(),
+            last_name: last_name.to_owned(),
+            username: username.to_owned(),
+            password: password.to_owned(),
             roles: roles
                 .iter()
                 .map(|r| RoleName::from_str(r).unwrap())
@@ -289,8 +301,8 @@ pub(crate) mod test {
     /// Utility method for creating a new [ValidateUserRequest]
     pub(crate) fn validate_user_request(username: &str, password: &str) -> ValidateUserRequest {
         ValidateUserRequest {
-            username: username.to_string(),
-            password: password.to_string(),
+            username: username.to_owned(),
+            password: password.to_owned(),
         }
     }
 
@@ -309,22 +321,22 @@ pub(crate) mod test {
     /// Utility method for creating a new [UpdateUserType::Username]
     pub(crate) fn update_username(new_username: &str) -> UpdateUserType {
         UpdateUserType::Username {
-            new_username: new_username.to_string(),
+            new_username: new_username.to_owned(),
         }
     }
 
     /// Utility method for creating a new [UpdateUserType::FullName]
     pub(crate) fn update_full_name(new_first_name: &str, new_last_name: &str) -> UpdateUserType {
         UpdateUserType::FullName {
-            new_first_name: new_first_name.to_string(),
-            new_last_name: new_last_name.to_string(),
+            new_first_name: new_first_name.to_owned(),
+            new_last_name: new_last_name.to_owned(),
         }
     }
 
     /// Utility method for creating a new [UpdateUserType::ResetPassword]
     pub(crate) fn reset_password(new_password: &str) -> UpdateUserType {
         UpdateUserType::ResetPassword {
-            new_password: new_password.to_string(),
+            new_password: new_password.to_owned(),
         }
     }
 

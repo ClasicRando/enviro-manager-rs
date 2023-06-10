@@ -16,8 +16,10 @@ thiserror = { workspace = true }
 rmp-serde = { workspace = true }
 reqwest = { workspace = true }
 log = { workspace = true }
+log4rs = { workspace = true }
 mime = { workspace = true }
 actix-web = { workspace = true }
+actix-web-lab = { workspace = true }
 actix-session = { workspace = true }
 uuid = { workspace = true }
 async-trait = { workspace = true }

@@ -11,17 +11,19 @@ with w_tasks as (
                 wt.parameters,
                 t.task_service_name,
                 t.url
-            )::task.workflow_task
+            )::workflow.workflow_task
         ) tasks
-    from task.workflow_tasks wt
-    join task.v_tasks t
+    from workflow.workflow_tasks wt
+    join workflow.v_tasks t
     on wt.task_id = t.task_id
     group by wt.workflow_id
 )
-select w.workflow_id, w.name, wt.tasks
+select w.workflow_id, w.name, w.is_deprecated, w.new_workflow, wt.tasks
 from workflow.workflows w
 join w_tasks wt
 on w.workflow_id = wt.workflow_id;
+
+grant select on workflow.v_workflows to we_web;
 
 comment on view workflow.v_workflows IS $$
 Utility view, showing all workflows and their task details (as an array of workflow_task instances)

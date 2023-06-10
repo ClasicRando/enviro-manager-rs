@@ -1,9 +1,13 @@
 use common::{
     api::ApiRequestValidator,
-    database::connection::{finalize_transaction, get_connection_with_em_uid},
+    database::{
+        connection::{finalize_transaction, get_connection_with_em_uid},
+        postgres::Postgres,
+        Database,
+    },
     error::{EmError::InvalidUser, EmResult},
 };
-use sqlx::{Connection, PgPool, Pool, Postgres};
+use sqlx::{Connection, PgPool};
 use uuid::Uuid;
 
 use crate::service::{
@@ -67,7 +71,7 @@ impl UserService for PgUserService {
     type Database = Postgres;
     type UpdateRequestValidator = UpdateUserRequestValidator;
 
-    fn create(pool: &Pool<Self::Database>) -> Self {
+    fn create(pool: &<Postgres as Database>::ConnectionPool) -> Self {
         Self { pool: pool.clone() }
     }
 
@@ -172,10 +176,7 @@ impl UserService for PgUserService {
         .bind(password)
         .fetch_optional(&self.pool)
         .await?;
-        match result {
-            Some(user) => Ok(user),
-            None => Err(InvalidUser),
-        }
+        result.map_or_else(|| Err(InvalidUser), Ok)
     }
 
     async fn modify_user_role(
@@ -297,7 +298,7 @@ mod test {
         let user = users
             .iter()
             .find(|u| u.uid == uuid)
-            .expect("Could not find admin user");
+            .ok_or("Could not find admin user")?;
         let user_roles: Vec<&str> = user.roles.iter().map(|r| r.name.as_ref()).collect();
         assert_eq!(user.full_name, full_name);
         assert_eq!(user_roles, roles);

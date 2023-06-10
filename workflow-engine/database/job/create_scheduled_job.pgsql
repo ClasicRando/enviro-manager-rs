@@ -1,14 +1,17 @@
-create or replace function job.create_scheduled_job(
+create or replace function job.create_scheduled_job (
     workflow_id bigint,
     maintainer text,
     job_schedule job.schedule_entry[]
 ) returns bigint
+security definer
 language sql
 as $$
 insert into job.jobs(workflow_id,job_type,maintainer,job_schedule,next_run)
 values($1,'Scheduled'::job.job_type,$2,$3,job.next_run_job_schedule($3))
 returning job_id;
 $$;
+
+grant execute on function job.create_scheduled_job to we_web;
 
 comment on function job.create_scheduled_job IS $$
 Create a new weekly schedule based job 

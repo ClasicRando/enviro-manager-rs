@@ -8,8 +8,6 @@ create table if not exists users.users (
 
 call audit.audit_table('users.users');
 
-revoke all on users.users from public;
-
 comment on table users.users is
 'All users that will access EnviroManager resources';
 comment on column users.users.uid is

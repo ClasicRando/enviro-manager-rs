@@ -1,23 +1,52 @@
 #![allow(incomplete_features)]
 #![feature(async_fn_in_trait)]
+#![warn(clippy::cloned_instead_of_copied)]
+#![warn(clippy::cognitive_complexity)]
+#![warn(clippy::create_dir)]
+#![warn(clippy::empty_structs_with_brackets)]
+#![warn(clippy::equatable_if_let)]
+#![warn(clippy::explicit_iter_loop)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::fn_params_excessive_bools)]
+#![warn(clippy::from_iter_instead_of_collect)]
+#![warn(clippy::indexing_slicing)]
+#![warn(clippy::inefficient_to_string)]
+#![warn(clippy::manual_let_else)]
+#![warn(clippy::manual_string_new)]
+#![warn(clippy::match_on_vec_items)]
+#![warn(clippy::match_same_arms)]
+#![warn(clippy::missing_assert_message)]
+#![warn(clippy::missing_const_for_fn)]
+#![warn(clippy::missing_docs_in_private_items)]
+#![warn(clippy::missing_errors_doc)]
+#![warn(clippy::missing_panics_doc)]
+#![warn(clippy::needless_collect)]
+#![warn(clippy::needless_continue)]
+#![warn(clippy::needless_for_each)]
+#![warn(clippy::needless_pass_by_value)]
+#![warn(clippy::option_if_let_else)]
+#![warn(clippy::panic)]
+#![warn(clippy::partial_pub_fields)]
+#![warn(clippy::print_stdout)]
+#![warn(clippy::pub_use)]
+#![warn(clippy::string_to_string)]
+#![warn(clippy::str_to_string)]
+#![warn(clippy::string_slice)]
+#![warn(clippy::too_many_arguments)]
+#![warn(clippy::too_many_lines)]
+#![warn(clippy::uninlined_format_args)]
+#![warn(clippy::unnecessary_box_returns)]
+#![warn(clippy::unused_async)]
+#![warn(clippy::unused_self)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::use_self)]
+#![warn(clippy::wildcard_imports)]
+
+//! Workflow Engine component of the EnivroManager application suite
 
 pub mod api;
 pub mod database;
-mod error;
-mod executor;
-mod job_worker;
-mod services;
-
-pub use error::{Error, Result};
-pub use executor::Executor;
-pub use job_worker::JobWorker;
-pub use services::{
-    create_executors_service, create_jobs_service, create_task_queue_service, create_tasks_service,
-    create_workflow_runs_service, create_workflows_service,
-    executors::{ExecutorsService, PgExecutorsService},
-    jobs::{JobsService, PgJobsService},
-    task_queue::{PgTaskQueueService, TaskQueueRecord, TaskQueueService, TaskResponse},
-    tasks::{PgTasksService, TasksService},
-    workflow_runs::{PgWorkflowRunsService, WorkflowRunsService},
-    workflows::{PgWorkflowsService, WorkflowsService},
-};
+pub mod executor;
+pub mod job;
+pub mod workflow;
+pub mod workflow_run;
