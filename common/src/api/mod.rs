@@ -2,11 +2,9 @@ pub mod request;
 
 use std::fmt::Debug;
 
-use actix_session::Session;
 use actix_web::Responder;
 use log::{error, warn};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::error::{EmError, EmResult};
 
@@ -172,20 +170,4 @@ pub trait ApiRequestValidator {
         }
         Ok(())
     }
-}
-
-/// Validate that a `session` object contains the required data. Returns the users [Uuid] if the
-/// session contains the key 'em_uid'. Otherwise, an [ApiResponse::Failure] is returned and should
-/// be sent as the response to the request.
-/// # Errors
-/// This function will return an error if the `session` does not contain the key 'em_uid'.
-pub fn validate_session<T: Serialize>(
-    session: &Session,
-    format: ApiContentFormat,
-) -> Result<Uuid, ApiResponse<T>> {
-    let Some(uid) = session.get("em_uid").unwrap_or(None) else {
-        return Err(ApiResponse::failure("Invalid or missing session ID", format))
-    };
-    session.renew();
-    Ok(uid)
 }

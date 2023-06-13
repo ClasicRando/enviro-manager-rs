@@ -20,8 +20,6 @@ thiserror = { workspace = true }
 async-trait = { workspace = true }
 mockall = { workspace = true }
 actix-web = { workspace = true }
-actix-web-lab = { workspace = true }
-actix-session = { workspace = true }
 lazy-regex = { workspace = true }
 uuid = { workspace = true }
 rstest = { workspace = true }

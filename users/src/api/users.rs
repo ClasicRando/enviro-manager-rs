@@ -1,10 +1,10 @@
-use actix_session::Session;
 use common::{
-    api::{request::ApiRequest, validate_session, ApiResponse, QueryApiFormat},
+    api::{request::ApiRequest, ApiResponse, QueryApiFormat},
     error::EmError,
 };
 use log::error;
 
+use super::UidRequest;
 use crate::service::users::{
     CreateUserRequest, ModifyUserRoleRequest, UpdateUserRequest, User, UserService,
     ValidateUserRequest,
@@ -12,7 +12,6 @@ use crate::service::users::{
 
 /// API endpoint to create a new user from a MessagePack body
 pub async fn create_user<U>(
-    session: Session,
     api_request: ApiRequest<CreateUserRequest>,
     service: actix_web::web::Data<U>,
     query: actix_web::web::Query<QueryApiFormat>,
@@ -21,12 +20,8 @@ where
     U: UserService,
 {
     let format = query.into_inner();
-    let uuid = match validate_session(&session, format.f) {
-        Ok(inner) => inner,
-        Err(response) => return response,
-    };
     let user_request = api_request.into_inner();
-    match service.create_user(&uuid, &user_request).await {
+    match service.create_user(&user_request).await {
         Ok(user) => ApiResponse::success(user, format.f),
         Err(error) => ApiResponse::error(error, format.f),
     }
@@ -34,7 +29,7 @@ where
 
 /// API endpoint to read all users
 pub async fn read_users<U>(
-    session: Session,
+    api_request: ApiRequest<UidRequest>,
     service: actix_web::web::Data<U>,
     query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<Vec<User>>
@@ -42,11 +37,8 @@ where
     U: UserService,
 {
     let format = query.into_inner();
-    let uuid = match validate_session(&session, format.f) {
-        Ok(inner) => inner,
-        Err(response) => return response,
-    };
-    match service.read_all(&uuid).await {
+    let UidRequest { uid } = api_request.into_inner();
+    match service.read_all(&uid).await {
         Ok(user) => ApiResponse::success(user, format.f),
         Err(error) => ApiResponse::error(error, format.f),
     }
@@ -54,7 +46,6 @@ where
 
 /// API endpoint to update a user
 pub async fn update_user<U>(
-    session: Session,
     api_request: ApiRequest<UpdateUserRequest>,
     service: actix_web::web::Data<U>,
     query: actix_web::web::Query<QueryApiFormat>,
@@ -63,12 +54,8 @@ where
     U: UserService,
 {
     let format = query.into_inner();
-    let uuid = match validate_session(&session, format.f) {
-        Ok(inner) => inner,
-        Err(response) => return response,
-    };
     let user_request = api_request.into_inner();
-    match service.update(&uuid, &user_request).await {
+    match service.update(&user_request).await {
         Ok(user) => ApiResponse::message(format!("Updated user {}", user.uid), format.f),
         Err(error) => ApiResponse::error(error, format.f),
     }
@@ -76,7 +63,6 @@ where
 
 /// API endpoint to validate a users credentials. If successful, a [User] instance is returned
 pub async fn validate_user<U>(
-    session: Session,
     api_request: ApiRequest<ValidateUserRequest>,
     service: actix_web::web::Data<U>,
     query: actix_web::web::Query<QueryApiFormat>,
@@ -87,14 +73,7 @@ where
     let query = query.into_inner();
     let user_request = api_request.into_inner();
     match service.validate_user(&user_request).await {
-        Ok(user) => {
-            if let Err(error) = session.insert("em_uid", user.uid) {
-                error!("{error}");
-                return ApiResponse::error(error.into(), query.f);
-            }
-            session.renew();
-            ApiResponse::success(user, query.f)
-        }
+        Ok(user) => ApiResponse::success(user, query.f),
         Err(error) if matches!(error, EmError::InvalidUser) => {
             ApiResponse::failure("Invalid user credentials", query.f)
         }
@@ -107,7 +86,6 @@ where
 
 /// API endpoint to add/remove a role for a specified user
 pub async fn modify_user_role<U>(
-    session: Session,
     api_request: ApiRequest<ModifyUserRoleRequest>,
     service: actix_web::web::Data<U>,
     query: actix_web::web::Query<QueryApiFormat>,
@@ -116,12 +94,8 @@ where
     U: UserService,
 {
     let format = query.into_inner();
-    let uuid = match validate_session(&session, format.f) {
-        Ok(inner) => inner,
-        Err(response) => return response,
-    };
     let user_request = api_request.into_inner();
-    match service.modify_user_role(&uuid, &user_request).await {
+    match service.modify_user_role(&user_request).await {
         Ok(user) => ApiResponse::success(user, format.f),
         Err(error) => ApiResponse::error(error, format.f),
     }

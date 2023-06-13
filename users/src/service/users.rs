@@ -71,7 +71,7 @@ fn validate_password(password: &str) -> EmResult<()> {
 #[derive(Deserialize, Debug)]
 pub struct CreateUserRequest {
     /// uuid of the user attempting to perform the action
-    // pub(crate) current_uid: Uuid,
+    pub(crate) current_uid: Uuid,
     /// First name of the user to be created
     pub(crate) first_name: String,
     /// Last name of the user to be created
@@ -111,6 +111,8 @@ impl ApiRequestValidator for CreateUserRequestValidator {
 /// Request object for updating an existing user
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UpdateUserRequest {
+    /// uuid of the user attempting to perform the action
+    pub(crate) current_uid: Uuid,
     /// Username of the user to updated. Required to verify user before updating.
     // #[serde(flatten)]
     pub(crate) validate_user: ValidateUserRequest,
@@ -121,8 +123,13 @@ pub struct UpdateUserRequest {
 
 impl UpdateUserRequest {
     /// Create a new [UpdateUserRequest] as the 2 components of a request
-    pub const fn new(validate_user: ValidateUserRequest, update_type: UpdateUserType) -> Self {
+    pub const fn new(
+        current_uid: Uuid,
+        validate_user: ValidateUserRequest,
+        update_type: UpdateUserType,
+    ) -> Self {
         Self {
+            current_uid,
             validate_user,
             update_type,
         }
@@ -216,7 +223,7 @@ impl ValidateUserRequest {
 #[derive(Deserialize, Debug)]
 pub struct ModifyUserRoleRequest {
     /// uuid of the user attempting to perform the action
-    // pub(crate) current_uid: Uuid,
+    pub(crate) current_uid: Uuid,
     /// uuid of the user to perform the action on
     pub(crate) uid: Uuid,
     /// Name of the role to modify for the specified `uid`
@@ -235,11 +242,9 @@ where
     type Database: Database;
     type UpdateRequestValidator: ApiRequestValidator<Request = UpdateUserRequest>;
 
-    /// Create new instance of a [UserService]
-    fn create(pool: &<Self::Database as Database>::ConnectionPool) -> Self;
     /// Create a new [User]. The user specified in `request` must have the 'admin' role to perform
     /// this action. Returns the newly created [User]
-    async fn create_user(&self, current_uid: &Uuid, request: &CreateUserRequest) -> EmResult<User>;
+    async fn create_user(&self, request: &CreateUserRequest) -> EmResult<User>;
     /// Read all [User]s from the database. The user specified as `current_uid` must have the
     /// 'admin' role to perform this action.
     async fn read_all(&self, current_uid: &Uuid) -> EmResult<Vec<User>>;
@@ -247,17 +252,13 @@ where
     async fn read_one(&self, uuid: &Uuid) -> EmResult<User>;
     /// Update the user specified within the `request`. Once the user is validated, the update type
     /// specified is performed and the new state of the [User] is returned.
-    async fn update(&self, current_uid: &Uuid, request: &UpdateUserRequest) -> EmResult<User>;
+    async fn update(&self, request: &UpdateUserRequest) -> EmResult<User>;
     /// Validate that the specified user credentials match a user. If successful, return that [User]
     async fn validate_user(&self, request: &ValidateUserRequest) -> EmResult<User>;
     /// Modify a role for the user specified within the `request`. The action user specified in the
     /// `request` must have the 'add-role' role and is only able to add/revoke roles that they have
     /// themselves
-    async fn modify_user_role(
-        &self,
-        current_uid: &Uuid,
-        request: &ModifyUserRoleRequest,
-    ) -> EmResult<User>;
+    async fn modify_user_role(&self, request: &ModifyUserRoleRequest) -> EmResult<User>;
 }
 
 #[cfg(test)]
@@ -267,6 +268,7 @@ pub(crate) mod test {
 
     use common::api::ApiRequestValidator;
     use rstest::rstest;
+    use uuid::Uuid;
 
     use crate::service::{
         roles::RoleName,
@@ -279,7 +281,9 @@ pub(crate) mod test {
     const VALID_PASSWORD: &str = "Va1idPa$$word";
 
     /// Utility method for creating a new [CreateUserRequest]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn create_user_request(
+        current_uid: Uuid,
         first_name: &str,
         last_name: &str,
         username: &str,
@@ -287,6 +291,7 @@ pub(crate) mod test {
         roles: &[&str],
     ) -> CreateUserRequest {
         CreateUserRequest {
+            current_uid,
             first_name: first_name.to_owned(),
             last_name: last_name.to_owned(),
             username: username.to_owned(),
@@ -308,11 +313,13 @@ pub(crate) mod test {
 
     /// Utility method for creating a new [UpdateUserRequest]
     pub(crate) fn update_user_request(
+        current_uid: Uuid,
         username: &str,
         password: &str,
         update_type: UpdateUserType,
     ) -> UpdateUserRequest {
         UpdateUserRequest {
+            current_uid,
             validate_user: validate_user_request(username, password),
             update_type,
         }
@@ -362,51 +369,74 @@ pub(crate) mod test {
     }
 
     #[rstest]
-    #[case::valid_request(create_user_request("test", "test", "test", VALID_PASSWORD, &["admin"]))]
+    #[case::valid_request(create_user_request(Uuid::new_v4(), "test", "test", "test", VALID_PASSWORD, &["admin"]))]
     fn create_user_request_should_validate_when(#[case] request: CreateUserRequest) {
         let result = CreateUserRequestValidator::validate(&request);
         assert!(result.is_ok(), "{:?}", result.unwrap_err());
     }
 
     #[rstest]
-    #[case::invalid_password(create_user_request("test", "test", "test", "test", &["admin"]))]
-    #[case::first_name_empty(create_user_request("", "test", "test", VALID_PASSWORD, &["admin"]))]
-    #[case::last_name_empty(create_user_request("test", "", "test", VALID_PASSWORD, &["admin"]))]
-    #[case::username_empty(create_user_request("test", "test", "", VALID_PASSWORD, &["admin"]))]
+    #[case::invalid_password(create_user_request(Uuid::new_v4(), "test", "test", "test", "test", &["admin"]))]
+    #[case::first_name_empty(create_user_request(Uuid::new_v4(), "", "test", "test", VALID_PASSWORD, &["admin"]))]
+    #[case::last_name_empty(create_user_request(Uuid::new_v4(), "test", "", "test", VALID_PASSWORD, &["admin"]))]
+    #[case::username_empty(create_user_request(Uuid::new_v4(), "test", "test", "", VALID_PASSWORD, &["admin"]))]
     fn create_user_request_should_fail_when(#[case] request: CreateUserRequest) {
         let result = CreateUserRequestValidator::validate(&request);
         assert!(result.is_err());
     }
 
     #[rstest]
-    #[case::valid_update_username_request("test", VALID_PASSWORD, update_username("test"))]
+    #[case::valid_update_username_request(
+        Uuid::new_v4(),
+        "test",
+        VALID_PASSWORD,
+        update_username("test")
+    )]
     #[case::valid_update_full_name_request(
+        Uuid::new_v4(),
         "test",
         VALID_PASSWORD,
         update_full_name("test", "test")
     )]
-    #[case::valid_reset_password_request("test", VALID_PASSWORD, reset_password(VALID_PASSWORD))]
+    #[case::valid_reset_password_request(
+        Uuid::new_v4(),
+        "test",
+        VALID_PASSWORD,
+        reset_password(VALID_PASSWORD)
+    )]
     fn update_user_request_should_validate_when(
+        #[case] current_uid: Uuid,
         #[case] username: &str,
         #[case] password: &str,
         #[case] update_type: UpdateUserType,
     ) {
-        let request = update_user_request(username, password, update_type);
+        let request = update_user_request(current_uid, username, password, update_type);
         let result = UpdateUserRequestValidator::validate(&request);
         assert!(result.is_ok(), "{:?}", result.unwrap_err());
     }
 
     #[rstest]
-    #[case::new_username_empty("test", VALID_PASSWORD, update_username(""))]
-    #[case::new_first_name_empty("test", VALID_PASSWORD, update_full_name("", "test"))]
-    #[case::new_last_name_empty("test", VALID_PASSWORD, update_full_name("test", ""))]
-    #[case::new_password_invalid("test", VALID_PASSWORD, reset_password(""))]
+    #[case::new_username_empty(Uuid::new_v4(), "test", VALID_PASSWORD, update_username(""))]
+    #[case::new_first_name_empty(
+        Uuid::new_v4(),
+        "test",
+        VALID_PASSWORD,
+        update_full_name("", "test")
+    )]
+    #[case::new_last_name_empty(
+        Uuid::new_v4(),
+        "test",
+        VALID_PASSWORD,
+        update_full_name("test", "")
+    )]
+    #[case::new_password_invalid(Uuid::new_v4(), "test", VALID_PASSWORD, reset_password(""))]
     fn update_user_request_should_fail_when(
+        #[case] current_uid: Uuid,
         #[case] username: &str,
         #[case] password: &str,
         #[case] update_type: UpdateUserType,
     ) {
-        let request = update_user_request(username, password, update_type);
+        let request = update_user_request(current_uid, username, password, update_type);
         let result = UpdateUserRequestValidator::validate(&request);
         assert!(result.is_err());
     }

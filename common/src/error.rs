@@ -1,6 +1,5 @@
 use std::fmt::Debug;
 
-use actix_session::SessionInsertError;
 use chrono::NaiveDateTime;
 use lettre::{
     address::AddressError, error::Error as EmailError, transport::smtp::Error as StmpError,
@@ -61,8 +60,6 @@ pub enum EmError {
     MissingRecord { pk: String },
     #[error("Contents of request '{request}' were not valid.\nReason: {reason}")]
     InvalidRequest { request: String, reason: String },
-    #[error("Error attempting to insert a session value. {0}")]
-    SessionInsert(#[from] SessionInsertError),
     #[error("{0}")]
     ApiRequestPayload(#[from] ApiRequestPayloadError),
 }
