@@ -1,21 +1,25 @@
-use common::api::{request::ApiRequest, ApiResponse, QueryApiFormat};
+use actix_web_httpauth::extractors::bearer::BearerAuth;
+use common::api::{ApiResponse, QueryApiFormat};
 
-use super::UidRequest;
+use super::{validate_bearer, BearerValidation};
 use crate::service::roles::{Role, RoleService};
 
 /// API endpoint to fetch all roles
 pub async fn roles<R>(
-    api_request: ApiRequest<UidRequest>,
+    bearer: BearerAuth,
     service: actix_web::web::Data<R>,
     query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<Vec<Role>>
 where
     R: RoleService,
 {
-    let query = query.into_inner();
-    let UidRequest { uid } = api_request.into_inner();
+    let format = query.into_inner();
+    let uid = match validate_bearer(bearer, format.f) {
+        BearerValidation::Valid(uid) => uid,
+        BearerValidation::InValid(response) => return response,
+    };
     match service.read_all(&uid).await {
-        Ok(roles) => ApiResponse::success(roles, query.f),
-        Err(error) => ApiResponse::error(error, query.f),
+        Ok(roles) => ApiResponse::success(roles, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
     }
 }

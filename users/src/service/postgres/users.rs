@@ -75,10 +75,9 @@ impl UserService for PgUserService {
     type Database = Postgres;
     type UpdateRequestValidator = UpdateUserRequestValidator;
 
-    async fn create_user(&self, request: &CreateUserRequest) -> EmResult<User> {
+    async fn create_user(&self, current_uid: &Uuid, request: &CreateUserRequest) -> EmResult<User> {
         Self::CreateRequestValidator::validate(request)?;
         let CreateUserRequest {
-            current_uid,
             first_name,
             last_name,
             username,
@@ -137,10 +136,9 @@ impl UserService for PgUserService {
         Ok(user)
     }
 
-    async fn update(&self, request: &UpdateUserRequest) -> EmResult<User> {
+    async fn update(&self, current_uid: &Uuid, request: &UpdateUserRequest) -> EmResult<User> {
         Self::UpdateRequestValidator::validate(request)?;
         let UpdateUserRequest {
-            current_uid,
             validate_user,
             update_type,
         } = request;
@@ -181,13 +179,12 @@ impl UserService for PgUserService {
         result.map_or_else(|| Err(InvalidUser), Ok)
     }
 
-    async fn modify_user_role(&self, request: &ModifyUserRoleRequest) -> EmResult<User> {
-        let ModifyUserRoleRequest {
-            current_uid,
-            uid,
-            role,
-            add,
-        } = request;
+    async fn modify_user_role(
+        &self,
+        current_uid: &Uuid,
+        request: &ModifyUserRoleRequest,
+    ) -> EmResult<User> {
+        let ModifyUserRoleRequest { uid, role, add } = request;
 
         let user = self.read_one(current_uid).await?;
         user.check_role(RoleName::AddRole)?;
@@ -235,15 +232,16 @@ mod test {
     }
 
     #[rstest]
-    #[case::valid_request(create_user_request(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "Mr", "Test", "test", "Test1!", &["admin"]))]
+    #[case::valid_request(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), create_user_request("Mr", "Test", "test", "Test1!", &["admin"]))]
     #[tokio::test]
     async fn create_user_should_succeed_when(
         database: PgPool,
+        #[case] uid: Uuid,
         #[case] user_request: CreateUserRequest,
     ) -> EmResult<()> {
         let service = PgUserService::new(&database);
 
-        let action = service.create_user(&user_request).await;
+        let action = service.create_user(&uid, &user_request).await;
         cleanup_user_create(&user_request.username, &database).await?;
 
         let user = action?;
@@ -259,17 +257,18 @@ mod test {
     }
 
     #[rstest]
-    #[case::user_does_not_exist(create_user_request(Uuid::new_v4(), "Mr", "Test2", "test2", "Test1!", &["admin"]))]
-    #[case::missing_privilege(create_user_request(uuid!("728ac060-9d38-47e9-b2fa-66d2954110e3"), "Mr", "Test3", "test3", "Test1!", &["admin"]))]
-    #[case::username_exists(create_user_request(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), "Mr", "Test4", "none", "Test1!", &["admin"]))]
+    #[case::user_does_not_exist(Uuid::new_v4(), create_user_request("Mr", "Test2", "test2", "Test1!", &["admin"]))]
+    #[case::missing_privilege(uuid!("728ac060-9d38-47e9-b2fa-66d2954110e3"), create_user_request("Mr", "Test3", "test3", "Test1!", &["admin"]))]
+    #[case::username_exists(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), create_user_request("Mr", "Test4", "none", "Test1!", &["admin"]))]
     #[tokio::test]
     async fn create_user_should_fail_when(
         database: PgPool,
+        #[case] uid: Uuid,
         #[case] user_request: CreateUserRequest,
     ) -> EmResult<()> {
         let service = PgUserService::new(&database);
 
-        let action = service.create_user(&user_request).await;
+        let action = service.create_user(&uid, &user_request).await;
         if user_request.username != "none" {
             cleanup_user_create(&user_request.username, &database).await?;
         }

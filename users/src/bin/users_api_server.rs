@@ -15,6 +15,6 @@ async fn main() -> EmResult<()> {
     let pool = Postgres::create_pool(options, 20, 10).await?;
     let users_service = PgUserService::new(&pool);
     let roles_service = PgRoleService::new(&users_service);
-    api::spawn_api_server(users_service, roles_service, ("127.0.0.1", 8080)).await?;
+    api::spawn_api_server(users_service, roles_service, ("127.0.0.1", 8001)).await?;
     Ok(())
 }

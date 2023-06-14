@@ -5,8 +5,14 @@ use actix_web::{
     web::{get, patch, post, Data},
     App, HttpServer,
 };
-use common::{database::Database, error::EmResult};
-use serde::{Deserialize, Serialize};
+use actix_web_httpauth::extractors::bearer::BearerAuth;
+use common::{
+    api::{ApiContentFormat, ApiResponse},
+    database::Database,
+    error::EmResult,
+};
+use log::error;
+use serde::Serialize;
 use uuid::Uuid;
 
 pub mod roles;
@@ -14,11 +20,32 @@ pub mod users;
 
 use crate::service::{roles::RoleService, users::UserService};
 
-/// Simple request with only the users uuid in the body
-#[derive(Serialize, Deserialize, Debug)]
-pub struct UidRequest {
-    /// uuid of the user attempting to perform the action
-    pub(crate) uid: Uuid,
+const BEARER_ERROR: &str = "Cannot parse bearer token";
+
+/// Validation result of a [BearerAuth] extractor. Validates into the users uid or an [ApiResponse]
+/// when the bearer authorization cannot be parsed.
+pub enum BearerValidation<T>
+where
+    T: Serialize,
+{
+    Valid(Uuid),
+    InValid(ApiResponse<T>),
+}
+
+/// Validate a [BearerAuth] into a [BearerValidation]
+#[allow(clippy::needless_pass_by_value)]
+pub(crate) fn validate_bearer<T>(
+    bearer: BearerAuth,
+    format: ApiContentFormat,
+) -> BearerValidation<T>
+where
+    T: Serialize,
+{
+    let Ok(uid) = bearer.token().parse() else {
+        error!("Got invalid bearer token. Token = '{}'", bearer.token());
+        return BearerValidation::InValid(ApiResponse::failure(BEARER_ERROR, format))
+    };
+    BearerValidation::Valid(uid)
 }
 
 /// Run generic API server. Creates all the required endpoints and resources. To run the api server,
@@ -48,6 +75,7 @@ where
                 .app_data(roles_service_data.clone())
                 .app_data(users_service_data.clone())
                 .route("/roles", get().to(roles::roles::<R>))
+                .route("/user", get().to(users::read_user::<U>))
                 .route("/users", get().to(users::read_users::<U>))
                 .route("/users", post().to(users::create_user::<U>))
                 .route("/users", patch().to(users::update_user::<U>))
