@@ -14,7 +14,7 @@ where
     R: RoleService,
 {
     let format = query.into_inner();
-    let uid = match validate_bearer(bearer, format.f) {
+    let uid = match validate_bearer(&bearer, format.f) {
         BearerValidation::Valid(uid) => uid,
         BearerValidation::InValid(response) => return response,
     };

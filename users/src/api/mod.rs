@@ -33,9 +33,8 @@ where
 }
 
 /// Validate a [BearerAuth] into a [BearerValidation]
-#[allow(clippy::needless_pass_by_value)]
 pub(crate) fn validate_bearer<T>(
-    bearer: BearerAuth,
+    bearer: &BearerAuth,
     format: ApiContentFormat,
 ) -> BearerValidation<T>
 where
