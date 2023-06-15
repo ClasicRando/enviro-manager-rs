@@ -7,4 +7,4 @@
 .env
 .idea/*
 scratch.txt
-/web-portal/end2end
+/web-portal-client/dist

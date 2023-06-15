@@ -1,0 +1,16 @@
+[package]
+name = "web-portal-client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+leptos = { version = "0.3.0" }
+leptos_router = { version = "0.3.0", features = ["csr"] }
+
+log = { workspace = true }
+console_error_panic_hook = "0.1"
+console_log = "1"
+gloo-net = "0.2"
+gloo-storage = "0.2"
+serde = { workspace = true }
+# common = { path = "../common" }
