@@ -9,10 +9,9 @@ use sqlx::{
 use strum::IntoEnumIterator;
 use uuid::Uuid;
 
-use crate::service::{
-    postgres::users::PgUserService,
-    roles::{Role, RoleName, RoleService},
-    users::UserService,
+use crate::{
+    data::role::{Role, RoleName},
+    service::{postgres::users::PgUserService, roles::RoleService, users::UserService},
 };
 
 impl<'r> Decode<'r, Postgres> for Role {
@@ -129,9 +128,12 @@ mod test {
     use uuid::{uuid, Uuid};
 
     use super::PgRoleService;
-    use crate::service::{
-        postgres::{test::database, users::PgUserService},
-        roles::{Role, RoleName, RoleService},
+    use crate::{
+        data::role::{Role, RoleName},
+        service::{
+            postgres::{test::database, users::PgUserService},
+            roles::RoleService,
+        },
     };
 
     #[rstest]

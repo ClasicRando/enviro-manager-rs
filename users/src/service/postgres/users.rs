@@ -9,11 +9,11 @@ use common::{
 use sqlx::{Connection, PgPool};
 use uuid::Uuid;
 
-use crate::service::{
-    roles::RoleName,
-    users::{
+use crate::{
+    data::{role::RoleName, user::User},
+    service::users::{
         CreateUserRequest, CreateUserRequestValidator, ModifyUserRoleRequest, UpdateUserRequest,
-        UpdateUserRequestValidator, UpdateUserType, User, UserService, ValidateUserRequest,
+        UpdateUserRequestValidator, UpdateUserType, UserService, ValidateUserRequest,
     },
 };
 
@@ -213,12 +213,14 @@ mod test {
     use uuid::{uuid, Uuid};
 
     use super::PgUserService;
-    use crate::service::{
-        postgres::test::database,
-        roles::RoleName,
-        users::{
-            test::{create_user_request, validate_user_request},
-            CreateUserRequest, UserService, ValidateUserRequest,
+    use crate::{
+        data::role::RoleName,
+        service::{
+            postgres::test::database,
+            users::{
+                test::{create_user_request, validate_user_request},
+                CreateUserRequest, UserService, ValidateUserRequest,
+            },
         },
     };
 

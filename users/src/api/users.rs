@@ -6,9 +6,12 @@ use common::{
 use log::error;
 
 use super::{validate_bearer, BearerValidation};
-use crate::service::users::{
-    CreateUserRequest, ModifyUserRoleRequest, UpdateUserRequest, User, UserService,
-    ValidateUserRequest,
+use crate::{
+    data::user::User,
+    service::users::{
+        CreateUserRequest, ModifyUserRoleRequest, UpdateUserRequest, UserService,
+        ValidateUserRequest,
+    },
 };
 
 /// API endpoint to create a new user from a MessagePack body

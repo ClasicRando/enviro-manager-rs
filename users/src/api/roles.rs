@@ -2,7 +2,7 @@ use actix_web_httpauth::extractors::bearer::BearerAuth;
 use common::api::{ApiResponse, QueryApiFormat};
 
 use super::{validate_bearer, BearerValidation};
-use crate::service::roles::{Role, RoleService};
+use crate::{data::role::Role, service::roles::RoleService};
 
 /// API endpoint to fetch all roles
 pub async fn roles<R>(
