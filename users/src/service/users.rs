@@ -7,40 +7,7 @@ use lazy_regex::regex;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::roles::Role;
-use crate::service::roles::RoleName;
-
-/// User entity as the uuid of the user, their full name and all roles possessed by the user.
-#[derive(Deserialize, Serialize, sqlx::FromRow, Debug)]
-pub struct User {
-    /// Unique identifier of the user
-    pub(crate) uid: Uuid,
-    /// First name and last name of the user in a single string
-    pub(crate) full_name: String,
-    /// Collection of roles the user possesses
-    pub(crate) roles: Vec<Role>,
-}
-
-impl User {
-    /// Checks the current roles of the [User] against the `role` name provided. If any of the roles
-    /// match or the user is an admin, return [Ok]. Otherwise, return an [EmError::MissingPrivilege]
-    /// error.
-    /// # Errors
-    /// This function will return an error if the user does not have the `role` provided
-    pub fn check_role(&self, role: RoleName) -> EmResult<()> {
-        if self
-            .roles
-            .iter()
-            .any(|r| r.name == role || r.name == RoleName::Admin)
-        {
-            return Ok(());
-        }
-        Err(EmError::MissingPrivilege {
-            role: role.into(),
-            uid: self.uid,
-        })
-    }
-}
+use crate::data::{role::RoleName, user::User};
 
 /// Validate that the provided `password` meets the rules prescribed for password
 fn validate_password(password: &str) -> EmResult<()> {
@@ -111,6 +78,8 @@ impl ApiRequestValidator for CreateUserRequestValidator {
 /// Request object for updating an existing user
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UpdateUserRequest {
+    /// uuid of the user attempting to perform the action
+    // pub(crate) current_uid: Uuid,
     /// Username of the user to updated. Required to verify user before updating.
     // #[serde(flatten)]
     pub(crate) validate_user: ValidateUserRequest,
@@ -235,8 +204,6 @@ where
     type Database: Database;
     type UpdateRequestValidator: ApiRequestValidator<Request = UpdateUserRequest>;
 
-    /// Create new instance of a [UserService]
-    fn create(pool: &<Self::Database as Database>::ConnectionPool) -> Self;
     /// Create a new [User]. The user specified in `request` must have the 'admin' role to perform
     /// this action. Returns the newly created [User]
     async fn create_user(&self, current_uid: &Uuid, request: &CreateUserRequest) -> EmResult<User>;
@@ -268,9 +235,9 @@ pub(crate) mod test {
     use common::api::ApiRequestValidator;
     use rstest::rstest;
 
-    use crate::service::{
-        roles::RoleName,
-        users::{
+    use crate::{
+        data::role::RoleName,
+        service::users::{
             validate_password, CreateUserRequest, CreateUserRequestValidator, UpdateUserRequest,
             UpdateUserRequestValidator, UpdateUserType, ValidateUserRequest,
         },
@@ -279,6 +246,7 @@ pub(crate) mod test {
     const VALID_PASSWORD: &str = "Va1idPa$$word";
 
     /// Utility method for creating a new [CreateUserRequest]
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn create_user_request(
         first_name: &str,
         last_name: &str,

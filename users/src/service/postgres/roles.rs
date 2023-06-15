@@ -9,10 +9,9 @@ use sqlx::{
 use strum::IntoEnumIterator;
 use uuid::Uuid;
 
-use crate::service::{
-    postgres::users::PgUserService,
-    roles::{Role, RoleName, RoleService},
-    users::UserService,
+use crate::{
+    data::role::{Role, RoleName},
+    service::{postgres::users::PgUserService, roles::RoleService, users::UserService},
 };
 
 impl<'r> Decode<'r, Postgres> for Role {
@@ -90,14 +89,18 @@ pub struct PgRoleService {
     user_service: PgUserService,
 }
 
-impl RoleService for PgRoleService {
-    type UserService = PgUserService;
-
-    fn create(user_service: &Self::UserService) -> Self {
+impl PgRoleService {
+    /// Create new instance of a [PgRoleService]. Both parameters are references to allow for
+    /// cloning of the value.
+    pub fn new(user_service: &PgUserService) -> Self {
         Self {
             user_service: user_service.clone(),
         }
     }
+}
+
+impl RoleService for PgRoleService {
+    type UserService = PgUserService;
 
     async fn read_all(&self, current_uid: &Uuid) -> EmResult<Vec<Role>> {
         let user = self.user_service.read_one(current_uid).await?;
@@ -125,17 +128,19 @@ mod test {
     use uuid::{uuid, Uuid};
 
     use super::PgRoleService;
-    use crate::service::{
-        postgres::{test::database, users::PgUserService},
-        roles::{Role, RoleName, RoleService},
-        users::UserService,
+    use crate::{
+        data::role::{Role, RoleName},
+        service::{
+            postgres::{test::database, users::PgUserService},
+            roles::RoleService,
+        },
     };
 
     #[rstest]
     #[case::privileged_user(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"))]
     #[tokio::test]
     async fn read_all_should_succeed_when(database: PgPool, #[case] uuid: Uuid) -> EmResult<()> {
-        let service = PgRoleService::create(&PgUserService::create(&database));
+        let service = PgRoleService::new(&PgUserService::new(&database));
         let static_roles: Vec<Role> = RoleName::iter()
             .map(|name| {
                 let description = name.description();
@@ -158,7 +163,7 @@ mod test {
     #[case::non_privileged_user(uuid!("be4c1ef7-771a-4580-b0dd-ff137c64ab48"))]
     #[tokio::test]
     async fn read_all_should_fail_when(database: PgPool, #[case] uuid: Uuid) -> EmResult<()> {
-        let service = PgRoleService::create(&PgUserService::create(&database));
+        let service = PgRoleService::new(&PgUserService::new(&database));
 
         let result = service.read_all(&uuid).await;
 

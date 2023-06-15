@@ -45,5 +45,6 @@
 //! Users component of the EnivroManager application suite
 
 pub mod api;
+pub mod data;
 pub mod database;
 pub mod service;

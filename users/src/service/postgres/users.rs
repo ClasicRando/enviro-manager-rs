@@ -3,18 +3,17 @@ use common::{
     database::{
         connection::{finalize_transaction, get_connection_with_em_uid},
         postgres::Postgres,
-        Database,
     },
     error::{EmError::InvalidUser, EmResult},
 };
 use sqlx::{Connection, PgPool};
 use uuid::Uuid;
 
-use crate::service::{
-    roles::RoleName,
-    users::{
+use crate::{
+    data::{role::RoleName, user::User},
+    service::users::{
         CreateUserRequest, CreateUserRequestValidator, ModifyUserRoleRequest, UpdateUserRequest,
-        UpdateUserRequestValidator, UpdateUserType, User, UserService, ValidateUserRequest,
+        UpdateUserRequestValidator, UpdateUserType, UserService, ValidateUserRequest,
     },
 };
 
@@ -26,6 +25,11 @@ pub struct PgUserService {
 }
 
 impl PgUserService {
+    /// Create new instance of a [UserService]
+    pub fn new(pool: &PgPool) -> Self {
+        Self { pool: pool.clone() }
+    }
+
     /// Update the full name of a user with the `uid` specified
     async fn update_full_name(
         &self,
@@ -70,10 +74,6 @@ impl UserService for PgUserService {
     type CreateRequestValidator = CreateUserRequestValidator;
     type Database = Postgres;
     type UpdateRequestValidator = UpdateUserRequestValidator;
-
-    fn create(pool: &<Postgres as Database>::ConnectionPool) -> Self {
-        Self { pool: pool.clone() }
-    }
 
     async fn create_user(&self, current_uid: &Uuid, request: &CreateUserRequest) -> EmResult<User> {
         Self::CreateRequestValidator::validate(request)?;
@@ -213,12 +213,14 @@ mod test {
     use uuid::{uuid, Uuid};
 
     use super::PgUserService;
-    use crate::service::{
-        postgres::test::database,
-        roles::RoleName,
-        users::{
-            test::{create_user_request, validate_user_request},
-            CreateUserRequest, UserService, ValidateUserRequest,
+    use crate::{
+        data::role::RoleName,
+        service::{
+            postgres::test::database,
+            users::{
+                test::{create_user_request, validate_user_request},
+                CreateUserRequest, UserService, ValidateUserRequest,
+            },
         },
     };
 
@@ -236,12 +238,12 @@ mod test {
     #[tokio::test]
     async fn create_user_should_succeed_when(
         database: PgPool,
-        #[case] current_uid: Uuid,
+        #[case] uid: Uuid,
         #[case] user_request: CreateUserRequest,
     ) -> EmResult<()> {
-        let service = PgUserService::create(&database);
+        let service = PgUserService::new(&database);
 
-        let action = service.create_user(&current_uid, &user_request).await;
+        let action = service.create_user(&uid, &user_request).await;
         cleanup_user_create(&user_request.username, &database).await?;
 
         let user = action?;
@@ -263,12 +265,12 @@ mod test {
     #[tokio::test]
     async fn create_user_should_fail_when(
         database: PgPool,
-        #[case] current_uid: Uuid,
+        #[case] uid: Uuid,
         #[case] user_request: CreateUserRequest,
     ) -> EmResult<()> {
-        let service = PgUserService::create(&database);
+        let service = PgUserService::new(&database);
 
-        let action = service.create_user(&current_uid, &user_request).await;
+        let action = service.create_user(&uid, &user_request).await;
         if user_request.username != "none" {
             cleanup_user_create(&user_request.username, &database).await?;
         }
@@ -289,7 +291,7 @@ mod test {
         #[case] full_name: &str,
         #[case] roles: Vec<&str>,
     ) -> EmResult<()> {
-        let service = PgUserService::create(&database);
+        let service = PgUserService::new(&database);
 
         let users = service
             .read_all(&uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"))
@@ -314,7 +316,7 @@ mod test {
         #[case] validate_user_request: ValidateUserRequest,
         #[case] uuid: Uuid,
     ) -> EmResult<()> {
-        let service = PgUserService::create(&database);
+        let service = PgUserService::new(&database);
 
         let user = service.validate_user(&validate_user_request).await?;
 
@@ -331,7 +333,7 @@ mod test {
         database: PgPool,
         #[case] validate_user_request: ValidateUserRequest,
     ) -> EmResult<()> {
-        let service = PgUserService::create(&database);
+        let service = PgUserService::new(&database);
 
         let action = service.validate_user(&validate_user_request).await;
 

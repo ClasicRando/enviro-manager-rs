@@ -11,7 +11,7 @@ use actix_web::{
     dev::Payload, error::PayloadError, http::header, web::BytesMut, FromRequest, HttpMessage,
     HttpRequest,
 };
-use actix_web_lab::__reexports::futures_util::Stream;
+use futures::Stream;
 use log::error;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use thiserror::Error;
