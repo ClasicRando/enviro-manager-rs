@@ -7,7 +7,7 @@ use crate::{
         postgres::{format_anonymous_block, Postgres},
     },
     error::EmResult,
-    package_dir, read_file,
+    fs::{package_dir, read_file},
 };
 
 /// Postgresql implementation of a [DatabaseBuilder]

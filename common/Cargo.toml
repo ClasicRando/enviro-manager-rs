@@ -6,20 +6,50 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sqlx = { workspace = true }
+sqlx = { workspace = true, optional = true }
 serde = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, optional = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
-lettre = { workspace = true }
-thiserror = { workspace = true }
+lettre = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
 rmp-serde = { workspace = true }
-reqwest = { workspace = true }
+reqwest = { workspace = true, optional = true }
 futures = { workspace = true }
 log = { workspace = true }
-log4rs = { workspace = true }
-mime = { workspace = true }
-actix-web = { workspace = true }
+# log4rs = { workspace = true, optional = true }
+mime = { workspace = true, optional = true }
+actix-web = { workspace = true, optional = true }
 uuid = { workspace = true }
-async-trait = { workspace = true }
-lazy-regex = { workspace = true }
+# async-trait = { workspace = true, optional = true }
+lazy-regex = { workspace = true, optional = true }
+
+[features]
+# default = ["full"]
+api = []
+actix = [
+    "api",
+    "error",
+    "dep:actix-web",
+    "dep:mime",
+    "dep:tokio"
+]
+database = [
+    "error",
+    "utils",
+    "dep:actix-web",
+    "dep:sqlx",
+    "dep:tokio"
+]
+email = [
+    "error",
+    "dep:thiserror",
+    "dep:reqwest",
+    "dep:lettre",
+]
+error = []
+utils = [
+    "error",
+    "dep:lazy-regex",
+]
+full = ["api","actix","database","email","error","utils"]

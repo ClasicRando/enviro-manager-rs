@@ -13,4 +13,9 @@ console_log = "1"
 gloo-net = "0.2"
 gloo-storage = "0.2"
 serde = { workspace = true }
-# common = { path = "../common" }
+serde_json = { workspace = true }
+rmp-serde = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+common = { path = "../common", features = ["api"] }
+web-portal-common = { path = "../web-portal-common" }

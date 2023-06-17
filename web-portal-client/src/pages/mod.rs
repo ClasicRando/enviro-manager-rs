@@ -1,5 +1,5 @@
+pub mod home;
 pub mod login;
-// pub mod home;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub enum Page {

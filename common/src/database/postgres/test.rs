@@ -8,7 +8,7 @@ use crate::{
         Database, RolledBackTransactionResult,
     },
     error::EmResult,
-    package_dir, read_file,
+    fs::{package_dir, read_file},
 };
 
 static ENUM_REGEX: &Lazy<Regex, fn() -> Regex> = regex!(

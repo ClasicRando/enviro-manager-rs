@@ -34,4 +34,14 @@ impl User {
             uid: self.uid,
         })
     }
+
+    /// Returns a reference to the user's uid
+    pub const fn uid(&self) -> &Uuid {
+        &self.uid
+    }
+
+    /// Returns a string slice of the user's full name
+    pub fn full_name(&self) -> &str {
+        &self.full_name
+    }
 }

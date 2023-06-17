@@ -1,11 +1,14 @@
+#[cfg(feature = "actix")]
+pub mod actix;
+#[cfg(feature = "actix")]
 pub mod request;
 
 use std::fmt::Debug;
 
-use actix_web::Responder;
 use log::{error, warn};
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "error")]
 use crate::error::{EmError, EmResult};
 
 /// Deserializable wrapper for allowing an API caller to send back content of an [ApiResponse].
@@ -25,18 +28,6 @@ pub enum ApiContentFormat {
     #[default]
     #[serde(rename = "msgpack")]
     MessagePack,
-}
-
-impl ApiContentFormat {
-    fn from_mime(value: &mime::Mime) -> Option<Self> {
-        if value.subtype() == mime::JSON || value.suffix() == Some(mime::JSON) {
-            return Some(Self::Json);
-        }
-        if value.subtype() == mime::MSGPACK || value.suffix() == Some(mime::MSGPACK) {
-            return Some(Self::MessagePack);
-        }
-        None
-    }
 }
 
 /// Generic response body for an [ApiResponse]. A response is either a success containing data, a
@@ -59,40 +50,6 @@ pub struct ApiResponse<T: Serialize> {
     format: ApiContentFormat,
     #[serde(flatten)]
     body: ApiResponseBody<T>,
-}
-
-impl<T> Responder for ApiResponse<T>
-where
-    T: Serialize + 'static,
-{
-    type Body = actix_web::body::BoxBody;
-
-    fn respond_to(self, req: &actix_web::HttpRequest) -> actix_web::HttpResponse<Self::Body> {
-        let bytes_result: Result<Vec<u8>, EmError> = match self.format {
-            ApiContentFormat::Json => serde_json::to_vec(&self.body).map_err(|e| e.into()),
-            ApiContentFormat::MessagePack => rmp_serde::to_vec(&self.body).map_err(|e| e.into()),
-        };
-        let bytes = match bytes_result {
-            Ok(inner) => inner,
-            Err(error) => {
-                let message = format!(
-                    "Could not serialize response for {}. Error: {}",
-                    req.path(),
-                    error
-                );
-                error!("{}", message);
-                return actix_web::HttpResponse::InternalServerError()
-                    .content_type(actix_web::http::header::ContentType::plaintext())
-                    .body(message.into_bytes());
-            }
-        };
-        actix_web::HttpResponse::Ok()
-            .content_type(actix_web::http::header::ContentType(match self.format {
-                ApiContentFormat::Json => mime::APPLICATION_JSON,
-                ApiContentFormat::MessagePack => mime::APPLICATION_MSGPACK,
-            }))
-            .body(bytes.into_iter().collect::<actix_web::web::Bytes>())
-    }
 }
 
 impl<T: Serialize> ApiResponse<T> {
@@ -126,7 +83,12 @@ impl<T: Serialize> ApiResponse<T> {
     /// Generate an [ApiResponse] for operations that return an [EmError]. Some [EmError] variants
     /// are downgraded to a [Failure][ApiResponseBody::Failure] if the `error` does not indicate an
     /// internal but rather bad user provided data or an error message the user could understand.
-    pub fn error(error: EmError, format: ApiContentFormat) -> Self {
+    #[cfg(feature = "error")]
+    pub fn error<E>(error: E, format: ApiContentFormat) -> Self
+    where
+        E: Into<EmError>,
+    {
+        let error = error.into();
         error!("{}", error);
         match error {
             EmError::Generic(message) => Self::failure(message, format),
@@ -147,6 +109,7 @@ impl<T: Serialize> ApiResponse<T> {
 }
 
 /// Validator for api requests that should have the request data verified
+#[cfg(feature = "error")]
 pub trait ApiRequestValidator {
     /// Type of the error message that is returned by the [validate][ApiRequestValidator::validate]
     /// method. Must be able to converted to a [String].

@@ -1,21 +1,27 @@
 use std::fmt::Debug;
 
 use chrono::NaiveDateTime;
+#[cfg(feature = "email")]
 use lettre::{
     address::AddressError, error::Error as EmailError, transport::smtp::Error as StmpError,
 };
+#[cfg(feature = "database")]
 use sqlx::types::Uuid;
 use thiserror::Error;
 
+#[cfg(feature = "actix")]
 use crate::api::request::ApiRequestPayloadError;
 
 /// All possible error types that may occur during EnviroManager operations
 #[derive(Error, Debug)]
 pub enum EmError {
+    #[cfg(feature = "database")]
     #[error("Generic SQL error\n{0}")]
     Sql(#[from] sqlx::Error),
+    #[cfg(feature = "database")]
     #[error("SQL Error during transaction commit\n{0}")]
     CommitError(sqlx::Error),
+    #[cfg(feature = "database")]
     #[error("SQL Error during transaction rollback\n{orig}\nOriginal Error\n{new}")]
     RollbackError { orig: sqlx::Error, new: sqlx::Error },
     #[error("Job attempted to start before next run")]
@@ -30,6 +36,7 @@ pub enum EmError {
     RmpDecode(#[from] rmp_serde::decode::Error),
     #[error("Json serde error\n{0}")]
     SerdeJson(#[from] serde_json::Error),
+    #[cfg(feature = "email")]
     #[error("Reqwest Error\n{0}")]
     Reqwest(#[from] reqwest::Error),
     #[error("Generic error\n{0}")]
@@ -38,10 +45,13 @@ pub enum EmError {
     DuplicateJobId(i64, [NaiveDateTime; 2]),
     #[error("Notification Payload Parse Error\nNotification: `{0}`")]
     PayloadParseError(String),
+    #[cfg(feature = "email")]
     #[error("Email Error\n{0}")]
     Lettre(#[from] EmailError),
+    #[cfg(feature = "email")]
     #[error("Email Address Error\n{0}")]
     AddressParseError(#[from] AddressError),
+    #[cfg(feature = "email")]
     #[error("SMTP Error\n{0}")]
     SmtpError(#[from] StmpError),
     #[error("{0}")]
@@ -60,6 +70,7 @@ pub enum EmError {
     MissingRecord { pk: String },
     #[error("Contents of request '{request}' were not valid.\nReason: {reason}")]
     InvalidRequest { request: String, reason: String },
+    #[cfg(feature = "actix")]
     #[error("{0}")]
     ApiRequestPayload(#[from] ApiRequestPayloadError),
 }

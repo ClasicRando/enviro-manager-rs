@@ -36,4 +36,4 @@ mime = { workspace = true }
 async-trait = { workspace = true }
 rstest = { workspace = true }
 lazy-regex = { workspace = true }
-common = { path = "../common" }
+common = { path = "../common", features = ["full"] }

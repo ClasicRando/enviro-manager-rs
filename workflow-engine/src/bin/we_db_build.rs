@@ -11,5 +11,10 @@ async fn main() {
             return;
         }
     };
-    build_database::<PgDatabaseBuilder, _, _>("workflow-engine/we_db_build_log.yml", options).await
+    if let Err(error) = log4rs::init_file("workflow-engine/we_db_build_log.yml", Default::default())
+    {
+        error!("Could not initialize log4rs. {error}");
+        return;
+    }
+    build_database::<PgDatabaseBuilder, _>(options).await
 }

@@ -21,8 +21,9 @@ async-trait = { workspace = true }
 mockall = { workspace = true }
 actix-web = { workspace = true }
 actix-web-httpauth = { workspace = true }
+actix-cors = { workspace = true }
 lazy-regex = { workspace = true }
 uuid = { workspace = true }
 rstest = { workspace = true }
 strum = { version = "0.24.1", features = ["derive"] }
-common = { path = "../common" }
+common = { path = "../common", features = ["full"] }
