@@ -19,7 +19,8 @@ actix-web-httpauth = { workspace = true }
 actix-cors = { workspace = true }
 rstest = { workspace = true }
 uuid = { workspace = true }
+jsonwebtoken = { workspace = true }
 once_cell = { workspace = true }
-common = { path = "../common", features = ["actix"] }
+common = { path = "../common", features = ["actix", "jwt"] }
 web-portal-common = { path = "../web-portal-common" }
 users = { path ="../users" }

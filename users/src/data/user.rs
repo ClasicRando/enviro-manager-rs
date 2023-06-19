@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::data::role::{Role, RoleName};
 
 /// User entity as the uuid of the user, their full name and all roles possessed by the user.
-#[derive(Deserialize, Serialize, sqlx::FromRow, Debug)]
+#[derive(Deserialize, Serialize, sqlx::FromRow, Debug, Clone)]
 pub struct User {
     /// Unique identifier of the user
     pub(crate) uid: Uuid,

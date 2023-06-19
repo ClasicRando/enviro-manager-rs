@@ -71,8 +71,11 @@ pub enum EmError {
     #[error("Contents of request '{request}' were not valid.\nReason: {reason}")]
     InvalidRequest { request: String, reason: String },
     #[cfg(feature = "actix")]
-    #[error("{0}")]
+    #[error(transparent)]
     ApiRequestPayload(#[from] ApiRequestPayloadError),
+    #[cfg(feature = "jwt")]
+    #[error(transparent)]
+    Jwt(#[from] jsonwebtoken::errors::Error),
 }
 
 impl From<&str> for EmError {

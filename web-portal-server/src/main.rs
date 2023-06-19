@@ -1,3 +1,5 @@
+mod auth;
+
 use std::fmt::Display;
 
 use actix_cors::Cors;

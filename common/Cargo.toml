@@ -17,15 +17,13 @@ rmp-serde = { workspace = true }
 reqwest = { workspace = true, optional = true }
 futures = { workspace = true }
 log = { workspace = true }
-# log4rs = { workspace = true, optional = true }
 mime = { workspace = true, optional = true }
 actix-web = { workspace = true, optional = true }
 uuid = { workspace = true }
-# async-trait = { workspace = true, optional = true }
 lazy-regex = { workspace = true, optional = true }
+jsonwebtoken = { workspace = true, optional = true }
 
 [features]
-# default = ["full"]
 api = []
 actix = [
     "api",
@@ -52,4 +50,8 @@ utils = [
     "error",
     "dep:lazy-regex",
 ]
-full = ["api","actix","database","email","error","utils"]
+jwt = [
+    "error",
+    "dep:jsonwebtoken",
+]
+full = ["api", "actix", "database", "email", "error", "utils", "jwt"]
