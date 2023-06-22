@@ -1,12 +1,13 @@
 create or replace function users.validate_user(
     username text,
-    password text,
-    out uid uuid,
-    out full_name text,
-    out roles text[]
+    password text
 )
-returns record
-returns null on null input
+returns table
+(
+    uid uuid,
+    full_name text,
+    roles text[]
+)
 immutable
 security definer
 language sql
