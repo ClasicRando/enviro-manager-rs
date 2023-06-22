@@ -15,7 +15,7 @@ reqwest = { version = "0.11.11", features = ["stream"] }
 thiserror = "1.0.38"
 indoc = "2"
 lettre = { version = "0.10.1", features = ["tokio1", "tokio1-native-tls"] }
-actix-web = { version = "4.3.1" }
+actix-web = { version = "4.3.1", features = ["cookie"] }
 actix-web-httpauth = "0.8.0"
 actix-cors = { version = "0.6.4" }
 mime = "0.3.17"

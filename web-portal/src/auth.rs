@@ -6,7 +6,11 @@ use uuid::Uuid;
 const SESSION_KEY: &str = "em_uid";
 
 async fn get_session(cx: Scope) -> Result<Session, ServerFnError> {
-    extract(cx, |session: Session| async move { session }).await
+    extract(cx, |session: Session| async move {
+        log::info!("Session {:?}", session.entries());
+        session
+    })
+    .await
 }
 
 pub async fn get_uid(cx: Scope) -> Result<Uuid, ServerFnError> {

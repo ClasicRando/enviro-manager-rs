@@ -9,7 +9,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 actix-files = { version = "0.6", optional = true }
 actix-web = { version = "4", optional = true, features = ["macros"] }
-actix-session = { version = "0.7.2", optional = true, features = ["redis-actor-session"] }
+actix-session = { version = "0.7.2", optional = true, features = ["redis-rs-session"] }
 console_error_panic_hook = "0.1"
 cfg-if = "1"
 leptos = { version = "0.3", default-features = false, features = [
@@ -25,6 +25,8 @@ once_cell = { workspace = true, optional = true }
 uuid = { workspace = true }
 common = { path = "../common", optional = true, features = ["full"] }
 users = { path = "../users", optional = true }
+log = { workspace = true, optional = true }
+log4rs = { workspace = true, optional = true }
 wasm-bindgen = "=0.2.87"
 
 [features]
@@ -41,6 +43,8 @@ ssr = [
   "dep:rmp-serde",
   "dep:once_cell",
   "dep:users",
+  "dep:log4rs",
+  "dep:log",
   "leptos/ssr",
   "leptos_meta/ssr",
   "leptos_router/ssr",

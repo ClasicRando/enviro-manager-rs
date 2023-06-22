@@ -2,7 +2,7 @@
 #[actix_web::main]
 async fn main() -> common::error::EmResult<()> {
     use actix_files::Files;
-    use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
+    use actix_session::{storage::RedisSessionStore, SessionMiddleware};
     use actix_web::{cookie::Key, *};
     use leptos::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
@@ -11,26 +11,36 @@ async fn main() -> common::error::EmResult<()> {
         app::*,
     };
 
-    _ = LoginUser::register();
-    _ = GetUser::register();
+    log4rs::init_file("web-portal/web_portal_log.yml", Default::default()).unwrap();
 
     let conf = get_configuration(None).await.unwrap();
     let addr = conf.leptos_options.site_addr;
     // Generate the list of routes in your Leptos App
     let routes = generate_route_list(|cx| view! { cx, <App/> });
 
+    _ = LoginUser::register();
+    _ = GetUser::register();
+
     let secret_key = Key::generate();
     let redis_connection_string = std::env::var("REDIS_CONNECTION")?;
+    let store = RedisSessionStore::new(&redis_connection_string)
+        .await
+        .unwrap();
 
     HttpServer::new(move || {
         let leptos_options = &conf.leptos_options;
         let site_root = &leptos_options.site_root;
 
         App::new()
-            .wrap(SessionMiddleware::new(
-                RedisActorSessionStore::new(&redis_connection_string),
-                secret_key.clone(),
-            ))
+            .wrap(middleware::Logger::default())
+            .wrap(
+                SessionMiddleware::builder(store.clone(), secret_key.clone())
+                    .cookie_http_only(true)
+                    .cookie_path("/".to_owned())
+                    .cookie_same_site(cookie::SameSite::Strict)
+                    .build(),
+            )
+            .wrap(middleware::Compress::default())
             .route("/api/{tail:.*}", leptos_actix::handle_server_fns())
             .leptos_routes(
                 leptos_options.to_owned(),
@@ -38,7 +48,6 @@ async fn main() -> common::error::EmResult<()> {
                 |cx| view! { cx, <App/> },
             )
             .service(Files::new("/", site_root))
-        //.wrap(middleware::Compress::default())
     })
     .bind(&addr)?
     .run()

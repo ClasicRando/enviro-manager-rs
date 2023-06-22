@@ -4,15 +4,14 @@ use leptos_router::*;
 use crate::api::user::LoginUser;
 
 #[component]
-pub fn Login(cx: Scope) -> impl IntoView {
-    let (login_error, set_login_error) = create_signal(cx, None::<String>);
-    let (wait_for_response, set_wait_for_response) = create_signal(cx, false);
-    let login = create_server_action::<LoginUser>(cx);
-    let value = login.value();
-    let disabled = Signal::derive(cx, move || wait_for_response.get());
+pub fn Login(cx: Scope, action: Action<LoginUser, Result<(), ServerFnError>>) -> impl IntoView {
+    let disabled = action.pending();
     view! { cx,
-        <h3>"Login to EnviroManager"</h3>
-        <ActionForm action=login>
+        <ActionForm
+            action=action
+            class="login-form mx-auto"
+        >
+            <h3>"Login to EnviroManager"</h3>
             <div class="form-group">
             <label for="username">"Username"</label>
             <input
@@ -33,13 +32,13 @@ pub fn Login(cx: Scope) -> impl IntoView {
                 required
             />
             </div>
-            {move || {
-                login_error
-                    .get()
-                    .map(|err| {
-                        view! { cx, <p style="color:red;">{err}</p> }
-                    })
-            }}
+            // {move || {
+            //     login_error
+            //         .get()
+            //         .map(|err| {
+            //             view! { cx, <p style="color:red;">{err}</p> }
+            //         })
+            // }}
             <input
                 class="btn btn-primary"
                 value="Login"

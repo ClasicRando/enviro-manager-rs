@@ -2,9 +2,10 @@ use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 
-#[cfg(feature = "ssr")]
-use crate::api::user::{get_user, LoginUser};
-use crate::pages::{home::*, login::Login};
+use crate::{
+    api::user::{get_user, LoginUser},
+    pages::{home::*, login::Login},
+};
 
 #[component]
 pub fn App(cx: Scope) -> impl IntoView {
@@ -22,7 +23,7 @@ pub fn App(cx: Scope) -> impl IntoView {
         <Meta name="theme-color" content="#000000"/>
         // injects a stylesheet into the document <head>
         // id=leptos means cargo-leptos will hot-reload this stylesheet
-        <Stylesheet id="leptos" href="/pkg/leptos_start.css"/>
+        <Stylesheet id="leptos" href="/pkg/web_portal.css"/>
 
         // sets the document title
         <Title text="EnviroManager"/>
@@ -41,11 +42,12 @@ pub fn App(cx: Scope) -> impl IntoView {
                 >
                 {move || {
                     user.read(cx).map(|user| match user {
-                        Err(e) => view! {cx,
-                            <A href="/login">"Login"</A>", "
-                            <span>{format!("Login error: {}", e)}</span>
-                        }.into_view(cx),
-                        Ok(user) => view! {cx,
+                        Err(e) => {
+                            log::error!("{}", e);
+                            view! { cx, }.into_view(cx)
+                        }
+                        Ok(None) => view! { cx, <span>"Not logged int"</span> }.into_view(cx),
+                        Ok(Some(user)) => view! {cx,
                             <span>{format!("Logged in as: {}", user.full_name())}</span>
                         }.into_view(cx)
                     })
@@ -55,7 +57,7 @@ pub fn App(cx: Scope) -> impl IntoView {
             <main>
                 <Routes>
                     <Route path="" view=|cx| view! { cx, <HomePage/> }/>
-                    <Route path="login" view=|cx| view! { cx, <Login/> }/>
+                    <Route path="login" view=move |cx| view! { cx, <Login action=login/> }/>
                 </Routes>
             </main>
         </Router>

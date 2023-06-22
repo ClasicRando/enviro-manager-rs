@@ -1,5 +1,6 @@
 use common::api::ApiResponseBody;
 use leptos::*;
+// use leptos_actix::redirect;
 use reqwest::Method;
 use users::{data::user::User, service::users::ValidateUserRequest};
 
@@ -8,7 +9,7 @@ use crate::{
     auth::{get_uid, set_session},
 };
 
-#[server(LoginUser, "/api/login")]
+#[server(LoginUser, "/api")]
 pub async fn login_user(
     cx: Scope,
     username: String,
@@ -27,9 +28,7 @@ pub async fn login_user(
         ApiResponseBody::Message(message) => {
             return api::utils::server_fn_error!("Expected data, got message. {}", message)
         }
-        ApiResponseBody::Failure(message) => {
-            return api::utils::server_fn_error!("Server failure. {}", message)
-        }
+        ApiResponseBody::Failure(_) => return Ok(()),
         ApiResponseBody::Error(message) => {
             return api::utils::server_fn_error!("Server error. {}", message)
         }
@@ -40,9 +39,19 @@ pub async fn login_user(
     Ok(())
 }
 
-#[server(GetUser)]
-pub async fn get_user(cx: Scope) -> Result<User, ServerFnError> {
-    let uid = get_uid(cx).await?;
+#[server(GetUser, "/api")]
+pub async fn get_user(cx: Scope) -> Result<Option<User>, ServerFnError> {
+    let uid = match get_uid(cx).await {
+        Ok(inner) => inner,
+        Err(error) => {
+            if let ServerFnError::Request(_) = error {
+                log::warn!("User not authenticated");
+            } else {
+                log::error!("{}", error);
+            }
+            return Ok(None);
+        }
+    };
     let user_response = api::send_request(
         "http://127.0.0.1:8001/api/v1/user?f=msgpack",
         Method::GET,
@@ -51,12 +60,10 @@ pub async fn get_user(cx: Scope) -> Result<User, ServerFnError> {
     )
     .await?;
     let user = match api::process_response::<User>(user_response).await? {
-        ApiResponseBody::Success(inner) => inner,
-        ApiResponseBody::Message(message) => {
-            return api::utils::server_fn_error!("Expected data, got message. {}", message)
-        }
-        ApiResponseBody::Failure(message) => {
-            return api::utils::server_fn_error!("Server failure. {}", message)
+        ApiResponseBody::Success(inner) => Some(inner),
+        ApiResponseBody::Message(message) | ApiResponseBody::Failure(message) => {
+            warn!("Could not get user details. {}", message);
+            None
         }
         ApiResponseBody::Error(message) => {
             return api::utils::server_fn_error!("Server error. {}", message)
