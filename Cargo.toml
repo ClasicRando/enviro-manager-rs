@@ -1,5 +1,5 @@
 [workspace]
-members = ["workflow-engine", "common", "users"]
+members = ["workflow-engine", "common", "users", "web-portal"]
 
 [workspace.dependencies]
 sqlx = { version = "0.6.2", features = ["postgres", "runtime-tokio-rustls", "json", "macros", "chrono", "ipnetwork", "uuid"] }
