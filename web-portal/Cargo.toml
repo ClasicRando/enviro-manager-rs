@@ -13,8 +13,13 @@ chrono = { workspace = true }
 rmp-serde = { workspace = true }
 actix-web = { workspace = true }
 actix-session = { version = "0.7.2", features = ["redis-actor-session"] }
+actix-files = "0.6.2"
+actix-multipart = { version = "0.6.0", features = ["derive"] }
+reqwest = { workspace = true }
+futures = { workspace = true }
+thiserror = { workspace = true }
 uuid = { workspace = true }
 rstest = { workspace = true }
 askama = "0.12.0"
 common = { path = "../common" }
-actix-files = "0.6.2"
+users = { path = "../users" }

@@ -16,6 +16,13 @@ pub struct User {
 }
 
 impl User {
+    /// Return a reference to the UUID of the user
+    pub const fn uid(&self) -> &Uuid {
+        &self.uid
+    }
+}
+
+impl User {
     /// Checks the current roles of the [User] against the `role` name provided. If any of the roles
     /// match or the user is an admin, return [Ok]. Otherwise, return an [EmError::MissingPrivilege]
     /// error.

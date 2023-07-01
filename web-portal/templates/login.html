@@ -11,6 +11,7 @@
         integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
         integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous" />
+    <script type="module" src="/assets/utils.js"></script>
     <title>EnviroManager</title>
     <style>
         main {
@@ -28,13 +29,17 @@
         h3 {
             width: 400px;
         }
+
+        #errorMessage {
+            color: red;
+        }
     </style>
 </head>
 
 <body>
     <main>
         <h3 class="mx-auto">Login to EnviroManager</h3>
-        <form id="loginForm" class="login-form mx-auto" method="post" action="loginUser">
+        <form id="loginForm" class="login-form mx-auto" method="" action="">
             <div class="form-group">
                 <label for="username">Username</label>
                 <input class="form-control" type="text" id="username" name="username" required />
@@ -47,6 +52,7 @@
             <input class="btn btn-primary" value="Login" type="submit" />
             </from>
     </main>
+    <script type="module" src="/assets/login.js"></script>
 </body>
 
 </html>
