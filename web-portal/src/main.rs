@@ -6,7 +6,10 @@ use actix_web::{
     App, HttpServer,
 };
 use common::error::EmResult;
-use web_portal::{index, login, login_user, logout_user};
+use web_portal::{
+    api::{login_user, logout_user},
+    pages::{index, login},
+};
 
 #[actix_web::main]
 async fn main() -> EmResult<()> {
