@@ -23,16 +23,18 @@ export const fetchApi = async (url, options = undefined) => {
                 redirect: response.url,
             }
         }
+        var text;
         try {
-            const json = await response.json();
+            text = await response.text();
+            const json = JSON.parse(text);
             return {
                 success: true,
-                content: json,
+                content: json || text,
             }
         } catch (error) {
             return {
                 success: false,
-                content: "Found OK response with no json body",
+                content: text || "Empty or invalid response body",
             }
         }
     } catch (e) {
