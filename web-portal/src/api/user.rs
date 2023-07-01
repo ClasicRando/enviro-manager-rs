@@ -35,7 +35,7 @@ pub async fn login_user(
     };
     set_session(cx, *user.uid()).await?;
 
-    leptos_actix::redirect(cx, "/");
+    // leptos_actix::redirect(cx, "index");
     Ok(())
 }
 

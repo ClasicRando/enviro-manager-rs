@@ -2,30 +2,24 @@
 #[actix_web::main]
 async fn main() -> common::error::EmResult<()> {
     use actix_files::Files;
-    use actix_session::{storage::RedisSessionStore, SessionMiddleware};
+    use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
     use actix_web::{cookie::Key, *};
     use leptos::*;
     use leptos_actix::{generate_route_list, LeptosRoutes};
-    use web_portal::{
-        api::user::{GetUser, LoginUser},
-        app::*,
-    };
+    use web_portal::app::*;
 
-    log4rs::init_file("web-portal/web_portal_log.yml", Default::default()).unwrap();
+    if let Err(error) = log4rs::init_file("web-portal/web_portal_log.yml", Default::default()) {
+        println!("Could not start logging. {error}");
+        return Ok(());
+    };
 
     let conf = get_configuration(None).await.unwrap();
     let addr = conf.leptos_options.site_addr;
     // Generate the list of routes in your Leptos App
     let routes = generate_route_list(|cx| view! { cx, <App/> });
 
-    _ = LoginUser::register();
-    _ = GetUser::register();
-
     let secret_key = Key::generate();
     let redis_connection_string = std::env::var("REDIS_CONNECTION")?;
-    let store = RedisSessionStore::new(&redis_connection_string)
-        .await
-        .unwrap();
 
     HttpServer::new(move || {
         let leptos_options = &conf.leptos_options;
@@ -34,11 +28,14 @@ async fn main() -> common::error::EmResult<()> {
         App::new()
             .wrap(middleware::Logger::default())
             .wrap(
-                SessionMiddleware::builder(store.clone(), secret_key.clone())
-                    .cookie_http_only(true)
-                    .cookie_path("/".to_owned())
-                    .cookie_same_site(cookie::SameSite::Strict)
-                    .build(),
+                SessionMiddleware::builder(
+                    RedisActorSessionStore::new(&redis_connection_string),
+                    secret_key.clone(),
+                )
+                .cookie_http_only(true)
+                // .cookie_path("/".to_owned())
+                .cookie_same_site(cookie::SameSite::Strict)
+                .build(),
             )
             .wrap(middleware::Compress::default())
             .route("/api/{tail:.*}", leptos_actix::handle_server_fns())

@@ -46,7 +46,7 @@ pub fn App(cx: Scope) -> impl IntoView {
                             log::error!("{}", e);
                             view! { cx, }.into_view(cx)
                         }
-                        Ok(None) => view! { cx, <span>"Not logged int"</span> }.into_view(cx),
+                        Ok(None) => view! { cx, <span>"Not logged in"</span> }.into_view(cx),
                         Ok(Some(user)) => view! {cx,
                             <span>{format!("Logged in as: {}", user.full_name())}</span>
                         }.into_view(cx)
