@@ -3,13 +3,19 @@ use actix_web::{
     cookie::Key,
     middleware::Logger,
     web::{get, post},
-    App, HttpServer,
+    App, HttpResponse, HttpServer,
 };
 use common::error::EmResult;
 use web_portal::{
     api::{login_user, logout_user},
     pages::{index, login},
 };
+
+async fn redirect_home() -> HttpResponse {
+    HttpResponse::Found()
+        .insert_header(("location", "/"))
+        .finish()
+}
 
 #[actix_web::main]
 async fn main() -> EmResult<()> {
@@ -25,6 +31,7 @@ async fn main() -> EmResult<()> {
             ))
             .service(actix_files::Files::new("/assets", "web-portal/assets").show_files_listing())
             .route("/", get().to(index))
+            .route("/index", get().to(redirect_home))
             .route("/login", get().to(login))
             .route("/logout", get().to(logout_user))
             .route("/api/login", post().to(login_user))
