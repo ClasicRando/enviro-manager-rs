@@ -20,42 +20,46 @@ mod utils {
             Err(ServerFnError::Generic(format!($f, $($item)+)))
         };
     }
+
+    macro_rules! internal_server_error {
+        ($error:ident) => {
+            HttpResponse::InternalServerError().body(format!("{}", $error))
+        };
+        ($t:literal) => {
+            HttpResponse::InternalServerError().body($t)
+        };
+        () => {
+            HttpResponse::InternalServerError()
+                .body("Error within the server that cannot be recovered. Contact administrator")
+        };
+    }
+
+    macro_rules! redirect {
+        ($location:literal) => {
+            HttpResponse::Found()
+                .insert_header(("location", $location))
+                .finish()
+        };
+    }
+
+    macro_rules! html_response {
+        ($html:ident) => {
+            HttpResponse::Ok()
+                .content_type(ContentType::html())
+                .body($html)
+        };
+    }
+
+    macro_rules! text {
+        ($text:literal) => {
+            HttpResponse::Ok().body($text)
+        };
+    }
+    pub(crate) use html_response;
+    pub(crate) use internal_server_error;
+    pub(crate) use redirect;
     pub(crate) use server_fn_error;
-}
-
-macro_rules! internal_server_error {
-    ($error:ident) => {
-        HttpResponse::InternalServerError().body(format!("{}", $error))
-    };
-    ($t:literal) => {
-        HttpResponse::InternalServerError().body($t)
-    };
-    () => {
-        HttpResponse::InternalServerError()
-            .body("Error within the server that cannot be recovered. Contact administrator")
-    };
-}
-
-macro_rules! redirect {
-    ($location:literal) => {
-        HttpResponse::Found()
-            .insert_header(("location", $location))
-            .finish()
-    };
-}
-
-macro_rules! html_response {
-    ($html:ident) => {
-        HttpResponse::Ok()
-            .content_type(ContentType::html())
-            .body($html)
-    };
-}
-
-macro_rules! text {
-    ($text:literal) => {
-        HttpResponse::Ok().body($text)
-    };
+    pub(crate) use text;
 }
 
 #[derive(Debug, Error)]
@@ -90,13 +94,13 @@ struct LoginTemplate;
 
 pub async fn login(session: Session) -> HttpResponse {
     if validate_session(session).is_some() {
-        return redirect!("/");
+        return utils::redirect!("/");
     }
     let html = match LoginTemplate.render() {
         Ok(inner) => inner,
-        Err(error) => return internal_server_error!(error),
+        Err(error) => return utils::internal_server_error!(error),
     };
-    html_response!(html)
+    utils::html_response!(html)
 }
 
 #[derive(Template)]
@@ -105,13 +109,13 @@ struct IndexTemplate;
 
 pub async fn index(session: Session) -> HttpResponse {
     let Some(_) = validate_session(session) else {
-        return redirect!("/login");
+        return utils::redirect!("/login");
     };
     let html = match IndexTemplate.render() {
         Ok(inner) => inner,
-        Err(error) => return internal_server_error!(error),
+        Err(error) => return utils::internal_server_error!(error),
     };
-    html_response!(html)
+    utils::html_response!(html)
 }
 
 async fn send_request<U, D, T>(
@@ -180,7 +184,7 @@ pub async fn logout_user(session: Option<Session>) -> HttpResponse {
     if let Some(session) = session {
         session.clear()
     }
-    redirect!("/login")
+    utils::redirect!("/login")
 }
 
 pub async fn login_user(
@@ -189,17 +193,17 @@ pub async fn login_user(
 ) -> HttpResponse {
     let user = match login_user_api(credentials.0.into()).await {
         Ok(Some(inner)) => inner,
-        Ok(None) => return text!("User validation failed"),
+        Ok(None) => return utils::text!("User validation failed"),
         Err(error) => {
             log::error!("{error}");
-            return internal_server_error!(INTERNAL_SERVICE_ERROR);
+            return utils::internal_server_error!(INTERNAL_SERVICE_ERROR);
         }
     };
     if let Err(error) = session.insert(SESSION_KEY, *user.uid()) {
         log::error!("{error}");
-        return internal_server_error!("Error trying to create a new session for the user");
+        return utils::internal_server_error!("Error trying to create a new session for the user");
     }
-    redirect!("/")
+    utils::redirect!("/")
 }
 
 async fn login_user_api(credentials: Credentials) -> Result<Option<User>, ServerFnError> {
