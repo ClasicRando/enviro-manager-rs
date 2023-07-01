@@ -7,10 +7,9 @@ use common::api::ApiResponseBody;
 use reqwest::{Client, IntoUrl, Method, Response};
 use serde::{Deserialize, Serialize};
 use users::data::user::User;
+use uuid::Uuid;
 
-use crate::{utils, ServerFnError, SESSION_KEY};
-
-const INTERNAL_SERVICE_ERROR: &str = "Error contacting internal service";
+use crate::{utils, ServerFnError, INTERNAL_SERVICE_ERROR, SESSION_KEY};
 
 async fn send_request<U, D, T>(
     url: U,
@@ -115,8 +114,30 @@ async fn login_user_api(credentials: Credentials) -> Result<Option<User>, Server
         }
         ApiResponseBody::Failure(_) => return Ok(None),
         ApiResponseBody::Error(message) => {
-            return utils::server_fn_error!("Server error. {}", message)
+            log::error!("{message}");
+            return utils::server_fn_error!(INTERNAL_SERVICE_ERROR);
         }
     };
     Ok(Some(user))
+}
+
+pub async fn get_user(uid: Uuid) -> Result<User, ServerFnError> {
+    let user_response = send_request(
+        "http://127.0.0.1:8001/api/v1/user?f=msgpack",
+        Method::GET,
+        Some(uid),
+        None::<()>,
+    )
+    .await?;
+    let user = match process_response::<User>(user_response).await? {
+        ApiResponseBody::Success(inner) => inner,
+        ApiResponseBody::Message(message) => {
+            return utils::server_fn_error!("Expected data, got message. {}", message)
+        }
+        ApiResponseBody::Error(message) | ApiResponseBody::Failure(message) => {
+            log::error!("{message}");
+            return utils::server_fn_error!(INTERNAL_SERVICE_ERROR);
+        }
+    };
+    Ok(user)
 }

@@ -7,11 +7,15 @@ use thiserror::Error;
 use uuid::Uuid;
 
 pub const SESSION_KEY: &str = "em_uid";
+pub const INTERNAL_SERVICE_ERROR: &str = "Error contacting internal service";
 
-mod utils {
+pub mod utils {
     macro_rules! server_fn_error {
         ($f:literal, $($item:ident)+) => {
             Err(ServerFnError::Generic(format!($f, $($item)+)))
+        };
+        ($item:ident) => {
+            Err(ServerFnError::Generic($item.to_owned()))
         };
     }
 
@@ -36,20 +40,11 @@ mod utils {
         };
     }
 
-    macro_rules! html_response {
-        ($html:ident) => {
-            HttpResponse::Ok()
-                .content_type(ContentType::html())
-                .body($html)
-        };
-    }
-
     macro_rules! text {
         ($text:literal) => {
             HttpResponse::Ok().body($text)
         };
     }
-    pub(crate) use html_response;
     pub(crate) use internal_server_error;
     pub(crate) use redirect;
     pub(crate) use server_fn_error;
