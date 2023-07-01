@@ -20,6 +20,11 @@ impl User {
     pub const fn uid(&self) -> &Uuid {
         &self.uid
     }
+
+    /// Return the user's full name as a string slice
+    pub fn full_name(&self) -> &str {
+        &self.full_name
+    }
 }
 
 impl User {
