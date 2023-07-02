@@ -7,11 +7,18 @@ use crate::{api::get_user, utils, validate_session};
 
 #[derive(Template)]
 #[template(path = "login.html")]
-struct LoginTemplate;
+struct LoginTemplate {
+    title: &'static str,
+    user_name: &'static str,
+}
 
 impl LoginTemplate {
     fn to_response() -> HttpResponse {
-        Self {}.to_response()
+        Self {
+            title: "Login",
+            user_name: "",
+        }
+        .to_response()
     }
 }
 
