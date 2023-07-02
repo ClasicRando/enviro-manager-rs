@@ -2,7 +2,6 @@
 export const fetchApi = async (url, options = undefined) => {
     try {
         const response = await fetch(url, options);
-        console.log(response);
         if (!response.ok) {
             try {
                 const text = await response.text();

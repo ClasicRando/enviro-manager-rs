@@ -12,7 +12,6 @@ loginForm.addEventListener("submit", async (e) => {
         body: formData,
         method: "POST",
     });
-    console.log(response);
     if (typeof response.redirect !== "undefined") {
         window.location = response.redirect;
         return;
