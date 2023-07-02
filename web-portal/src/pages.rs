@@ -3,7 +3,7 @@ use actix_web::HttpResponse;
 use askama::Template;
 use askama_actix::TemplateToResponse;
 
-use crate::{api::get_user, utils, validate_session};
+use crate::{api::get_user, utils, validate_session, ServerFnError};
 
 #[derive(Template)]
 #[template(path = "login.html")]
@@ -23,7 +23,7 @@ impl LoginTemplate {
 }
 
 pub async fn login(session: Session) -> HttpResponse {
-    if validate_session(session).is_some() {
+    if validate_session(session).is_ok() {
         return utils::redirect!("/");
     }
     LoginTemplate::to_response()
@@ -38,7 +38,7 @@ struct IndexTemplate<'n> {
 
 impl<'n> IndexTemplate<'n> {
     fn new(user_name: &'n str) -> Self {
-        IndexTemplate {
+        Self {
             title: "Home",
             user_name,
         }
@@ -46,10 +46,14 @@ impl<'n> IndexTemplate<'n> {
 }
 
 pub async fn index(session: Session) -> HttpResponse {
-    let Some(user) = validate_session(session) else {
-        return utils::redirect!("/login");
+    let user = match get_user(session).await {
+        Ok(inner) => inner,
+        Err(ServerFnError::InvalidUser) => return utils::redirect_login!(),
+        Err(error) => return error.to_response(),
     };
-    let user = match get_user(user).await {
+    IndexTemplate::new(user.full_name()).to_response()
+}
+
         Ok(inner) => inner,
         Err(error) => {
             log::error!("{error}");

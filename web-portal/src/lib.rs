@@ -2,6 +2,7 @@ pub mod api;
 pub mod pages;
 
 use actix_session::Session;
+use actix_web::HttpResponse;
 use reqwest::StatusCode;
 use thiserror::Error;
 use uuid::Uuid;
@@ -15,7 +16,15 @@ pub mod utils {
             Err(ServerFnError::Generic(format!($f, $($item)+)))
         };
         ($item:ident) => {
-            Err(ServerFnError::Generic($item.to_owned()))
+            Err(ServerFnError::Generic($item))
+        };
+    }
+    macro_rules! server_fn_static_error {
+        ($item:ident) => {
+            Err(ServerFnError::StaticGeneric($item))
+        };
+        ($item:literal) => {
+            Err(ServerFnError::StaticGeneric($item))
         };
     }
 
@@ -40,15 +49,29 @@ pub mod utils {
         };
     }
 
-    macro_rules! text {
-        ($text:literal) => {
-            HttpResponse::Ok().body($text)
+    #[macro_export]
+    macro_rules! redirect_home {
+        () => {
+            HttpResponse::Found()
+                .insert_header(("location", "/"))
+                .finish()
         };
     }
+
+    macro_rules! redirect_login {
+        () => {
+            HttpResponse::Found()
+                .insert_header(("location", "/login"))
+                .finish()
+        };
+    }
+
     pub(crate) use internal_server_error;
     pub(crate) use redirect;
+    pub use redirect_home;
+    pub(crate) use redirect_login;
     pub(crate) use server_fn_error;
-    pub(crate) use text;
+    pub(crate) use server_fn_static_error;
 }
 
 #[derive(Debug, Error)]
@@ -63,16 +86,26 @@ pub enum ServerFnError {
     ApiResponse(StatusCode),
     #[error("Api response body cannot be processed. {0}")]
     ApiResponseBody(reqwest::Error),
+    #[error(transparent)]
+    Session(#[from] actix_session::SessionGetError),
+    #[error("User attempted to access endpoint without a valid session")]
+    InvalidUser,
     #[error("{0}")]
     Generic(String),
+    #[error("{0}")]
+    StaticGeneric(&'static str),
 }
 
-fn validate_session(session: Session) -> Option<Uuid> {
-    match session.get(SESSION_KEY) {
-        Ok(result) => result,
-        Err(error) => {
-            log::error!("{error}");
-            None
-        }
+impl ServerFnError {
+    pub fn to_response(&self) -> HttpResponse {
+        log::error!("{}", self);
+        utils::internal_server_error!()
     }
+}
+
+fn validate_session(session: Session) -> Result<Uuid, ServerFnError> {
+    let Some(user) = session.get(SESSION_KEY)? else {
+        return Err(ServerFnError::InvalidUser)
+    };
+    Ok(user)
 }

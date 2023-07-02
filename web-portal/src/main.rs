@@ -8,13 +8,11 @@ use actix_web::{
 use common::error::EmResult;
 use web_portal::{
     api::{login_user, logout_user},
-    pages::{index, login},
+    pages::{index, login, workflow_engine},
 };
 
 async fn redirect_home() -> HttpResponse {
-    HttpResponse::Found()
-        .insert_header(("location", "/"))
-        .finish()
+    web_portal::utils::redirect_home!()
 }
 
 #[actix_web::main]
@@ -35,6 +33,7 @@ async fn main() -> EmResult<()> {
             .route("/index", get().to(redirect_home))
             .route("/login", get().to(login))
             .route("/logout", get().to(logout_user))
+            .route("/workflow-engine", get().to(workflow_engine))
             .route("/api/login", post().to(login_user))
     })
     .bind(("127.0.0.1", 8080))?

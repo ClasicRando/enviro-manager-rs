@@ -7,9 +7,8 @@ use common::api::ApiResponseBody;
 use reqwest::{Client, IntoUrl, Method, Response};
 use serde::{Deserialize, Serialize};
 use users::data::user::User;
-use uuid::Uuid;
 
-use crate::{utils, ServerFnError, INTERNAL_SERVICE_ERROR, SESSION_KEY};
+use crate::{utils, validate_session, ServerFnError, INTERNAL_SERVICE_ERROR, SESSION_KEY};
 
 async fn send_request<U, D, T>(
     url: U,
@@ -52,6 +51,23 @@ where
     Ok(data)
 }
 
+async fn api_request<U, D, B, T>(
+    url: U,
+    method: Method,
+    auth: Option<D>,
+    body: Option<B>,
+) -> Result<ApiResponseBody<T>, ServerFnError>
+where
+    U: IntoUrl,
+    D: Display,
+    B: Serialize,
+    T: Serialize + for<'de> Deserialize<'de>,
+{
+    let response = send_request(url, method, auth, body).await?;
+    let data = process_response::<T>(response).await?;
+    Ok(data)
+}
+
 #[derive(MultipartForm)]
 pub struct CredentialsFormData {
     username: Text<String>,
@@ -85,12 +101,8 @@ pub async fn login_user(
     credentials: MultipartForm<CredentialsFormData>,
 ) -> HttpResponse {
     let user = match login_user_api(credentials.0.into()).await {
-        Ok(Some(inner)) => inner,
-        Ok(None) => return utils::text!("User validation failed"),
-        Err(error) => {
-            log::error!("{error}");
-            return utils::internal_server_error!(INTERNAL_SERVICE_ERROR);
-        }
+        Ok(inner) => inner,
+        Err(error) => return error.to_response(),
     };
     if let Err(error) = session.insert(SESSION_KEY, *user.uid()) {
         log::error!("{error}");
@@ -99,44 +111,44 @@ pub async fn login_user(
     utils::redirect!("/")
 }
 
-async fn login_user_api(credentials: Credentials) -> Result<Option<User>, ServerFnError> {
-    let login_response = send_request(
+async fn login_user_api(credentials: Credentials) -> Result<User, ServerFnError> {
+    let user_response = api_request(
         "http://127.0.0.1:8001/api/v1/users/validate?f=msgpack",
         Method::POST,
         None::<String>,
         Some(credentials),
     )
     .await?;
-    let user = match process_response::<User>(login_response).await? {
+    let user = match user_response {
         ApiResponseBody::Success(inner) => inner,
         ApiResponseBody::Message(message) => {
-            return utils::server_fn_error!("Expected data, got message. {}", message)
+            log::error!("Expected data, got message. {message}");
+            return utils::server_fn_error!("Expected data, got message. {}", message);
         }
-        ApiResponseBody::Failure(_) => return Ok(None),
-        ApiResponseBody::Error(message) => {
+        ApiResponseBody::Error(message) | ApiResponseBody::Failure(message) => {
             log::error!("{message}");
-            return utils::server_fn_error!(INTERNAL_SERVICE_ERROR);
+            return utils::server_fn_static_error!(INTERNAL_SERVICE_ERROR);
         }
     };
-    Ok(Some(user))
+    Ok(user)
 }
 
-pub async fn get_user(uid: Uuid) -> Result<User, ServerFnError> {
-    let user_response = send_request(
+pub async fn get_user(session: Session) -> Result<User, ServerFnError> {
+    let uid = validate_session(session)?;
+    let user_response = api_request(
         "http://127.0.0.1:8001/api/v1/user?f=msgpack",
         Method::GET,
         Some(uid),
         None::<()>,
     )
     .await?;
-    let user = match process_response::<User>(user_response).await? {
+    let user = match user_response {
         ApiResponseBody::Success(inner) => inner,
         ApiResponseBody::Message(message) => {
             return utils::server_fn_error!("Expected data, got message. {}", message)
         }
         ApiResponseBody::Error(message) | ApiResponseBody::Failure(message) => {
-            log::error!("{message}");
-            return utils::server_fn_error!(INTERNAL_SERVICE_ERROR);
+            return utils::server_fn_error!(message)
         }
     };
     Ok(user)
