@@ -20,7 +20,8 @@ async fn redirect_home() -> HttpResponse {
 #[actix_web::main]
 async fn main() -> EmResult<()> {
     log4rs::init_file("web-portal/web_portal_log.yml", Default::default()).unwrap();
-    let secret_key = Key::generate();
+    let secret = std::env::var("SECRET_KEY")?;
+    let secret_key = Key::from(secret.as_bytes());
     let redis_connection_string = std::env::var("REDIS_CONNECTION")?;
     HttpServer::new(move || {
         App::new()
