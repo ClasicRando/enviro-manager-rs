@@ -54,12 +54,27 @@ pub async fn index(session: Session) -> HttpResponse {
     IndexTemplate::new(user.full_name()).to_response()
 }
 
-        Ok(inner) => inner,
-        Err(error) => {
-            log::error!("{error}");
-            return IndexTemplate::new("Test").to_response();
-            // return utils::internal_server_error!();
+#[derive(Template)]
+#[template(path = "workflow-engine.html")]
+struct WorkflowEngineTemplate<'n> {
+    title: &'static str,
+    user_name: &'n str,
+}
+
+impl<'n> WorkflowEngineTemplate<'n> {
+    fn new(user_name: &'n str) -> Self {
+        Self {
+            title: "Workflow Engine",
+            user_name,
         }
+    }
+}
+
+pub async fn workflow_engine(session: Session) -> HttpResponse {
+    let user = match get_user(session).await {
+        Ok(inner) => inner,
+        Err(ServerFnError::InvalidUser) => return utils::redirect_login!(),
+        Err(error) => return error.to_response(),
     };
-    IndexTemplate::new(user.full_name()).to_response()
+    WorkflowEngineTemplate::new(user.full_name()).to_response()
 }
