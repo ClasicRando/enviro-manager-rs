@@ -1,9 +1,10 @@
 create or replace function workflow_run.next_workflow_run(
-    executor_id bigint,
-    out workflow_run_id bigint,
-    out is_valid boolean
+    executor_id bigint
 )
-returns record
+returns table (
+    workflow_run_id bigint,
+    is_valid boolean
+)
 returns null on null input
 security definer
 language sql

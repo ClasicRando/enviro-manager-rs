@@ -1,3 +1,7 @@
+// import {
+//     Grid
+// } from "https://unpkg.com/gridjs?module";
+
 /** @type {(url: RequestInfo | URL, options?: RequestInit | undefined) => Promise<{success: boolean, redirect: string | undefined, content: T | string | undefined}>} */
 export const fetchApi = async (url, options = undefined) => {
     try {
@@ -12,7 +16,7 @@ export const fetchApi = async (url, options = undefined) => {
             } catch (ex) {
                 return {
                     success: false,
-                    content: "Error without a readable body",
+                    content: 'Error without a readable body',
                 }
             }
         }
@@ -33,7 +37,7 @@ export const fetchApi = async (url, options = undefined) => {
         } catch (error) {
             return {
                 success: false,
-                content: text || "Empty or invalid response body",
+                content: text || 'Empty or invalid response body',
             }
         }
     } catch (e) {
@@ -46,7 +50,7 @@ export const fetchApi = async (url, options = undefined) => {
 
 /** @type {(classList: DOMTokenList) => Array<string>} */
 const filterIconClassList = (classList) => {
-    return Array.from(classList.values()).filter(c => c.startsWith("fa-") && c !== "fa-solid")
+    return Array.from(classList.values()).filter(c => c.startsWith('fa-') && c !== 'fa-solid')
 };
 const getStoredTheme = () => localStorage.getItem('theme');
 const setStoredTheme = theme => localStorage.setItem('theme', theme);
@@ -79,7 +83,7 @@ const showActiveTheme = (theme, focus = false) => {
 
     const themeSwitcherText = document.querySelector('#bd-theme-text');
     const activeThemeIcon = document.querySelector('#theme-selector');
-    const btnToActive = document.querySelector(`[data-bs-theme-value="${theme}"]`);
+    const btnToActive = document.querySelector(`[data-bs-theme-value='${theme}']`);
     const classOfActiveBtn = (btnToActive.querySelector('svg') || btnToActive.querySelector('i')).classList;
 
     document.querySelectorAll('[data-bs-theme-value]').forEach(element => {
@@ -122,3 +126,122 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+/** @type {(element: HTMLElement) => void} */
+const clearAllChildren = (element) => {
+    while (element.firstChild) {
+        element.removeChild(element.lastChild);
+    }
+};
+
+/** @type {(dec: number) => string} */
+const dec2hex = (dec) => dec.toString(16).padStart(2, "0");
+
+/** @type {(len: number) => string} */
+const generateId = (len) => {
+    const arr = new Uint8Array((len || 40) / 2);
+    window.crypto.getRandomValues(arr);
+    return Array.from(arr, dec2hex).join('');
+};
+
+class Table {
+    /** @param {HTMLTableElement} element */
+    constructor(element) {
+        /** @type {string} */
+        this.id = generateId(20);
+        /** @type {HTMLTableElement} */
+        this.element = element;
+        this.element.id = this.id;
+        /** @type {string} */
+        this.url = element.getAttribute('data-wp-table');
+        for (const body of element.tBodies) {
+            body.remove();
+        }
+
+        const container = document.createElement('div');
+        container.classList.add('table-responsive-sm');
+        element.parentNode.insertBefore(container, element);
+        container.appendChild(element);
+
+        /** @type {HTMLTableSectionElement} */
+        this.body = element.createTBody();
+        this.body.classList.add('table-group-divider');
+
+        /** @type {string[]} */
+        this.keys = this.dataKeysFromHeader(element.tHead);
+
+        /** @type {HTMLTableRowElement} */
+        this.loadingRow = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = this.keys.length;
+        cell.innerText = 'Loading...';
+        this.loadingRow.appendChild(cell);
+    }
+
+    /** @type {() => Array<string>} */
+    dataKeysFromHeader() {
+        const keys = [];
+        for (const column of this.element.tHead.querySelectorAll('th')) {
+            const key = column.getAttribute('data-wp-table-key') || column.textContent;
+            keys.push(key);
+        }
+        return keys;
+    }
+
+    setLoading() {
+        clearAllChildren(this.body);
+        this.body.appendChild(this.loadingRow);
+    }
+
+    unsetLoading() {
+        this.body.removeChild(this.loadingRow);
+    }
+
+    addRow(data) {
+        const row = document.createElement('tr');
+        for (const key of this.keys) {
+            const cell = document.createElement('td');
+            cell.innerText = data[key] || '';
+            row.appendChild(cell);
+        }
+        this.body.appendChild(row);
+    }
+
+    async RefreshData() {
+        this.setLoading();
+        const response = await fetchApi(this.url);
+        if (!response.success) {
+            console.error(response.content);
+            return;
+        }
+        if (response.redirect) {
+            console.error("Expected data but got a redirect");
+            return;
+        }
+        if (typeof response.content === "string") {
+            console.error("Expected data but got a message", response.content);
+            return;
+        }
+        this.unsetLoading();
+
+        const data = response.content;
+        const items = Array.isArray(data) ? data : [data];
+        items.forEach(item => this.addRow(item));
+    }
+}
+
+/** @type {(element: HTMLTableElement) => Promise<Table>} */
+const buildTable = async (element) => {
+    const table = new Table(element);
+    await table.RefreshData();
+    return table;
+};
+
+window.addEventListener('DOMContentLoaded', async () => {
+    /** @type {Array<Promise<Table>>} */
+    const builders = [];
+    for (const table of document.querySelectorAll('[data-wp-table]')) {
+        builders.push(buildTable(table));
+    };
+    await Promise.allSettled(builders);
+    console.log('Done building tables');
+});

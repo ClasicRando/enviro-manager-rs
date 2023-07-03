@@ -7,6 +7,7 @@ use common::api::ApiResponseBody;
 use reqwest::{Client, IntoUrl, Method, Response};
 use serde::{Deserialize, Serialize};
 use users::data::user::User;
+use workflow_engine::executor::data::Executor;
 
 use crate::{utils, validate_session, ServerFnError, INTERNAL_SERVICE_ERROR, SESSION_KEY};
 
@@ -152,4 +153,35 @@ pub async fn get_user(session: Session) -> Result<User, ServerFnError> {
         }
     };
     Ok(user)
+}
+
+pub async fn active_executors(session: Session) -> HttpResponse {
+    if validate_session(session).is_err() {
+        return utils::redirect_login!();
+    }
+    let user = match get_active_executors().await {
+        Ok(inner) => inner,
+        Err(error) => return error.to_response(),
+    };
+    utils::json!(user)
+}
+
+async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
+    let executors_response = api_request(
+        "http://127.0.0.1:8000/api/v1/executors?f=msgpack",
+        Method::GET,
+        None::<String>,
+        None::<()>,
+    )
+    .await?;
+    let executors = match executors_response {
+        ApiResponseBody::Success(inner) => inner,
+        ApiResponseBody::Message(message) => {
+            return utils::server_fn_error!("Expected data, got message. {}", message)
+        }
+        ApiResponseBody::Error(message) | ApiResponseBody::Failure(message) => {
+            return utils::server_fn_error!(message)
+        }
+    };
+    Ok(executors)
 }

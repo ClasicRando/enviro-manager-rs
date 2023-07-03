@@ -24,7 +24,7 @@ begin
     join workflow.tasks t on wt.task_id = t.task_id
     where wt.workflow_id = $1;
 
-    return v_workflow_run_id;
+    $2 := v_workflow_run_id;
 end;
 $$;
 

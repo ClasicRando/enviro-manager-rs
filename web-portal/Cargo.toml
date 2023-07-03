@@ -24,3 +24,4 @@ uuid = { workspace = true }
 rstest = { workspace = true }
 common = { path = "../common" }
 users = { path = "../users" }
+workflow-engine = { path = "../workflow-engine" }

@@ -151,11 +151,12 @@ impl ExecutorService for PgExecutorService {
 
     async fn next_workflow_run(&self, executor_id: &ExecutorId) -> EmResult<Option<WorkflowRunId>> {
         let mut transaction = self.pool.begin().await?;
-        let next_workflow: Option<(WorkflowRunId, bool)> =
-            sqlx::query_as("call workflow.next_workflow($1)")
-                .bind(executor_id)
-                .fetch_optional(&mut transaction)
-                .await?;
+        let next_workflow: Option<(WorkflowRunId, bool)> = sqlx::query_as(
+            "select workflow_run_id, is_valid from workflow_run.next_workflow_run($1)",
+        )
+        .bind(executor_id)
+        .fetch_optional(&mut transaction)
+        .await?;
         let Some((workflow_run_id, is_valid)) = next_workflow else {
             transaction.commit().await?;
             return Ok(None)

@@ -66,7 +66,14 @@ pub mod utils {
         };
     }
 
+    macro_rules! json {
+        ($data:ident) => {
+            HttpResponse::Ok().json($data)
+        };
+    }
+
     pub(crate) use internal_server_error;
+    pub(crate) use json;
     pub(crate) use redirect;
     pub use redirect_home;
     pub(crate) use redirect_login;
