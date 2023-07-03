@@ -81,23 +81,23 @@ where
                 .route("/tasks", post().to(workflows_api::create_task::<T>))
                 .route("/tasks", post().to(workflows_api::create_task::<T>))
                 .route(
-                    "/workflow_runs/{workflow_run_id}",
+                    "/workflow-runs/{workflow_run_id}",
                     get().to(workflow_runs_api::workflow_run::<R>),
                 )
                 .route(
-                    "/workflow_runs/init/{workflow_id}",
+                    "/workflow-runs/init/{workflow_id}",
                     get().to(workflow_runs_api::init_workflow_run::<R>),
                 )
                 .route(
-                    "/workflow_runs/cancel/{workflow_run_id}",
+                    "/workflow-runs/cancel/{workflow_run_id}",
                     get().to(workflow_runs_api::cancel_workflow_run::<R>),
                 )
                 .route(
-                    "/workflow_runs/schedule/{workflow_run_id}",
+                    "/workflow-runs/schedule/{workflow_run_id}",
                     get().to(workflow_runs_api::schedule_workflow_run::<R>),
                 )
                 .route(
-                    "/workflow_runs/restart/{workflow_run_id}",
+                    "/workflow-runs/restart/{workflow_run_id}",
                     get().to(workflow_runs_api::restart_workflow_run::<R>),
                 )
                 .route("/workflows", get().to(workflows_api::workflows::<W>))
