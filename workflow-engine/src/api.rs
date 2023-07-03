@@ -85,6 +85,10 @@ where
                     get().to(workflow_runs_api::workflow_run::<R>),
                 )
                 .route(
+                    "/workflow-runs",
+                    get().to(workflow_runs_api::workflow_runs::<R>),
+                )
+                .route(
                     "/workflow-runs/init/{workflow_id}",
                     get().to(workflow_runs_api::init_workflow_run::<R>),
                 )

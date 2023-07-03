@@ -180,13 +180,14 @@ impl WorkflowRunsService for PgWorkflowRunsService {
         )
     }
 
-    async fn read_many(&self) -> EmResult<Vec<WorkflowRun>> {
+    async fn read_active(&self) -> EmResult<Vec<WorkflowRun>> {
         let result = sqlx::query_as(
             r#"
             select
                 wr.workflow_run_id, wr.workflow_id, wr.status, wr.executor_id, wr.progress,
                 wr.tasks
-            from workflow_run.v_workflow_runs wr"#,
+            from workflow_run.v_workflow_runs wr
+            where wr.status != 'Complete'::workflow_run.workflow_run_status"#,
         )
         .fetch_all(&self.pool)
         .await?;
