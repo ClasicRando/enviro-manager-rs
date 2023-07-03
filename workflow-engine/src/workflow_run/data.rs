@@ -8,7 +8,7 @@ use serde_json::Value;
 use crate::workflow::data::TaskId;
 
 /// Status of a workflow run as found in the database as a simple Postgresql enum type
-#[derive(sqlx::Type, PartialEq, Eq, Serialize)]
+#[derive(sqlx::Type, PartialEq, Eq, Serialize, Deserialize)]
 #[sqlx(type_name = "workflow_run_status")]
 pub enum WorkflowRunStatus {
     Waiting,
@@ -21,7 +21,7 @@ pub enum WorkflowRunStatus {
 }
 
 /// Task information for entries under a [WorkflowRun]
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct WorkflowRunTask {
     /// Order of a task within a workflow run
     pub(crate) task_order: i32,
@@ -48,7 +48,7 @@ pub struct WorkflowRunTask {
 }
 
 /// Workflow run data as fetched from `workflow.v_workflow_runs`
-#[derive(sqlx::FromRow, Serialize)]
+#[derive(sqlx::FromRow, Serialize, Deserialize)]
 pub struct WorkflowRun {
     /// ID of the workflow run
     pub(crate) workflow_run_id: WorkflowRunId,
