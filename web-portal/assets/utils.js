@@ -1,8 +1,8 @@
 // import {
 //     Grid
-// } from "https://unpkg.com/gridjs?module";
+// } from 'https://unpkg.com/gridjs?module';
 
-/** @type {(url: RequestInfo | URL, options?: RequestInit | undefined) => Promise<{success: boolean, redirect: string | undefined, content: T | string | undefined}>} */
+/** @type {(url: RequestInfo | URL, options?: RequestInit | undefined) => Promise<{success: boolean, content: T | null, message: string | null}>} */
 export const fetchApi = async (url, options = undefined) => {
     try {
         const response = await fetch(url, options);
@@ -11,39 +11,52 @@ export const fetchApi = async (url, options = undefined) => {
                 const text = await response.text();
                 return {
                     success: false,
-                    content: text,
+                    content: null,
+                    message: text,
                 }
             } catch (ex) {
                 return {
                     success: false,
-                    content: 'Error without a readable body',
+                    content: null,
+                    message: 'Error without a readable body',
                 }
-            }
-        }
-        if (response.redirected) {
-            return {
-                success: true,
-                redirect: response.url,
             }
         }
         var text;
         try {
             text = await response.text();
             const json = JSON.parse(text);
-            return {
-                success: true,
-                content: json || text,
+            if (json.type === 'Success') {
+                return {
+                    success: true,
+                    content: json.data,
+                    message: null,
+                }
+            } else if (json.type === 'Message' || json.type === 'Failure' || json.type === 'Error') {
+                return {
+                    success: json.type === 'Message',
+                    content: null,
+                    message: json.data,
+                }
+            } else {
+                return {
+                    success: false,
+                    content: json,
+                    message: 'Unknown response type',
+                }
             }
         } catch (error) {
             return {
                 success: false,
-                content: text || 'Empty or invalid response body',
+                content: null,
+                message: text || 'Empty or invalid response body',
             }
         }
     } catch (e) {
         return {
             success: false,
-            content: e.toString(),
+            content: null,
+            message: e.toString(),
         }
     }
 };
@@ -134,7 +147,7 @@ const clearAllChildren = (element) => {
 };
 
 /** @type {(dec: number) => string} */
-const dec2hex = (dec) => dec.toString(16).padStart(2, "0");
+const dec2hex = (dec) => dec.toString(16).padStart(2, '0');
 
 /** @type {(len: number) => string} */
 const generateId = (len) => {
@@ -192,7 +205,8 @@ class Table {
         this.body.appendChild(this.loadingRow);
     }
 
-    unsetLoading() {
+    /** @type {(message: string | undefined) => void} */
+    unsetLoading(message) {
         this.body.removeChild(this.loadingRow);
     }
 
@@ -210,15 +224,13 @@ class Table {
         this.setLoading();
         const response = await fetchApi(this.url);
         if (!response.success) {
-            console.error(response.content);
+            console.error('Unsuccessful api fetch', response);
+            this.unsetLoading('Unsuccessful api fetch');
             return;
         }
-        if (response.redirect) {
-            console.error("Expected data but got a redirect");
-            return;
-        }
-        if (typeof response.content === "string") {
-            console.error("Expected data but got a message", response.content);
+        if (typeof response.message === 'string') {
+            console.error('Expected data but got a message', response.message);
+            this.unsetLoading('Expected data but got a message');
             return;
         }
         this.unsetLoading();

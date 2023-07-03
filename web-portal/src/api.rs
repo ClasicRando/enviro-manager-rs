@@ -3,13 +3,34 @@ use std::fmt::Display;
 use actix_multipart::form::{text::Text, MultipartForm};
 use actix_session::Session;
 use actix_web::HttpResponse;
-use common::api::ApiResponseBody;
+use common::api::{ApiContentFormat, ApiResponse, ApiResponseBody};
 use reqwest::{Client, IntoUrl, Method, Response};
 use serde::{Deserialize, Serialize};
 use users::data::user::User;
-use workflow_engine::executor::data::Executor;
+use workflow_engine::{executor::data::Executor, workflow_run::data::WorkflowRun};
 
 use crate::{utils, validate_session, ServerFnError, INTERNAL_SERVICE_ERROR, SESSION_KEY};
+
+macro_rules! invalid_user_api_response {
+    () => {
+        ApiResponse::failure("User is not validated", ApiContentFormat::Json)
+    };
+}
+
+macro_rules! json_api_success {
+    (()) => {
+        ApiResponse::success((), ApiContentFormat::Json)
+    };
+    ($data:ident) => {
+        ApiResponse::success($data, ApiContentFormat::Json)
+    };
+}
+
+macro_rules! json_api_failure {
+    ($message:literal) => {
+        ApiResponse::failure($message, ApiContentFormat::Json)
+    };
+}
 
 async fn send_request<U, D, T>(
     url: U,
@@ -100,16 +121,16 @@ pub async fn logout_user(session: Option<Session>) -> HttpResponse {
 pub async fn login_user(
     session: Session,
     credentials: MultipartForm<CredentialsFormData>,
-) -> HttpResponse {
+) -> ApiResponse<()> {
     let user = match login_user_api(credentials.0.into()).await {
         Ok(inner) => inner,
-        Err(error) => return error.to_response(),
+        Err(error) => return error.to_api_response(ApiContentFormat::Json),
     };
     if let Err(error) = session.insert(SESSION_KEY, *user.uid()) {
         log::error!("{error}");
-        return utils::internal_server_error!("Error trying to create a new session for the user");
+        return json_api_failure!("Could not insert user session");
     }
-    utils::redirect!("/")
+    json_api_success!(())
 }
 
 async fn login_user_api(credentials: Credentials) -> Result<User, ServerFnError> {
@@ -155,15 +176,15 @@ pub async fn get_user(session: Session) -> Result<User, ServerFnError> {
     Ok(user)
 }
 
-pub async fn active_executors(session: Session) -> HttpResponse {
+pub async fn active_executors(session: Session) -> ApiResponse<Vec<Executor>> {
     if validate_session(session).is_err() {
-        return utils::redirect_login!();
+        return invalid_user_api_response!();
     }
-    let user = match get_active_executors().await {
+    let executors = match get_active_executors().await {
         Ok(inner) => inner,
-        Err(error) => return error.to_response(),
+        Err(error) => return error.to_api_response(ApiContentFormat::Json),
     };
-    utils::json!(user)
+    json_api_success!(executors)
 }
 
 async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
@@ -175,6 +196,37 @@ async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
     )
     .await?;
     let executors = match executors_response {
+        ApiResponseBody::Success(inner) => inner,
+        ApiResponseBody::Message(message) => {
+            return utils::server_fn_error!("Expected data, got message. {}", message)
+        }
+        ApiResponseBody::Error(message) | ApiResponseBody::Failure(message) => {
+            return utils::server_fn_error!(message)
+        }
+    };
+    Ok(executors)
+}
+
+pub async fn active_workflow_runs(session: Session) -> ApiResponse<Vec<WorkflowRun>> {
+    if validate_session(session).is_err() {
+        return invalid_user_api_response!();
+    }
+    let workflow_runs = match get_active_workflow_runs().await {
+        Ok(inner) => inner,
+        Err(error) => return error.to_api_response(ApiContentFormat::Json),
+    };
+    json_api_success!(workflow_runs)
+}
+
+async fn get_active_workflow_runs() -> Result<Vec<WorkflowRun>, ServerFnError> {
+    let workflow_runs_response = api_request(
+        "http://127.0.0.1:8000/api/v1/workflow-runs?f=msgpack",
+        Method::GET,
+        None::<String>,
+        None::<()>,
+    )
+    .await?;
+    let executors = match workflow_runs_response {
         ApiResponseBody::Success(inner) => inner,
         ApiResponseBody::Message(message) => {
             return utils::server_fn_error!("Expected data, got message. {}", message)

@@ -1,20 +1,21 @@
-import { fetchApi } from "/assets/utils.js"
+import { fetchApi } from '/assets/utils.js'
 
 /** @type {HTMLFormElement} */
-const loginForm = document.getElementById("loginForm");
+const loginForm = document.getElementById('loginForm');
 /** @type {HTMLParagraphElement} */
-const errorMessage = document.getElementById("errorMessage");
+const errorMessage = document.getElementById('errorMessage');
 
-loginForm.addEventListener("submit", async (e) => {
+loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(loginForm);
-    const response = await fetchApi("/api/login", {
+    const response = await fetchApi('/api/login', {
         body: formData,
-        method: "POST",
+        method: 'POST',
     });
-    if (typeof response.redirect !== "undefined") {
-        window.location = response.redirect;
+    console.log(response);
+    if (response.success) {
+        window.location = '/';
         return;
     }
-    errorMessage.innerText = response.content || "";
+    errorMessage.innerText = response.message || '';
 });

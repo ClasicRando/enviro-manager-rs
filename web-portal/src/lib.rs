@@ -3,7 +3,9 @@ pub mod pages;
 
 use actix_session::Session;
 use actix_web::HttpResponse;
+use common::api::{ApiContentFormat, ApiResponse};
 use reqwest::StatusCode;
+use serde::Serialize;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -66,14 +68,7 @@ pub mod utils {
         };
     }
 
-    macro_rules! json {
-        ($data:ident) => {
-            HttpResponse::Ok().json($data)
-        };
-    }
-
     pub(crate) use internal_server_error;
-    pub(crate) use json;
     pub(crate) use redirect;
     pub use redirect_home;
     pub(crate) use redirect_login;
@@ -104,6 +99,14 @@ pub enum ServerFnError {
 }
 
 impl ServerFnError {
+    pub fn to_api_response<T>(self, format: ApiContentFormat) -> ApiResponse<T>
+    where
+        T: Serialize,
+    {
+        log::error!("{}", self);
+        ApiResponse::failure("Error during internal API request", format)
+    }
+
     pub fn to_response(&self) -> HttpResponse {
         log::error!("{}", self);
         utils::internal_server_error!()
