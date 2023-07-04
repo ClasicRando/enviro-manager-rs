@@ -208,6 +208,14 @@ class Table {
     /** @type {(message: string | undefined) => void} */
     unsetLoading(message) {
         this.body.removeChild(this.loadingRow);
+        if (typeof message === "string") {
+            const messageRow = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = this.keys.length;
+            cell.innerText = message;
+            messageRow.appendChild(cell);
+            this.body.appendChild(messageRow);
+        }
     }
 
     addRow(data) {
