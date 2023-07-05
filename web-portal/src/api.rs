@@ -17,11 +17,28 @@ pub struct ApiTableColumn {
     title: &'static str,
 }
 
-macro_rules! table_column {
-    ($key:literal, $title:literal) => {
-        ApiTableColumn {
-            key: $key,
-            title: $title,
+macro_rules! columns {
+    ($({$key:literal, $title:literal}),+) => {
+        vec![
+            $(ApiTableColumn {
+                key: $key,
+                title: $title,
+            }),+
+        ]
+    };
+}
+
+#[derive(Serialize)]
+pub struct ApiDetailsTable {
+    key: &'static str,
+    columns: Vec<ApiTableColumn>,
+}
+
+macro_rules! details_table {
+    ($detail:literal, $({$key:literal, $title:literal}),+) => {
+        ApiDetailsTable {
+            key: $detail,
+            columns: columns![$({$key, $title}),+],
         }
     };
 }
@@ -34,6 +51,7 @@ where
     caption: String,
     columns: Vec<ApiTableColumn>,
     data: Vec<T>,
+    details: Option<ApiDetailsTable>,
 }
 
 impl<T> ApiTable<T>
@@ -48,6 +66,24 @@ where
             caption: caption.into(),
             columns,
             data,
+            details: None,
+        }
+    }
+
+    fn new_with_details<C>(
+        caption: C,
+        columns: Vec<ApiTableColumn>,
+        data: Vec<T>,
+        details: ApiDetailsTable,
+    ) -> Self
+    where
+        C: Into<String>,
+    {
+        Self {
+            caption: caption.into(),
+            columns,
+            data,
+            details: Some(details),
         }
     }
 }
@@ -227,16 +263,16 @@ pub async fn active_executors(session: Session) -> ApiResponse<ApiTable<Executor
     };
     let table = ApiTable::new(
         "Active Executors",
-        vec![
-            table_column!("executor_id", "ID"),
-            table_column!("pid", "PID"),
-            table_column!("username", "Username"),
-            table_column!("application_name", "Application"),
-            table_column!("client_addr", "Client Address"),
-            table_column!("client_port", "Client Port"),
-            table_column!("exec_start", "Start"),
-            table_column!("session_active", "Active?"),
-            table_column!("workflow_run_count", "Workflow Run Count"),
+        columns![
+            { "executor_id", "ID" },
+            { "pid", "PID" },
+            { "username", "Username" },
+            { "application_name", "Application" },
+            { "client_addr", "Client Address" },
+            { "client_port", "Client Port" },
+            { "exec_start", "Start" },
+            { "session_active", "Active?" },
+            { "workflow_run_count", "Workflow Run Count" }
         ],
         executors,
     );
@@ -271,16 +307,30 @@ pub async fn active_workflow_runs(session: Session) -> ApiResponse<ApiTable<Work
         Ok(inner) => inner,
         Err(error) => return error.to_api_response(ApiContentFormat::Json),
     };
-    let table = ApiTable::new(
+    let table = ApiTable::new_with_details(
         "Active Workflow Runs",
-        vec![
-            table_column!("workflow_run_id", "ID"),
-            table_column!("workflow_id", "Workflow ID"),
-            table_column!("status", "status"),
-            table_column!("executor_id", "Executor ID"),
-            table_column!("progress", "Progress"),
+        columns! [
+            { "workflow_run_id", "ID" },
+            { "workflow_id", "Workflow ID" },
+            { "status", "status" },
+            { "executor_id", "Executor ID" },
+            { "progress", "Progress" }
         ],
         workflow_runs,
+        details_table!(
+            "tasks",
+            { "task_order", "Order" },
+            { "task_id", "Task ID" },
+            { "name", "Name" },
+            { "description", "Description" },
+            { "task_status", "Status" },
+            { "parameters", "Parameters" },
+            { "output", "Output" },
+            { "rules", "Rules" },
+            { "task_start", "Start" },
+            { "task_end", "End" },
+            { "progress", "Progress" }
+        ),
     );
     json_api_success!(table)
 }

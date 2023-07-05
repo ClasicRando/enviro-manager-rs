@@ -233,29 +233,89 @@ class Table {
         }
         this.unsetLoading();
 
-        /** @type {{caption: string, columns: {key: string, title: string}[], data: T[]}} */
+        /** @type {{caption: string, columns: {key: string, title: string}[], data: T[], details: {key: string, columns: {key: string, title: string}[]} | null}} */
         const tableData = response.content;
         const caption = document.createElement('caption');
         caption.textContent = tableData.caption;
         this.element.insertBefore(caption, this.header);
         const headerRow = document.createElement('tr');
         this.header.appendChild(headerRow);
-        tableData.columns.forEach(column => {
-            const cell = document.createElement('td');
-            cell.textContent = column.title;
-            headerRow.appendChild(cell);
-        });
-        tableData.data.forEach(item => {
-            const row = document.createElement('tr');
-            for (const col of tableData.columns) {
-                const cell = document.createElement('td');
-                cell.innerText = item[col.key] || '';
-                row.appendChild(cell);
-            }
-            this.body.appendChild(row);
-        });
+        if (typeof tableData.details === 'string') {
+            addCellWithText(headerRow, 'Details');
+        }
+        tableData.columns.forEach(column => addCellWithText(headerRow, column.title));
+        tableData.data.forEach(item => addRow(this.body, item, tableData.columns, tableData.details));
     }
 }
+
+/**
+ * @param {T[]} data
+ * @param {{key: string, title: string}[]} columns
+ * @param {number} columnCount
+ * @returns {HTMLTableRowElement}
+ */
+const createDetailsRow = (data, columns, columnCount) => {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = columnCount;
+    row.appendChild(cell);
+
+    if (data.length === 0) {
+        return row;
+    }
+
+    const detailsTable = document.createElement('table');
+    cell.appendChild(detailsTable);
+    detailsTable.classList.add('table', 'mb-0');
+
+    const header = detailsTable.createTHead();
+    const headerRow = document.createElement('tr');
+    header.appendChild(headerRow);
+    columns.forEach(column => addCellWithText(headerRow, column.title));
+
+    const body = detailsTable.createTBody();
+    data.forEach(item => addRow(body, item, columns, null));
+
+    return row;
+};
+
+/** @type {(row: HTMLTableSectionElement, text: string | null)} */
+const addCellWithText = (row, text) => {
+    const cell = row.tagName === 'thead' ? document.createElement('th') : document.createElement('td');
+    cell.textContent = text;
+    row.appendChild(cell);
+};
+
+/** @type {(body: HTMLTableSectionElement, item: T, columns: {key: string, title: string}[], details: {key: string, columns: {key: string, title: string}[]} | null) => void})} */
+const addRow = (body, item, columns, details) => {
+    const row = document.createElement('tr');
+    body.appendChild(row);
+    if (details !== null) {
+        const cell = document.createElement('td');
+        const button = document.createElement('button');
+        button.classList.add('btn', 'btn-primary');
+        let opened = false;
+        /** @type {HTMLTableRowElement | null} */
+        let detailsRow = null;
+        button.addEventListener('click', () => {
+            opened = !opened;
+            if (opened) {
+                detailsRow = createDetailsRow(item[details.key], details.columns, columns.length + 1);
+                row.after(detailsRow);
+            } else {
+                detailsRow.remove();
+            }
+        });
+        const symbol = document.createElement('i');
+        symbol.classList.add('fa-solid', 'fa-plus');
+        button.appendChild(symbol);
+        cell.appendChild(button);
+        row.appendChild(cell);
+    }
+    for (const col of columns) {
+        addCellWithText(row, item[col.key] || '');
+    }
+};
 
 /** @type {(element: HTMLTableElement) => Promise<Table>} */
 const buildTable = async (element) => {
@@ -271,5 +331,17 @@ window.addEventListener('DOMContentLoaded', async () => {
         builders.push(buildTable(table));
     };
     await Promise.allSettled(builders);
-    console.log('Done building tables');
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+    const navScroll = document.querySelector('#navbarScroll');
+    for (const navLink of navScroll.querySelectorAll('a.nav-link')) {
+        navLink.classList.remove('active');
+        if (navLink.href.endsWith("/")) {
+            continue;
+        }
+        if (window.location.href.startsWith(navLink.href)) {
+            navLink.classList.add('active');
+        }
+    }
 });
