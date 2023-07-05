@@ -11,6 +11,47 @@ use workflow_engine::{executor::data::Executor, workflow_run::data::WorkflowRun}
 
 use crate::{utils, validate_session, ServerFnError, INTERNAL_SERVICE_ERROR, SESSION_KEY};
 
+#[derive(Serialize)]
+pub struct ApiTableColumn {
+    key: &'static str,
+    title: &'static str,
+}
+
+macro_rules! table_column {
+    ($key:literal, $title:literal) => {
+        ApiTableColumn {
+            key: $key,
+            title: $title,
+        }
+    };
+}
+
+#[derive(Serialize)]
+pub struct ApiTable<T>
+where
+    T: Serialize,
+{
+    caption: String,
+    columns: Vec<ApiTableColumn>,
+    data: Vec<T>,
+}
+
+impl<T> ApiTable<T>
+where
+    T: Serialize,
+{
+    fn new<C>(caption: C, columns: Vec<ApiTableColumn>, data: Vec<T>) -> Self
+    where
+        C: Into<String>,
+    {
+        Self {
+            caption: caption.into(),
+            columns,
+            data,
+        }
+    }
+}
+
 macro_rules! invalid_user_api_response {
     () => {
         ApiResponse::failure("User is not validated", ApiContentFormat::Json)
@@ -176,7 +217,7 @@ pub async fn get_user(session: Session) -> Result<User, ServerFnError> {
     Ok(user)
 }
 
-pub async fn active_executors(session: Session) -> ApiResponse<Vec<Executor>> {
+pub async fn active_executors(session: Session) -> ApiResponse<ApiTable<Executor>> {
     if validate_session(session).is_err() {
         return invalid_user_api_response!();
     }
@@ -184,7 +225,22 @@ pub async fn active_executors(session: Session) -> ApiResponse<Vec<Executor>> {
         Ok(inner) => inner,
         Err(error) => return error.to_api_response(ApiContentFormat::Json),
     };
-    json_api_success!(executors)
+    let table = ApiTable::new(
+        "Active Executors",
+        vec![
+            table_column!("executor_id", "ID"),
+            table_column!("pid", "PID"),
+            table_column!("username", "Username"),
+            table_column!("application_name", "Application"),
+            table_column!("client_addr", "Client Address"),
+            table_column!("client_port", "Client Port"),
+            table_column!("exec_start", "Start"),
+            table_column!("session_active", "Active?"),
+            table_column!("workflow_run_count", "Workflow Run Count"),
+        ],
+        executors,
+    );
+    json_api_success!(table)
 }
 
 async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
@@ -207,7 +263,7 @@ async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
     Ok(executors)
 }
 
-pub async fn active_workflow_runs(session: Session) -> ApiResponse<Vec<WorkflowRun>> {
+pub async fn active_workflow_runs(session: Session) -> ApiResponse<ApiTable<WorkflowRun>> {
     if validate_session(session).is_err() {
         return invalid_user_api_response!();
     }
@@ -215,7 +271,18 @@ pub async fn active_workflow_runs(session: Session) -> ApiResponse<Vec<WorkflowR
         Ok(inner) => inner,
         Err(error) => return error.to_api_response(ApiContentFormat::Json),
     };
-    json_api_success!(workflow_runs)
+    let table = ApiTable::new(
+        "Active Workflow Runs",
+        vec![
+            table_column!("workflow_run_id", "ID"),
+            table_column!("workflow_id", "Workflow ID"),
+            table_column!("status", "status"),
+            table_column!("executor_id", "Executor ID"),
+            table_column!("progress", "Progress"),
+        ],
+        workflow_runs,
+    );
+    json_api_success!(table)
 }
 
 async fn get_active_workflow_runs() -> Result<Vec<WorkflowRun>, ServerFnError> {

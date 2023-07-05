@@ -166,66 +166,56 @@ class Table {
         this.element.id = this.id;
         /** @type {string} */
         this.url = element.getAttribute('data-wp-table');
-        for (const body of element.tBodies) {
-            body.remove();
-        }
+        clearAllChildren(this.element);
 
         const container = document.createElement('div');
         container.classList.add('table-responsive-sm');
         element.parentNode.insertBefore(container, element);
         container.appendChild(element);
 
-        /** @type {HTMLTableSectionElement} */
-        this.body = element.createTBody();
-        this.body.classList.add('table-group-divider');
-
-        /** @type {string[]} */
-        this.keys = this.dataKeysFromHeader(element.tHead);
-
         /** @type {HTMLTableRowElement} */
         this.loadingRow = document.createElement('tr');
         const cell = document.createElement('td');
-        cell.colSpan = this.keys.length;
         cell.innerText = 'Loading...';
         this.loadingRow.appendChild(cell);
+
+        /** @type {HTMLTableSectionElement | null} */
+        this.body = null;
+        /** @type {HTMLTableSectionElement | null} */
+        this.header = null;
     }
 
-    /** @type {() => Array<string>} */
-    dataKeysFromHeader() {
-        const keys = [];
-        for (const column of this.element.tHead.querySelectorAll('th')) {
-            const key = column.getAttribute('data-wp-table-key') || column.textContent;
-            keys.push(key);
-        }
-        return keys;
+    /** 
+     * @returns {void}
+     */
+    resetInnerContents() {
+        clearAllChildren(this.element);
+        this.header = this.element.createTHead();
+        this.body = this.element.createTBody();
+        this.body.classList.add('table-group-divider');
     }
 
+    /** 
+     * @returns {void}
+     */
     setLoading() {
-        clearAllChildren(this.body);
+        this.resetInnerContents();
         this.body.appendChild(this.loadingRow);
     }
 
-    /** @type {(message: string | undefined) => void} */
+    /** 
+     * @param {string | undefined} message
+     * @returns {void}
+     */
     unsetLoading(message) {
         this.body.removeChild(this.loadingRow);
         if (typeof message === "string") {
             const messageRow = document.createElement('tr');
             const cell = document.createElement('td');
-            cell.colSpan = this.keys.length;
             cell.innerText = message;
             messageRow.appendChild(cell);
             this.body.appendChild(messageRow);
         }
-    }
-
-    addRow(data) {
-        const row = document.createElement('tr');
-        for (const key of this.keys) {
-            const cell = document.createElement('td');
-            cell.innerText = data[key] || '';
-            row.appendChild(cell);
-        }
-        this.body.appendChild(row);
     }
 
     async RefreshData() {
@@ -243,9 +233,27 @@ class Table {
         }
         this.unsetLoading();
 
-        const data = response.content;
-        const items = Array.isArray(data) ? data : [data];
-        items.forEach(item => this.addRow(item));
+        /** @type {{caption: string, columns: {key: string, title: string}[], data: T[]}} */
+        const tableData = response.content;
+        const caption = document.createElement('caption');
+        caption.textContent = tableData.caption;
+        this.element.insertBefore(caption, this.header);
+        const headerRow = document.createElement('tr');
+        this.header.appendChild(headerRow);
+        tableData.columns.forEach(column => {
+            const cell = document.createElement('td');
+            cell.textContent = column.title;
+            headerRow.appendChild(cell);
+        });
+        tableData.data.forEach(item => {
+            const row = document.createElement('tr');
+            for (const col of tableData.columns) {
+                const cell = document.createElement('td');
+                cell.innerText = item[col.key] || '';
+                row.appendChild(cell);
+            }
+            this.body.appendChild(row);
+        });
     }
 }
 
