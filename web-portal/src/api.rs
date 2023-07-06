@@ -3,6 +3,8 @@ use std::fmt::Display;
 use actix_multipart::form::{text::Text, MultipartForm};
 use actix_session::Session;
 use actix_web::HttpResponse;
+use askama::Template;
+use askama_actix::TemplateToResponse;
 use common::api::{ApiContentFormat, ApiResponse, ApiResponseBody};
 use reqwest::{Client, IntoUrl, Method, Response};
 use serde::{Deserialize, Serialize};
@@ -10,83 +12,6 @@ use users::data::user::User;
 use workflow_engine::{executor::data::Executor, workflow_run::data::WorkflowRun};
 
 use crate::{utils, validate_session, ServerFnError, INTERNAL_SERVICE_ERROR, SESSION_KEY};
-
-#[derive(Serialize)]
-pub struct ApiTableColumn {
-    key: &'static str,
-    title: &'static str,
-}
-
-macro_rules! columns {
-    ($({$key:literal, $title:literal}),+) => {
-        vec![
-            $(ApiTableColumn {
-                key: $key,
-                title: $title,
-            }),+
-        ]
-    };
-}
-
-#[derive(Serialize)]
-pub struct ApiDetailsTable {
-    key: &'static str,
-    columns: Vec<ApiTableColumn>,
-}
-
-macro_rules! details_table {
-    ($detail:literal, $({$key:literal, $title:literal}),+) => {
-        ApiDetailsTable {
-            key: $detail,
-            columns: columns![$({$key, $title}),+],
-        }
-    };
-}
-
-#[derive(Serialize)]
-pub struct ApiTable<T>
-where
-    T: Serialize,
-{
-    caption: String,
-    columns: Vec<ApiTableColumn>,
-    data: Vec<T>,
-    details: Option<ApiDetailsTable>,
-}
-
-impl<T> ApiTable<T>
-where
-    T: Serialize,
-{
-    fn new<C>(caption: C, columns: Vec<ApiTableColumn>, data: Vec<T>) -> Self
-    where
-        C: Into<String>,
-    {
-        Self {
-            caption: caption.into(),
-            columns,
-            data,
-            details: None,
-        }
-    }
-
-    fn new_with_details<C>(
-        caption: C,
-        columns: Vec<ApiTableColumn>,
-        data: Vec<T>,
-        details: ApiDetailsTable,
-    ) -> Self
-    where
-        C: Into<String>,
-    {
-        Self {
-            caption: caption.into(),
-            columns,
-            data,
-            details: Some(details),
-        }
-    }
-}
 
 macro_rules! invalid_user_api_response {
     () => {
@@ -253,7 +178,7 @@ pub async fn get_user(session: Session) -> Result<User, ServerFnError> {
     Ok(user)
 }
 
-pub async fn active_executors(session: Session) -> ApiResponse<ApiTable<Executor>> {
+pub async fn active_executors(session: Session) -> ApiResponse<Vec<Executor>> {
     if validate_session(session).is_err() {
         return invalid_user_api_response!();
     }
@@ -261,22 +186,24 @@ pub async fn active_executors(session: Session) -> ApiResponse<ApiTable<Executor
         Ok(inner) => inner,
         Err(error) => return error.to_api_response(ApiContentFormat::Json),
     };
-    let table = ApiTable::new(
-        "Active Executors",
-        columns![
-            { "executor_id", "ID" },
-            { "pid", "PID" },
-            { "username", "Username" },
-            { "application_name", "Application" },
-            { "client_addr", "Client Address" },
-            { "client_port", "Client Port" },
-            { "exec_start", "Start" },
-            { "session_active", "Active?" },
-            { "workflow_run_count", "Workflow Run Count" }
-        ],
-        executors,
-    );
-    json_api_success!(table)
+    json_api_success!(executors)
+}
+
+#[derive(Template)]
+#[template(path = "active-executors.html")]
+struct ActiveExecutorsBlock {
+    executors: Vec<Executor>,
+}
+
+pub async fn active_executors_html(session: Session) -> HttpResponse {
+    if validate_session(session).is_err() {
+        return utils::redirect_login!();
+    }
+    let executors = match get_active_executors().await {
+        Ok(inner) => inner,
+        Err(error) => return error.to_response(),
+    };
+    ActiveExecutorsBlock { executors }.to_response()
 }
 
 async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
@@ -299,7 +226,24 @@ async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
     Ok(executors)
 }
 
-pub async fn active_workflow_runs(session: Session) -> ApiResponse<ApiTable<WorkflowRun>> {
+#[derive(Template)]
+#[template(path = "active-workflow-runs.html")]
+struct ActiveWorkflowRunsBlock {
+    workflow_runs: Vec<WorkflowRun>,
+}
+
+pub async fn active_workflow_runs_html(session: Session) -> HttpResponse {
+    if validate_session(session).is_err() {
+        return utils::redirect_login!();
+    }
+    let workflow_runs = match get_active_workflow_runs().await {
+        Ok(inner) => inner,
+        Err(error) => return error.to_response(),
+    };
+    ActiveWorkflowRunsBlock { workflow_runs }.to_response()
+}
+
+pub async fn active_workflow_runs(session: Session) -> ApiResponse<Vec<WorkflowRun>> {
     if validate_session(session).is_err() {
         return invalid_user_api_response!();
     }
@@ -307,32 +251,7 @@ pub async fn active_workflow_runs(session: Session) -> ApiResponse<ApiTable<Work
         Ok(inner) => inner,
         Err(error) => return error.to_api_response(ApiContentFormat::Json),
     };
-    let table = ApiTable::new_with_details(
-        "Active Workflow Runs",
-        columns! [
-            { "workflow_run_id", "ID" },
-            { "workflow_id", "Workflow ID" },
-            { "status", "status" },
-            { "executor_id", "Executor ID" },
-            { "progress", "Progress" }
-        ],
-        workflow_runs,
-        details_table!(
-            "tasks",
-            { "task_order", "Order" },
-            { "task_id", "Task ID" },
-            { "name", "Name" },
-            { "description", "Description" },
-            { "task_status", "Status" },
-            { "parameters", "Parameters" },
-            { "output", "Output" },
-            { "rules", "Rules" },
-            { "task_start", "Start" },
-            { "task_end", "End" },
-            { "progress", "Progress" }
-        ),
-    );
-    json_api_success!(table)
+    json_api_success!(workflow_runs)
 }
 
 async fn get_active_workflow_runs() -> Result<Vec<WorkflowRun>, ServerFnError> {

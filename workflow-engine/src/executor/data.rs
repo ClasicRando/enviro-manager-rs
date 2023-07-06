@@ -50,23 +50,21 @@ where
 /// Executor data type representing a row from `executor.v_executor`
 #[derive(sqlx::FromRow, Serialize, Deserialize)]
 pub struct Executor {
-    executor_id: ExecutorId,
-    pid: i32,
-    username: String,
-    application_name: String,
+    pub executor_id: ExecutorId,
+    pub pid: i32,
+    pub username: String,
+    pub application_name: String,
     #[serde(
         serialize_with = "serialize_ipnetwork",
         deserialize_with = "deserialize_ipnetwork"
     )]
-    client_addr: IpNetwork,
-    client_port: i32,
-    exec_start: NaiveDateTime,
+    pub client_addr: IpNetwork,
+    pub client_port: i32,
+    pub exec_start: NaiveDateTime,
     #[sqlx(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    session_active: Option<bool>,
-    #[sqlx(default, rename = "wr_count")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    workflow_run_count: Option<i64>,
+    pub session_active: bool,
+    #[sqlx(rename = "wr_count")]
+    pub workflow_run_count: i64,
 }
 
 /// Wrapper for an `executor_id` value. Made to ensure data passed as the id of an executor is

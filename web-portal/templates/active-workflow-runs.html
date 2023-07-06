@@ -1,0 +1,109 @@
+<table class="table table-striped caption-top">
+    <caption>Active Workflow Runs</caption>
+    <thead>
+        <tr>
+            <th>Details</th>
+            <th>ID</th>
+            <th>Workflow ID</th>
+            <th>Status</th>
+            <th>Executor ID</th>
+            <th>Progress</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for workflow_run in workflow_runs %}
+        {% let details_id = format!("tasks{}", workflow_run.workflow_run_id) %}
+        <tr>
+            <td>
+                <button class="btn btn-primary"
+                    hx-on="click: toggleDisplay(document.getElementById('{{ details_id }}'))">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </td>
+            <td>{{ workflow_run.workflow_run_id }}</td>
+            <td>{{ workflow_run.workflow_id }}</td>
+            <td>{{ workflow_run.status }}</td>
+            <td>
+                {% match workflow_run.executor_id %}
+                {% when Some with (id) %} {{ id }}
+                {% when None %} -
+                {% endmatch %}
+            </td>
+            <td>
+                {% match workflow_run.progress %}
+                {% when Some with (val) %} {{ val }}
+                {% when None %} -
+                {% endmatch %}
+            </td>
+        </tr>
+        <tr id="{{ details_id }}" class="d-none">
+            <td colspan="6">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Order</th>
+                            <th>Task ID</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Parameters</th>
+                            <th>Output</th>
+                            <th>Rules</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th>Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in workflow_run.tasks %}
+                        <tr>
+                            <td>{{ task.task_order }}</td>
+                            <td>{{ task.task_id }}</td>
+                            <td>{{ task.name }}</td>
+                            <td>{{ task.description }}</td>
+                            <td>{{ task.task_status }}</td>
+                            <td>
+                                {% match task.parameters %}
+                                {% when Some with (parameters) %} {{ parameters }}
+                                {% when None %} -
+                                {% endmatch %}
+                            </td>
+                            <td>
+                                {% match task.output %}
+                                {% when Some with (output) %} {{ output }}
+                                {% when None %} -
+                                {% endmatch %}
+                            </td>
+                            <td>
+                                {% match task.rules %}
+                                {% when Some with (rules) %} {{ format!("{:?}", rules) }}
+                                {% when None %} -
+                                {% endmatch %}
+                            </td>
+                            <td>
+                                {% match task.task_start %}
+                                {% when Some with (start) %} {{ start }}
+                                {% when None %} -
+                                {% endmatch %}
+                            </td>
+                            <td>
+                                {% match task.task_end %}
+                                {% when Some with (end) %} {{ end }}
+                                {% when None %} -
+                                {% endmatch %}
+                            </td>
+                            <td>
+                                {% match task.progress %}
+                                {% when Some with (progress) %} {{ progress }}
+                                {% when None %} -
+                                {% endmatch %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

@@ -1,0 +1,31 @@
+<table class="table table-striped caption-top">
+    <caption>Active Executors</caption>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>PID</th>
+            <th>Username</th>
+            <th>Application</th>
+            <th>Client Address</th>
+            <th>Client Port</th>
+            <th>Start</th>
+            <th>Active?</th>
+            <th>Workflow Run Count</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for executor in executors %}
+        <tr>
+            <td>{{ executor.executor_id }}</td>
+            <td>{{ executor.pid }}</td>
+            <td>{{ executor.username }}</td>
+            <td>{{ executor.application_name }}</td>
+            <td>{{ executor.client_addr }}</td>
+            <td>{{ executor.client_port }}</td>
+            <td>{{ executor.exec_start }}</td>
+            <td>{{ executor.session_active }}</td>
+            <td>{{ executor.workflow_run_count }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
