@@ -1,4 +1,5 @@
 pub mod api;
+pub mod components;
 pub mod pages;
 
 use actix_session::Session;
@@ -43,6 +44,14 @@ pub mod utils {
         };
     }
 
+    macro_rules! html {
+        ($html:ident) => {
+            HttpResponse::Ok()
+                .content_type(actix_web::http::header::ContentType::html())
+                .body($html)
+        };
+    }
+
     macro_rules! redirect {
         ($location:literal) => {
             HttpResponse::Found()
@@ -68,6 +77,7 @@ pub mod utils {
         };
     }
 
+    pub(crate) use html;
     pub(crate) use internal_server_error;
     pub(crate) use redirect;
     pub use redirect_home;

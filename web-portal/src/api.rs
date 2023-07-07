@@ -3,15 +3,15 @@ use std::fmt::Display;
 use actix_multipart::form::{text::Text, MultipartForm};
 use actix_session::Session;
 use actix_web::HttpResponse;
-use askama::Template;
-use askama_actix::TemplateToResponse;
 use common::api::{ApiContentFormat, ApiResponse, ApiResponseBody};
 use reqwest::{Client, IntoUrl, Method, Response};
 use serde::{Deserialize, Serialize};
 use users::data::user::User;
 use workflow_engine::{executor::data::Executor, workflow_run::data::WorkflowRun};
 
-use crate::{utils, validate_session, ServerFnError, INTERNAL_SERVICE_ERROR, SESSION_KEY};
+use crate::{
+    components, utils, validate_session, ServerFnError, INTERNAL_SERVICE_ERROR, SESSION_KEY,
+};
 
 macro_rules! invalid_user_api_response {
     () => {
@@ -189,12 +189,6 @@ pub async fn active_executors(session: Session) -> ApiResponse<Vec<Executor>> {
     json_api_success!(executors)
 }
 
-#[derive(Template)]
-#[template(path = "active-executors.html")]
-struct ActiveExecutorsBlock {
-    executors: Vec<Executor>,
-}
-
 pub async fn active_executors_html(session: Session) -> HttpResponse {
     if validate_session(session).is_err() {
         return utils::redirect_login!();
@@ -203,7 +197,8 @@ pub async fn active_executors_html(session: Session) -> HttpResponse {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
-    ActiveExecutorsBlock { executors }.to_response()
+    let html = components::active_executors(executors).0;
+    utils::html!(html)
 }
 
 async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
@@ -226,12 +221,6 @@ async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
     Ok(executors)
 }
 
-#[derive(Template)]
-#[template(path = "active-workflow-runs.html")]
-struct ActiveWorkflowRunsBlock {
-    workflow_runs: Vec<WorkflowRun>,
-}
-
 pub async fn active_workflow_runs_html(session: Session) -> HttpResponse {
     if validate_session(session).is_err() {
         return utils::redirect_login!();
@@ -240,7 +229,8 @@ pub async fn active_workflow_runs_html(session: Session) -> HttpResponse {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
-    ActiveWorkflowRunsBlock { workflow_runs }.to_response()
+    let html = components::active_workflow_runs(workflow_runs).0;
+    utils::html!(html)
 }
 
 pub async fn active_workflow_runs(session: Session) -> ApiResponse<Vec<WorkflowRun>> {
