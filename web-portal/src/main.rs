@@ -9,7 +9,7 @@ use common::error::EmResult;
 use web_portal::{
     api::{
         active_executors, active_executors_html, active_workflow_runs, active_workflow_runs_html,
-        login_user, logout_user,
+        login_user, login_user_html, logout_user,
     },
     pages::{index, login, workflow_engine},
 };
@@ -38,6 +38,7 @@ async fn main() -> EmResult<()> {
             .route("/logout", get().to(logout_user))
             .route("/workflow-engine", get().to(workflow_engine))
             .route("/api/login", post().to(login_user))
+            .route("/api/html/login", post().to(login_user_html))
             .route("/api/workflow-engine/executors", get().to(active_executors))
             .route(
                 "/api/html/workflow-engine/executors",

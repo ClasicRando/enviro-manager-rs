@@ -59,6 +59,11 @@ pub mod utils {
                 .content_type(actix_web::http::header::ContentType::html())
                 .body($html)
         };
+        ($html:literal) => {
+            HttpResponse::Ok()
+                .content_type(actix_web::http::header::ContentType::html())
+                .body($html)
+        };
     }
 
     macro_rules! redirect {
@@ -78,6 +83,14 @@ pub mod utils {
         };
     }
 
+    macro_rules! redirect_home_htmx {
+        () => {
+            HttpResponse::Found()
+                .insert_header(("HX-Redirect", "/"))
+                .finish()
+        };
+    }
+
     macro_rules! redirect_login {
         () => {
             HttpResponse::Found()
@@ -91,6 +104,7 @@ pub mod utils {
     pub(crate) use internal_server_error;
     pub(crate) use redirect;
     pub use redirect_home;
+    pub(crate) use redirect_home_htmx;
     pub(crate) use redirect_login;
     pub(crate) use server_fn_error;
     pub(crate) use server_fn_static_error;

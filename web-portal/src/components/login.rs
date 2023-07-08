@@ -8,10 +8,10 @@ pub fn login(cx: Scope) -> impl IntoView {
         <BasePage
             title="Index"
             stylesheet_href="/assets/login.css"
-            script_src="/assets/login.js"
         >
             <h3 class="mx-auto">"Login to EnviroManager"</h3>
-            <form id="loginForm" class="login-form mx-auto" method="" action="">
+            <form id="loginForm" class="login-form mx-auto" hx-post="/api/html/login"
+                hx-encoding="multipart/form-data" hx-target="#errorMessage" hx-swap="innerHTML">
                 <div class="form-group">
                     <label for="username">"Username"</label>
                     <input class="form-control" type="text" id="username" name="username" required />
@@ -20,7 +20,7 @@ pub fn login(cx: Scope) -> impl IntoView {
                     <label for="password">"Password"</label>
                     <input class="form-control" type="password" id="password" name="password" required />
                 </div>
-                <p id="errorMessage"></p>
+                <div id="errorMessage"></div>
                 <input class="btn btn-primary" value="Login" type="submit" />
             </form>
         </BasePage>

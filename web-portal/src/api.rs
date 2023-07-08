@@ -137,6 +137,21 @@ pub async fn login_user(
     json_api_success!(())
 }
 
+pub async fn login_user_html(
+    session: Session,
+    credentials: MultipartForm<CredentialsFormData>,
+) -> HttpResponse {
+    let user = match login_user_api(credentials.0.into()).await {
+        Ok(inner) => inner,
+        Err(_) => return utils::html_chunk!("Could not login user"),
+    };
+    if let Err(error) = session.insert(SESSION_KEY, *user.uid()) {
+        log::error!("{error}");
+        return utils::internal_server_error!();
+    }
+    utils::redirect_home_htmx!()
+}
+
 async fn login_user_api(credentials: Credentials) -> Result<User, ServerFnError> {
     let user_response = api_request(
         "http://127.0.0.1:8001/api/v1/users/validate?f=msgpack",
