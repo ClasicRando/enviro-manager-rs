@@ -10,7 +10,7 @@ pub fn login(cx: Scope) -> impl IntoView {
             stylesheet_href="/assets/login.css"
         >
             <h3 class="mx-auto">"Login to EnviroManager"</h3>
-            <form id="loginForm" class="login-form mx-auto" hx-post="/api/html/login"
+            <form id="loginForm" class="login-form mx-auto" hx-post="/api/htmx/login"
                 hx-encoding="multipart/form-data" hx-target="#errorMessage" hx-swap="innerHTML">
                 <div class="form-group">
                     <label for="username">"Username"</label>

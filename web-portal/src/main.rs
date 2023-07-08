@@ -38,10 +38,10 @@ async fn main() -> EmResult<()> {
             .route("/logout", get().to(logout_user))
             .route("/workflow-engine", get().to(workflow_engine))
             .route("/api/login", post().to(login_user))
-            .route("/api/html/login", post().to(login_user_html))
+            .route("/api/htmx/login", post().to(login_user_html))
             .route("/api/workflow-engine/executors", get().to(active_executors))
             .route(
-                "/api/html/workflow-engine/executors",
+                "/api/htmx/workflow-engine/executors",
                 get().to(active_executors_html),
             )
             .route(
@@ -49,7 +49,7 @@ async fn main() -> EmResult<()> {
                 get().to(active_workflow_runs),
             )
             .route(
-                "/api/html/workflow-engine/workflow-runs",
+                "/api/htmx/workflow-engine/workflow-runs",
                 get().to(active_workflow_runs_html),
             )
     })
