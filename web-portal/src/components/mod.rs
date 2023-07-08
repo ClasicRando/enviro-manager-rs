@@ -1,5 +1,3 @@
-mod active_executors;
-mod active_workflow_runs;
 mod base;
 mod index;
 mod login;
@@ -27,10 +25,8 @@ fn option_into_view_default<T: ToString>(val: Option<T>, default: &'static str) 
     default.to_string()
 }
 
-pub use active_executors::ActiveExecutors;
-pub use active_workflow_runs::ActiveWorkflowRuns;
 pub use base::BasePage;
 pub use index::Index;
 pub use login::Login;
 
-pub use self::workflow_engine::WorkflowEngine;
+pub use self::workflow_engine::{ActiveExecutors, ActiveWorkflowRuns, WorkflowEngine};
