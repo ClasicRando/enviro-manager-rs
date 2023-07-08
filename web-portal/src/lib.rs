@@ -45,6 +45,15 @@ pub mod utils {
     }
 
     macro_rules! html {
+        ($html:ident) => {{
+            $html.insert_str(0, "<!DOCTYPE html>");
+            HttpResponse::Ok()
+                .content_type(actix_web::http::header::ContentType::html())
+                .body($html)
+        }};
+    }
+
+    macro_rules! html_chunk {
         ($html:ident) => {
             HttpResponse::Ok()
                 .content_type(actix_web::http::header::ContentType::html())
@@ -78,6 +87,7 @@ pub mod utils {
     }
 
     pub(crate) use html;
+    pub(crate) use html_chunk;
     pub(crate) use internal_server_error;
     pub(crate) use redirect;
     pub use redirect_home;

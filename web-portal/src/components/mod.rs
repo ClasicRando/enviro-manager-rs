@@ -1,5 +1,36 @@
 mod active_executors;
 mod active_workflow_runs;
+mod base;
+mod index;
+mod login;
+mod nav;
+mod workflow_engine;
 
-pub use active_executors::active_executors;
-pub use active_workflow_runs::active_workflow_runs;
+use leptos::IntoView;
+
+fn into_view<T: ToString>(val: T) -> impl IntoView {
+    val.to_string()
+}
+
+fn option_into_view<T: ToString>(val: Option<T>) -> impl IntoView {
+    if let Some(val) = val {
+        return val.to_string();
+    }
+    "-".to_string()
+}
+
+#[allow(unused)]
+fn option_into_view_default<T: ToString>(val: Option<T>, default: &'static str) -> impl IntoView {
+    if let Some(val) = val {
+        return val.to_string();
+    }
+    default.to_string()
+}
+
+pub use active_executors::ActiveExecutors;
+pub use active_workflow_runs::ActiveWorkflowRuns;
+pub use base::BasePage;
+pub use index::Index;
+pub use login::Login;
+
+pub use self::workflow_engine::WorkflowEngine;
