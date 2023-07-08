@@ -21,6 +21,7 @@ futures = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true }
 rstest = { workspace = true }
+strum = { workspace = true }
 common = { path = "../common" }
 users = { path = "../users" }
 workflow-engine = { path = "../workflow-engine" }
