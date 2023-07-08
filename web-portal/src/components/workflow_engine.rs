@@ -219,7 +219,7 @@ pub fn workflow_engine(cx: Scope, username: String) -> impl IntoView {
             title="Index"
             username=username
         >
-            <div id="tabs" hx-get="/api/htmx/workflow-engine/executors" hx-trigger="load"
+            <div id="tabs" hx-get={WorkflowEngineMainPageTabs::Executors.get_url()} hx-trigger="load"
                 hx-target="#tabs" hx-swap="innerHTML"></div>
         </BasePage>
     }
