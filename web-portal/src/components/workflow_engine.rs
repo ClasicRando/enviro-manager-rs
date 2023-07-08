@@ -191,8 +191,9 @@ impl WorkflowEngineMainPageTabs {
         };
         view! { cx,
             <li class="nav-item" role="presentation">
-                <button class=class id=self.id() type="button" role="tab" aria-selected=selected
-                    hx-get=self.get_url() hx-swap="innerHTML">{self.label()}</button>
+                <button class=class id=self.id() type="button" role="tab" aria-selected=selected hx-get=self.get_url()>
+                    {self.label()}
+                </button>
             </li>
         }
     }
