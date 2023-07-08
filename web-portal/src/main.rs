@@ -7,10 +7,7 @@ use actix_web::{
 };
 use common::error::EmResult;
 use web_portal::{
-    api::{
-        active_executors, active_executors_html, active_workflow_runs, active_workflow_runs_html,
-        login_user, login_user_html, logout_user,
-    },
+    api::{active_executors, active_workflow_runs, login_user, logout_user},
     pages::{index, login, workflow_engine},
 };
 
@@ -38,19 +35,10 @@ async fn main() -> EmResult<()> {
             .route("/logout", get().to(logout_user))
             .route("/workflow-engine", get().to(workflow_engine))
             .route("/api/login", post().to(login_user))
-            .route("/api/htmx/login", post().to(login_user_html))
             .route("/api/workflow-engine/executors", get().to(active_executors))
-            .route(
-                "/api/htmx/workflow-engine/executors",
-                get().to(active_executors_html),
-            )
             .route(
                 "/api/workflow-engine/workflow-runs",
                 get().to(active_workflow_runs),
-            )
-            .route(
-                "/api/htmx/workflow-engine/workflow-runs",
-                get().to(active_workflow_runs_html),
             )
     })
     .bind(("127.0.0.1", 8080))?

@@ -177,8 +177,8 @@ impl WorkflowEngineMainPageTabs {
 
     fn get_url(&self) -> &'static str {
         match self {
-            Self::Executors => "/api/htmx/workflow-engine/executors",
-            Self::WorkflowRuns => "/api/htmx/workflow-engine/workflow-runs",
+            Self::Executors => "/api/workflow-engine/executors",
+            Self::WorkflowRuns => "/api/workflow-engine/workflow-runs",
         }
     }
 
