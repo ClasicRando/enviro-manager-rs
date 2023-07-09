@@ -1,8 +1,7 @@
 use std::fmt::Display;
 
-use actix_multipart::form::{text::Text, MultipartForm};
 use actix_session::Session;
-use actix_web::HttpResponse;
+use actix_web::{web::Form, HttpResponse};
 use common::api::ApiResponseBody;
 use leptos::*;
 use reqwest::{Client, IntoUrl, Method, Response};
@@ -73,21 +72,6 @@ where
     Ok(data)
 }
 
-#[derive(MultipartForm)]
-pub struct CredentialsFormData {
-    username: Text<String>,
-    password: Text<String>,
-}
-
-impl From<CredentialsFormData> for Credentials {
-    fn from(val: CredentialsFormData) -> Self {
-        Credentials {
-            username: val.username.0,
-            password: val.password.0,
-        }
-    }
-}
-
 #[derive(Deserialize, Serialize)]
 pub struct Credentials {
     username: String,
@@ -101,11 +85,8 @@ pub async fn logout_user(session: Option<Session>) -> HttpResponse {
     utils::redirect!("/login")
 }
 
-pub async fn login_user(
-    session: Session,
-    credentials: MultipartForm<CredentialsFormData>,
-) -> HttpResponse {
-    let user = match login_user_api(credentials.0.into()).await {
+pub async fn login_user(session: Session, credentials: Form<Credentials>) -> HttpResponse {
+    let user = match login_user_api(credentials.0).await {
         Ok(inner) => inner,
         Err(_) => return utils::html_chunk!("Could not login user"),
     };
