@@ -1,3 +1,5 @@
+#![feature(lazy_cell)]
+
 pub mod api;
 pub mod components;
 pub mod pages;
@@ -149,7 +151,7 @@ impl ServerFnError {
 
 fn validate_session(session: Session) -> Result<Uuid, ServerFnError> {
     let Some(user) = session.get(SESSION_KEY)? else {
-        return Err(ServerFnError::InvalidUser)
+        return Err(ServerFnError::InvalidUser);
     };
     Ok(user)
 }

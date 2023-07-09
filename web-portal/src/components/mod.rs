@@ -2,6 +2,7 @@ mod base;
 mod index;
 mod login;
 mod nav;
+mod table;
 mod workflow_engine;
 
 use leptos::IntoView;

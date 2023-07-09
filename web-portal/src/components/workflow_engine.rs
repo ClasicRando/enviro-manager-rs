@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use leptos::*;
 use strum::{EnumIter, IntoEnumIterator};
 use workflow_engine::{
@@ -5,7 +7,11 @@ use workflow_engine::{
     workflow_run::data::{WorkflowRun, WorkflowRunTask},
 };
 
-use super::{into_view, option_into_view, BasePage};
+use super::{
+    into_view, option_into_view,
+    table::{DataTable, RowWithDetails},
+    BasePage,
+};
 
 #[component]
 fn workflow_run_task(cx: Scope, workflow_run_task: WorkflowRunTask) -> impl IntoView {
@@ -33,79 +39,65 @@ fn workflow_run_task(cx: Scope, workflow_run_task: WorkflowRunTask) -> impl Into
     }
 }
 
+static ACTIVE_WORKFLOW_RUN_TASK_COLUMNS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
+    vec![
+        "Order",
+        "Task ID",
+        "Name",
+        "Description",
+        "Status",
+        "Parameters",
+        "Output",
+        "Rules",
+        "Start",
+        "End",
+        "Progress",
+    ]
+});
+
 #[component]
 fn workflow_run(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
     let details_id = format!("tasks{}", workflow_run.workflow_run_id);
-    let hm_on = format!(
-        "click: toggleDisplay(document.getElementById('{}'))",
-        details_id
-    );
+    let rows = workflow_run
+        .tasks
+        .into_iter()
+        .map(|wrt| view! { cx, <WorkflowRunTask workflow_run_task=wrt/> })
+        .collect_view(cx);
     view! { cx,
-        <tr>
-            <td>
-                <button class="btn btn-primary" hx-on=hm_on>
-                    <i class="fa-solid fa-plus"></i>
-                </button>
-            </td>
+        <RowWithDetails
+            details_id=details_id
+            detail_columns=&ACTIVE_WORKFLOW_RUN_TASK_COLUMNS
+            detail_rows=rows
+        >
             <td>{into_view(workflow_run.workflow_run_id)}</td>
             <td>{into_view(workflow_run.workflow_id)}</td>
             <td>{into_view(workflow_run.status)}</td>
             <td>{option_into_view(workflow_run.executor_id)}</td>
             <td>{option_into_view(workflow_run.progress)}</td>
-        </tr>
-        <tr id=details_id class="d-none">
-            <td colspan="6">
-                <table class="table table-stripped">
-                    <thead>
-                        <tr>
-                            <th>"Order"</th>
-                            <th>"Task ID"</th>
-                            <th>"Name"</th>
-                            <th>"Description"</th>
-                            <th>"Status"</th>
-                            <th>"Parameters"</th>
-                            <th>"Output"</th>
-                            <th>"Rules"</th>
-                            <th>"Start"</th>
-                            <th>"End"</th>
-                            <th>"Progress"</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {workflow_run.tasks.into_iter()
-                            .map(|wrt| view! { cx, <WorkflowRunTask workflow_run_task=wrt/> })
-                            .collect::<Vec<_>>()}
-                    </tbody>
-                </table>
-            </td>
-        </tr>
+        </RowWithDetails>
     }
 }
 
+static ACTIVE_WORKFLOW_RUN_COLUMNS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
+    vec![
+        "Details",
+        "ID",
+        "Workflow ID",
+        "Status",
+        "Executor ID",
+        "Progress",
+    ]
+});
+
 #[component]
 pub fn active_workflow_runs(cx: Scope, workflow_runs: Vec<WorkflowRun>) -> impl IntoView {
+    let rows = workflow_runs
+        .into_iter()
+        .map(|wr| view! { cx, <WorkflowRun workflow_run=wr/> })
+        .collect_view(cx);
     view! { cx,
         <Tabs selected_tab=WorkflowEngineMainPageTabs::WorkflowRuns/>
-        <div class="table-responsive-sm">
-            <table class="table table-stripped caption-top">
-                <caption>"Active Workflow Runs"</caption>
-                <thead>
-                    <tr>
-                        <th>"Details"</th>
-                        <th>"ID"</th>
-                        <th>"Workflow ID"</th>
-                        <th>"Status"</th>
-                        <th>"Executor ID"</th>
-                        <th>"Progress"</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {workflow_runs.into_iter()
-                        .map(|wr| view! { cx, <WorkflowRun workflow_run=wr/> })
-                        .collect::<Vec<_>>()}
-                </tbody>
-            </table>
-        </div>
+        <DataTable caption="Active Workflow Runs" columns=&ACTIVE_WORKFLOW_RUN_COLUMNS rows=rows/>
     }
 }
 
@@ -124,33 +116,28 @@ fn executor(cx: Scope, executor: Executor) -> impl IntoView {
     }
 }
 
+static ACTIVE_EXECUTOR_COLUMNS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
+    vec![
+        "ID",
+        "PID",
+        "Username",
+        "Application",
+        "Client Address",
+        "Start",
+        "Active",
+        "Workflow Run Count",
+    ]
+});
+
 #[component]
 pub fn active_executors(cx: Scope, executors: Vec<Executor>) -> impl IntoView {
+    let rows = executors
+        .into_iter()
+        .map(|ex| view! { cx, <tr><Executor executor=ex/></tr> })
+        .collect_view(cx);
     view! { cx,
         <Tabs selected_tab=WorkflowEngineMainPageTabs::Executors/>
-        <div class="table-responsive-sm">
-            <table class="table table-striped caption-top">
-                <caption>"Active Executors"</caption>
-                <thead>
-                    <tr>
-                        <th>"ID"</th>
-                        <th>"PID"</th>
-                        <th>"Username"</th>
-                        <th>"Application"</th>
-                        <th>"Client Address"</th>
-                        <th>"Client Port"</th>
-                        <th>"Start"</th>
-                        <th>"Active?"</th>
-                        <th>"Workflow Run Count"</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {executors.into_iter()
-                        .map(|ex| view! { cx, <tr><Executor executor=ex/></tr> })
-                        .collect::<Vec<_>>()}
-                </tbody>
-            </table>
-        </div>
+        <DataTable caption="Active Executors" columns=&ACTIVE_EXECUTOR_COLUMNS rows=rows/>
     }
 }
 
