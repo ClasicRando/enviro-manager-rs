@@ -97,7 +97,13 @@ pub fn active_workflow_runs(cx: Scope, workflow_runs: Vec<WorkflowRun>) -> impl 
         .collect_view(cx);
     view! { cx,
         <Tabs selected_tab=WorkflowEngineMainPageTabs::WorkflowRuns/>
-        <DataTable caption="Active Workflow Runs" columns=&ACTIVE_WORKFLOW_RUN_COLUMNS rows=rows/>
+        <DataTable
+            id="active-workflow-runs-tbl"
+            caption="Active Workflow Runs"
+            columns=&ACTIVE_WORKFLOW_RUN_COLUMNS
+            rows=rows
+            data_source=WorkflowEngineMainPageTabs::WorkflowRuns.get_url()
+            refresh=true/>
     }
 }
 
@@ -123,6 +129,7 @@ static ACTIVE_EXECUTOR_COLUMNS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
         "Username",
         "Application",
         "Client Address",
+        "Client Port",
         "Start",
         "Active",
         "Workflow Run Count",
@@ -137,7 +144,13 @@ pub fn active_executors(cx: Scope, executors: Vec<Executor>) -> impl IntoView {
         .collect_view(cx);
     view! { cx,
         <Tabs selected_tab=WorkflowEngineMainPageTabs::Executors/>
-        <DataTable caption="Active Executors" columns=&ACTIVE_EXECUTOR_COLUMNS rows=rows/>
+        <DataTable
+            id="active-executors-tbl"
+            caption="Active Executors"
+            columns=&ACTIVE_EXECUTOR_COLUMNS
+            rows=rows
+            data_source=WorkflowEngineMainPageTabs::Executors.get_url()
+            refresh=true/>
     }
 }
 

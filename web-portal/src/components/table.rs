@@ -55,17 +55,54 @@ pub fn details_table(
 #[component]
 pub fn data_table(
     cx: Scope,
+    id: &'static str,
     caption: &'static str,
     columns: &'static [&'static str],
     rows: View,
+    data_source: &'static str,
+    #[prop(optional)] refresh: bool,
+    #[prop(optional)] search: bool,
 ) -> impl IntoView {
+    let body_id = format!("{id}Body");
+    let search_form = if search {
+        let search_source = format!("{data_source}/search");
+        Some(view! { cx,
+            <form role="search" class="d-flex ms-auto">
+                <input class="form-control me-2" type="search" placeholder="Search" name="search"
+                    aria-label="Search" hx-trigger="keyup changed delay:500ms, search"
+                    hx-post=search_source hx-indicator=".htmx-indicator" hx-target=format!("#{body_id}")/>
+            </form>
+        })
+    } else {
+        None
+    };
+    let refresh_button = if refresh {
+        Some(view! { cx,
+            <button type="button" class="btn btn-secondary" hx-get=data_source>
+                <i class="fa-solid fa-refresh"></i>
+            </button>
+        })
+    } else {
+        None
+    };
+    let button_group_class = if search {
+        "btn-group"
+    } else {
+        "btn-group ms-auto"
+    };
     view! { cx,
         <div class="table-responsive-sm">
-            <div>
-
+            <div class="btn-toolbar mt-1" role="toolbar">
+                {search_form}
+                <div class=button_group_class>
+                {refresh_button}
+                </div>
             </div>
-            <table class="table table-striped caption-top">
-                <caption>{caption}</caption>
+            <table class="table table-striped caption-top" id=id>
+                <caption>
+                    {caption}
+                    <div class="spinner-border htmx-indicator" role="status"></div>
+                </caption>
                 <thead>
                     <tr>
                     {columns.iter()
@@ -73,7 +110,7 @@ pub fn data_table(
                         .collect::<Vec<_>>()}
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id=body_id>
                 {rows}
                 </tbody>
             </table>
