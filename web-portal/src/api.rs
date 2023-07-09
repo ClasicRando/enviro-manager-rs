@@ -167,8 +167,9 @@ pub async fn active_executors(session: Session) -> HttpResponse {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
-    let html =
-        leptos::ssr::render_to_string(|cx| view! { cx, <ActiveExecutors executors=executors /> });
+    let html = leptos::ssr::render_to_string(|cx| {
+        view! { cx, <ActiveExecutors executors=executors /> }
+    });
     utils::html_chunk!(html)
 }
 
@@ -200,9 +201,9 @@ pub async fn active_workflow_runs(session: Session) -> HttpResponse {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
-    let html = leptos::ssr::render_to_string(
-        |cx| view! { cx, <ActiveWorkflowRuns workflow_runs=workflow_runs /> },
-    );
+    let html = leptos::ssr::render_to_string(|cx| {
+        view! { cx, <ActiveWorkflowRuns workflow_runs=workflow_runs /> }
+    });
     utils::html_chunk!(html)
 }
 
