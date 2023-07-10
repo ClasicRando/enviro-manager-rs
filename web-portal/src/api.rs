@@ -120,7 +120,7 @@ async fn login_user_api(credentials: Credentials) -> Result<User, ServerFnError>
 }
 
 pub async fn get_user(session: Session) -> Result<User, ServerFnError> {
-    let uid = validate_session(session)?;
+    let uid = validate_session(&session)?;
     let user_response = api_request(
         "http://127.0.0.1:8001/api/v1/user?f=msgpack",
         Method::GET,
@@ -141,7 +141,7 @@ pub async fn get_user(session: Session) -> Result<User, ServerFnError> {
 }
 
 pub async fn active_executors(session: Session) -> HttpResponse {
-    if validate_session(session).is_err() {
+    if validate_session(&session).is_err() {
         return utils::redirect_login!();
     }
     let executors = match get_active_executors().await {
@@ -175,7 +175,7 @@ async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
 }
 
 pub async fn active_workflow_runs(session: Session) -> HttpResponse {
-    if validate_session(session).is_err() {
+    if validate_session(&session).is_err() {
         return utils::redirect_login!();
     }
     let workflow_runs = match get_active_workflow_runs().await {

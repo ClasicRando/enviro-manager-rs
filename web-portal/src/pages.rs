@@ -9,7 +9,7 @@ use crate::{
 };
 
 pub async fn login(session: Session) -> HttpResponse {
-    if validate_session(session).is_ok() {
+    if validate_session(&session).is_ok() {
         return utils::redirect!("/");
     }
     let mut html = leptos::ssr::render_to_string(|cx| {
