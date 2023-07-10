@@ -109,16 +109,29 @@ pub fn active_workflow_runs(cx: Scope, workflow_runs: Vec<WorkflowRun>) -> impl 
 
 #[component]
 fn executor(cx: Scope, executor: Executor) -> impl IntoView {
+    let actions = if executor.session_active {
+        Some(view! { cx,
+            <i class="fa-solid fa-stop fa-xl me-2"></i>
+            <i class="fa-solid fa-power-off fa-xl"></i>
+        })
+    } else {
+        None
+    };
     view! { cx,
-        <td>{into_view(executor.executor_id)}</td>
-        <td>{into_view(executor.pid)}</td>
-        <td>{into_view(executor.username)}</td>
-        <td>{into_view(executor.application_name)}</td>
-        <td>{into_view(executor.client_addr)}</td>
-        <td>{into_view(executor.client_port)}</td>
-        <td>{into_view(executor.exec_start)}</td>
-        <td>{into_view(executor.session_active)}</td>
-        <td>{into_view(executor.workflow_run_count)}</td>
+        <tr>
+            <td>{into_view(executor.executor_id)}</td>
+            <td>{into_view(executor.pid)}</td>
+            <td>{into_view(executor.username)}</td>
+            <td>{into_view(executor.application_name)}</td>
+            <td>{into_view(executor.client_addr)}</td>
+            <td>{into_view(executor.client_port)}</td>
+            <td>{into_view(executor.exec_start)}</td>
+            <td>{into_view(executor.session_active)}</td>
+            <td>{into_view(executor.workflow_run_count)}</td>
+            <td>
+                {actions}
+            </td>
+        </tr>
     }
 }
 
@@ -133,6 +146,7 @@ static ACTIVE_EXECUTOR_COLUMNS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
         "Start",
         "Active",
         "Workflow Run Count",
+        "Actions",
     ]
 });
 

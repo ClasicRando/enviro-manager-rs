@@ -48,6 +48,9 @@ pub enum RoleName {
     #[serde(rename = "qa")]
     #[strum(serialize = "qa")]
     DataQualityAssurance,
+    #[serde(rename = "view-workflow-engine")]
+    #[strum(serialize = "view-workflow-engine")]
+    ViewWorkflowEngine,
 }
 
 impl RoleName {
@@ -69,6 +72,11 @@ impl RoleName {
             Self::DataQualityAssurance => {
                 "Provides a user the ability to perform quality assurance checks on a data load \
                  instance"
+            }
+            Self::ViewWorkflowEngine => {
+                "View data within the workflow engine. This is a the base privilege in the \
+                 workflow engine and all other workflow engine related roles implicitly have this \
+                 role"
             }
         }
     }
