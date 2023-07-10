@@ -23,6 +23,9 @@ pub mod utils {
         ($item:ident) => {
             Err(ServerFnError::Generic($item))
         };
+        ($string:literal) => {
+            Err(ServerFnError::Generic($string.to_owned()))
+        };
     }
     macro_rules! server_fn_static_error {
         ($item:ident) => {
