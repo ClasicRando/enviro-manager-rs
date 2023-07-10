@@ -59,11 +59,11 @@ where
                 .route("/executors", get().to(executors_api::active_executors::<E>))
                 .route(
                     "/executors/shutdown/{executor_id}",
-                    get().to(executors_api::shutdown_executor::<E>),
+                    post().to(executors_api::shutdown_executor::<E>),
                 )
                 .route(
                     "/executors/cancel/{executor_id}",
-                    get().to(executors_api::cancel_executor::<E>),
+                    post().to(executors_api::cancel_executor::<E>),
                 )
                 .route(
                     "/executors/clean",
