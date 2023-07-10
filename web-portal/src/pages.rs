@@ -1,5 +1,5 @@
 use actix_session::Session;
-use actix_web::{web, HttpResponse, Scope};
+use actix_web::{web, HttpResponse};
 use leptos::view;
 
 use crate::{
@@ -52,11 +52,24 @@ async fn redirect_home() -> HttpResponse {
     utils::redirect_home!()
 }
 
-pub fn service() -> Scope {
-    web::scope("")
-        .route("/", web::get().to(index))
-        .route("/index", web::get().to(redirect_home))
-        .route("/login", web::get().to(login))
-        .route("/workflow-engine", web::get().to(workflow_engine))
-        .route("/logout", web::get().to(logout_user))
+pub trait Pages {
+    fn add_pages(self) -> Self;
+}
+
+impl<T> Pages for actix_web::App<T>
+where
+    T: actix_web::dev::ServiceFactory<
+        actix_web::dev::ServiceRequest,
+        Config = (),
+        Error = actix_web::error::Error,
+        InitError = (),
+    >,
+{
+    fn add_pages(self) -> Self {
+        self.route("/", web::get().to(index))
+            .route("/index", web::get().to(redirect_home))
+            .route("/login", web::get().to(login))
+            .route("/workflow-engine", web::get().to(workflow_engine))
+            .route("/logout", web::get().to(logout_user))
+    }
 }

@@ -1,7 +1,7 @@
 use actix_session::{storage::RedisActorSessionStore, SessionMiddleware};
 use actix_web::{cookie::Key, middleware::Logger, App, HttpServer};
 use common::error::EmResult;
-use web_portal::{api, pages};
+use web_portal::{api, pages::Pages};
 
 #[actix_web::main]
 async fn main() -> EmResult<()> {
@@ -17,7 +17,7 @@ async fn main() -> EmResult<()> {
                 secret_key.clone(),
             ))
             .service(actix_files::Files::new("/assets", "web-portal/assets").show_files_listing())
-            .service(pages::service())
+            .add_pages()
             .service(api::service())
     })
     .bind(("127.0.0.1", 8080))?

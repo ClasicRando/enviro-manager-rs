@@ -109,10 +109,18 @@ pub fn active_workflow_runs(cx: Scope, workflow_runs: Vec<WorkflowRun>) -> impl 
 
 #[component]
 fn executor(cx: Scope, executor: Executor) -> impl IntoView {
+    let cancel_post: String = format!(
+        "/api/workflow-engine/executors/cancel/{}",
+        executor.executor_id
+    );
+    let shutdown_post: String = format!(
+        "/api/workflow-engine/executors/shutdown/{}",
+        executor.executor_id
+    );
     let actions = if executor.session_active {
         Some(view! { cx,
-            <i class="fa-solid fa-stop fa-xl me-2"></i>
-            <i class="fa-solid fa-power-off fa-xl"></i>
+            <i class="table-action fa-solid fa-stop fa-xl me-2 px-1" hx-trigger="click" hx-post=cancel_post></i>
+            <i class="table-action fa-solid fa-power-off fa-xl px-1" hx-trigger="click" hx-post=shutdown_post></i>
         })
     } else {
         None

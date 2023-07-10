@@ -19,12 +19,12 @@ pub fn service() -> actix_web::Scope {
 }
 
 #[derive(Deserialize, Serialize)]
-struct Credentials {
+pub struct Credentials {
     username: String,
     password: String,
 }
 
-async fn login_user(session: Session, credentials: Form<Credentials>) -> HttpResponse {
+pub async fn login_user(session: Session, credentials: Form<Credentials>) -> HttpResponse {
     let user = match login_user_api(credentials.0).await {
         Ok(inner) => inner,
         Err(_) => return utils::html_chunk!("Could not login user"),
