@@ -62,6 +62,7 @@ pub fn data_table(
     data_source: &'static str,
     #[prop(optional)] refresh: bool,
     #[prop(optional)] search: bool,
+    #[prop(optional)] extra_buttons: View,
 ) -> impl IntoView {
     let body_id = format!("{id}Body");
     let search_form = if search {
@@ -78,7 +79,7 @@ pub fn data_table(
     };
     let refresh_button = if refresh {
         Some(view! { cx,
-            <button type="button" class="btn btn-secondary" hx-get=data_source>
+            <button type="button" title="Refresh" class="btn btn-secondary" hx-get=data_source>
                 <i class="fa-solid fa-refresh"></i>
             </button>
         })
@@ -96,6 +97,7 @@ pub fn data_table(
                 {search_form}
                 <div class=button_group_class>
                 {refresh_button}
+                {extra_buttons}
                 </div>
             </div>
             <table class="table table-striped caption-top" id=id>

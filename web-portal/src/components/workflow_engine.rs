@@ -142,6 +142,15 @@ pub fn active_executors(cx: Scope, executors: Vec<Executor>) -> impl IntoView {
         .into_iter()
         .map(|ex| view! { cx, <tr><Executor executor=ex/></tr> })
         .collect_view(cx);
+    let extra_buttons = [view! { cx,
+        <button title="Clean Executors" type="button" class="btn btn-secondary"
+            hx-post="/api/workflow-engine/executors/clean" hx-trigger="click"
+        >
+            <i class="fa-solid fa-broom"></i>
+        </button>
+    }]
+    .into_iter()
+    .collect_view(cx);
     view! { cx,
         <Tabs selected_tab=WorkflowEngineMainPageTabs::Executors/>
         <DataTable
@@ -150,7 +159,8 @@ pub fn active_executors(cx: Scope, executors: Vec<Executor>) -> impl IntoView {
             columns=&ACTIVE_EXECUTOR_COLUMNS
             rows=rows
             data_source=WorkflowEngineMainPageTabs::Executors.get_url()
-            refresh=true/>
+            refresh=true
+            extra_buttons=extra_buttons/>
     }
 }
 

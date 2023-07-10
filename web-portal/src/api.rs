@@ -207,3 +207,35 @@ async fn get_active_workflow_runs() -> Result<Vec<WorkflowRun>, ServerFnError> {
     };
     Ok(executors)
 }
+
+pub async fn clean_executors(session: Session) -> HttpResponse {
+    if validate_session(&session).is_err() {
+        return utils::redirect_login!();
+    }
+    if let Err(error) = post_clean_executors().await {
+        return error.to_response();
+    }
+    active_executors(session).await
+}
+
+async fn post_clean_executors() -> Result<(), ServerFnError> {
+    let clean_executors_response = api_request(
+        "http://127.0.0.1:8000/api/v1/executors/clean?f=msgpack",
+        Method::POST,
+        None::<String>,
+        None::<()>,
+    )
+    .await?;
+    match clean_executors_response {
+        ApiResponseBody::Success(()) => {
+            utils::server_fn_error!("Expected message, got data")
+        }
+        ApiResponseBody::Message(message) => {
+            log::info!("{message}");
+            Ok(())
+        }
+        ApiResponseBody::Error(message) | ApiResponseBody::Failure(message) => {
+            utils::server_fn_error!(message)
+        }
+    }
+}
