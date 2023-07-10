@@ -51,3 +51,18 @@ where
         Err(error) => ApiResponse::error(error, format.f),
     }
 }
+
+/// API endpoint to perform a cleaning of all inactive but not closed executors
+pub async fn clean_executors<E>(
+    service: actix_web::web::Data<E>,
+    query: actix_web::web::Query<QueryApiFormat>,
+) -> ApiResponse<Executor>
+where
+    E: ExecutorService,
+{
+    let format = query.into_inner();
+    match service.clean_executors().await {
+        Ok(_) => ApiResponse::message("Successfully cleaned executors".to_owned(), format.f),
+        Err(error) => ApiResponse::error(error, format.f),
+    }
+}

@@ -65,6 +65,10 @@ where
                     "/executors/cancel/{executor_id}",
                     get().to(executors_api::cancel_executor::<E>),
                 )
+                .route(
+                    "/executors/clean",
+                    post().to(executors_api::clean_executors::<E>),
+                )
                 .route("/jobs", get().to(jobs_api::jobs::<J>))
                 .route("/jobs/{job_id}", get().to(jobs_api::job::<J>))
                 .route("/jobs", post().to(jobs_api::create_job::<J>))
