@@ -1,6 +1,6 @@
 use leptos::*;
 
-use super::BasePage;
+use super::base::BasePage;
 
 #[component]
 pub fn login(cx: Scope) -> impl IntoView {

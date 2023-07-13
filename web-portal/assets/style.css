@@ -5,3 +5,9 @@
 .table-action:hover {
     border: 1px solid var(--bs-secondary-color);
 }
+
+.link {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}

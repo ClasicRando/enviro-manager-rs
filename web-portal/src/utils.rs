@@ -7,7 +7,7 @@ use reqwest::{Client, IntoUrl, Method, Response};
 use serde::{Deserialize, Serialize};
 use users::data::user::User;
 
-use crate::{validate_session, ServerFnError};
+use crate::{extract_session_uid, ServerFnError};
 
 async fn send_request<U, D, T>(
     url: U,
@@ -40,7 +40,15 @@ where
     T: Serialize + for<'de> Deserialize<'de>,
 {
     if !response.status().is_success() {
-        return Err(ServerFnError::ApiResponse(response.status()));
+        let status_code = response.status();
+        let text = match response.text().await {
+            Ok(inner) => Some(inner),
+            Err(error) => {
+                log::error!("{error}");
+                None
+            }
+        };
+        return Err(ServerFnError::ApiResponse(status_code, text));
     }
     let bytes = response
         .bytes()
@@ -68,7 +76,7 @@ where
 }
 
 pub async fn get_user(session: Session) -> Result<User, ServerFnError> {
-    let uid = validate_session(&session)?;
+    let uid = extract_session_uid(&session)?;
     let user_response = api_request(
         "http://127.0.0.1:8001/api/v1/user?f=msgpack",
         Method::GET,
@@ -151,6 +159,14 @@ macro_rules! redirect {
     };
 }
 
+macro_rules! redirect_htmx {
+    ($location:literal) => {
+        HttpResponse::Found()
+            .insert_header(("HX-Redirect", $location))
+            .finish()
+    };
+}
+
 macro_rules! redirect_home {
     () => {
         HttpResponse::Found()
@@ -181,6 +197,7 @@ pub(crate) use internal_server_error;
 pub(crate) use redirect;
 pub(crate) use redirect_home;
 pub(crate) use redirect_home_htmx;
+pub(crate) use redirect_htmx;
 pub(crate) use redirect_login;
 pub(crate) use server_fn_error;
 pub(crate) use server_fn_static_error;

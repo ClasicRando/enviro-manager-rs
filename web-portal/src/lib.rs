@@ -12,7 +12,8 @@ use serde::Serialize;
 use thiserror::Error;
 use uuid::Uuid;
 
-pub const SESSION_KEY: &str = "em_uid";
+pub const EM_UID_SESSION_KEY: &str = "em_uid";
+pub const USERNAME_SESSION_KEY: &str = "username";
 pub const INTERNAL_SERVICE_ERROR: &str = "Error contacting internal service";
 
 pub mod utils;
@@ -25,8 +26,8 @@ pub enum ServerFnError {
     Deserialization(#[from] rmp_serde::decode::Error),
     #[error("Error performing API request. {0}")]
     ApiRequest(reqwest::Error),
-    #[error("Invalid API response: {0}")]
-    ApiResponse(StatusCode),
+    #[error("Invalid API response: {0}. {1:?}")]
+    ApiResponse(StatusCode, Option<String>),
     #[error("Api response body cannot be processed. {0}")]
     ApiResponseBody(reqwest::Error),
     #[error(transparent)]
@@ -54,8 +55,15 @@ impl ServerFnError {
     }
 }
 
-fn validate_session(session: &Session) -> Result<Uuid, ServerFnError> {
-    let Some(user) = session.get(SESSION_KEY)? else {
+fn extract_session_uid(session: &Session) -> Result<Uuid, ServerFnError> {
+    let Some(user) = session.get(EM_UID_SESSION_KEY)? else {
+        return Err(ServerFnError::InvalidUser);
+    };
+    Ok(user)
+}
+
+fn extract_session_username(session: &Session) -> Result<String, ServerFnError> {
+    let Some(user) = session.get(USERNAME_SESSION_KEY)? else {
         return Err(ServerFnError::InvalidUser);
     };
     Ok(user)

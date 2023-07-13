@@ -1,8 +1,10 @@
 mod base;
+mod grid;
 mod index;
 mod login;
 mod nav;
 mod table;
+mod user;
 mod workflow_engine;
 
 use leptos::IntoView;
@@ -26,8 +28,8 @@ fn option_into_view_default<T: ToString>(val: Option<T>, default: &'static str) 
     default.to_string()
 }
 
-pub use base::BasePage;
 pub use index::Index;
 pub use login::Login;
+pub use user::{UpdateFullName, UpdatePassword, UpdateUsername, User};
 
 pub use self::workflow_engine::{ActiveExecutors, ActiveWorkflowRuns, WorkflowEngine};

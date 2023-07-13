@@ -8,9 +8,9 @@ use workflow_engine::{
 };
 
 use super::{
+    base::BasePage,
     into_view, option_into_view,
     table::{DataTable, RowWithDetails},
-    BasePage,
 };
 
 #[component]

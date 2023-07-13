@@ -158,7 +158,7 @@ window.selectTab = (element) => {
 };
 
 window.addEventListener('DOMContentLoaded', () => {
-    const navScroll = document.querySelector('#navbarScroll');
+    const navScroll = document.querySelector('#mainNavBar');
     for (const navLink of navScroll.querySelectorAll('a.nav-link')) {
         navLink.classList.remove('active');
         if (navLink.href.endsWith("/")) {

@@ -10,9 +10,7 @@ use workflow_engine::{
 
 use crate::{
     components::{ActiveExecutors, ActiveWorkflowRuns},
-    utils,
-    utils::api_request,
-    validate_session, ServerFnError,
+    extract_session_uid, utils, ServerFnError,
 };
 
 pub fn service() -> actix_web::Scope {
@@ -31,7 +29,7 @@ pub fn service() -> actix_web::Scope {
 }
 
 async fn active_executors(session: Session) -> HttpResponse {
-    if validate_session(&session).is_err() {
+    if extract_session_uid(&session).is_err() {
         return utils::redirect_login!();
     }
     let executors = match get_active_executors().await {
@@ -45,7 +43,7 @@ async fn active_executors(session: Session) -> HttpResponse {
 }
 
 async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
-    let executors_response = api_request(
+    let executors_response = utils::api_request(
         "http://127.0.0.1:8000/api/v1/executors?f=msgpack",
         Method::GET,
         None::<String>,
@@ -65,7 +63,7 @@ async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
 }
 
 async fn active_workflow_runs(session: Session) -> HttpResponse {
-    if validate_session(&session).is_err() {
+    if extract_session_uid(&session).is_err() {
         return utils::redirect_login!();
     }
     let workflow_runs = match get_active_workflow_runs().await {
@@ -79,7 +77,7 @@ async fn active_workflow_runs(session: Session) -> HttpResponse {
 }
 
 async fn get_active_workflow_runs() -> Result<Vec<WorkflowRun>, ServerFnError> {
-    let workflow_runs_response = api_request(
+    let workflow_runs_response = utils::api_request(
         "http://127.0.0.1:8000/api/v1/workflow-runs?f=msgpack",
         Method::GET,
         None::<String>,
@@ -99,7 +97,7 @@ async fn get_active_workflow_runs() -> Result<Vec<WorkflowRun>, ServerFnError> {
 }
 
 async fn clean_executors(session: Session) -> HttpResponse {
-    if validate_session(&session).is_err() {
+    if extract_session_uid(&session).is_err() {
         return utils::redirect_login!();
     }
     if let Err(error) = post_clean_executors().await {
@@ -109,7 +107,7 @@ async fn clean_executors(session: Session) -> HttpResponse {
 }
 
 async fn post_clean_executors() -> Result<(), ServerFnError> {
-    let clean_executors_response = api_request(
+    let clean_executors_response = utils::api_request(
         "http://127.0.0.1:8000/api/v1/executors/clean?f=msgpack",
         Method::POST,
         None::<String>,
@@ -131,7 +129,7 @@ async fn post_clean_executors() -> Result<(), ServerFnError> {
 }
 
 async fn cancel_executor(session: Session, executor_id: web::Path<ExecutorId>) -> HttpResponse {
-    if validate_session(&session).is_err() {
+    if extract_session_uid(&session).is_err() {
         return utils::redirect_login!();
     }
     if let Err(error) = post_cancel_executor(executor_id.into_inner()).await {
@@ -141,7 +139,7 @@ async fn cancel_executor(session: Session, executor_id: web::Path<ExecutorId>) -
 }
 
 async fn post_cancel_executor(executor_id: ExecutorId) -> Result<(), ServerFnError> {
-    let clean_executors_response: ApiResponseBody<Executor> = api_request(
+    let clean_executors_response: ApiResponseBody<Executor> = utils::api_request(
         format!("http://127.0.0.1:8000/api/v1/executors/cancel/{executor_id}?f=msgpack"),
         Method::POST,
         None::<String>,
@@ -163,7 +161,7 @@ async fn post_cancel_executor(executor_id: ExecutorId) -> Result<(), ServerFnErr
 }
 
 async fn shutdown_executor(session: Session, executor_id: web::Path<ExecutorId>) -> HttpResponse {
-    if validate_session(&session).is_err() {
+    if extract_session_uid(&session).is_err() {
         return utils::redirect_login!();
     }
     if let Err(error) = post_shutdown_executor(executor_id.into_inner()).await {
@@ -173,7 +171,7 @@ async fn shutdown_executor(session: Session, executor_id: web::Path<ExecutorId>)
 }
 
 async fn post_shutdown_executor(executor_id: ExecutorId) -> Result<(), ServerFnError> {
-    let clean_executors_response: ApiResponseBody<Executor> = api_request(
+    let clean_executors_response: ApiResponseBody<Executor> = utils::api_request(
         format!("http://127.0.0.1:8000/api/v1/executors/shutdown/{executor_id}?f=msgpack"),
         Method::POST,
         None::<String>,

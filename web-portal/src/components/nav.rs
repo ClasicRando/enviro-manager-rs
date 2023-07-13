@@ -53,6 +53,7 @@ fn user_context(cx: Scope, username: String) -> impl IntoView {
                 {username}
             </a>
             <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="/user">"Info"</a></li>
                 <li><a class="dropdown-item" href="/logout">"Logout"</a></li>
             </ul>
         </li>
@@ -62,29 +63,24 @@ fn user_context(cx: Scope, username: String) -> impl IntoView {
 #[component]
 pub fn nav(cx: Scope, username: String) -> impl IntoView {
     view! { cx,
-        <nav class="navbar navbar-expand-lg bg-body-tertiary">
-            <div class="container-md">
-                <a class="navbar-brand" href="#">"EnviroManager"</a>
-                <button class="navbar-toggler collapsed" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#navbarScroll" aria-controls="navbarScroll" aria-expanded="false"
-                    aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarScroll">
-                    <ul class="navbar-nav me-auto my-2 my-lg-0 navbar-nav-scroll" style="--bs-scroll-height: 100px;">
-                        <li class="nav-item">
-                            <a class="nav-link" href="/">"Home"</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/workflow-engine">"Workflow Engine"</a>
-                        </li>
-                    </ul>
-
-                    <ul class="navbar-nav ms-auto my-2 my-lg-0 navbar-nav-scroll" style="--bs-scroll-height: 100px;">
-                        <UserContext username=username/>
-                        <ThemeSelector />
-                    </ul>
-                </div>
+        <nav class="navbar navbar-expand-lg bg-body-tertiary" id="mainNavBar">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">
+                    <img src="/assets/favicon.ico" alt="logo" class="d-inline-block align-text-top me-1" height="30"/>
+                    "EnviroManager"
+                </a>
+                <ul class="navbar-nav me-auto my-2 my-lg-0 navbar-nav-scroll" style="--bs-scroll-height: 100px;">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">"Home"</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/workflow-engine">"Workflow Engine"</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto my-2 my-lg-0 navbar-nav-scroll" style="--bs-scroll-height: 100px;">
+                    <UserContext username=username/>
+                    <ThemeSelector />
+                </ul>
             </div>
         </nav>
     }

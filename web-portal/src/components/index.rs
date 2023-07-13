@@ -1,6 +1,6 @@
 use leptos::*;
 
-use super::BasePage;
+use super::base::BasePage;
 
 #[component]
 pub fn index(cx: Scope, username: String) -> impl IntoView {

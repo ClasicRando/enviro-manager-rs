@@ -39,7 +39,7 @@ pub fn base_page(
                 <script defer src="/assets/fontawesome/js/fontawesome.js"></script>
                 <title>"EnviroManager - "{title}</title>
             </head>
-            <body class="p-3 m-0 border-0 bd-example m-0 border-0">
+            <body class="p-3 m-0 border-0">
                 <div class="container-fluid">
                     <Nav username=username/>
                     {children(cx)}

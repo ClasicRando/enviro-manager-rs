@@ -1,3 +1,4 @@
+mod user;
 mod workflow_engine;
 
 use actix_session::Session;
@@ -10,12 +11,15 @@ use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use users::data::user::User;
 
-use crate::{utils, ServerFnError, INTERNAL_SERVICE_ERROR, SESSION_KEY};
+use crate::{
+    utils, ServerFnError, EM_UID_SESSION_KEY, INTERNAL_SERVICE_ERROR, USERNAME_SESSION_KEY,
+};
 
 pub fn service() -> actix_web::Scope {
     web::scope("/api")
         .route("/login", web::post().to(login_user))
         .service(workflow_engine::service())
+        .service(user::service())
 }
 
 #[derive(Deserialize, Serialize)]
@@ -29,7 +33,11 @@ pub async fn login_user(session: Session, credentials: Form<Credentials>) -> Htt
         Ok(inner) => inner,
         Err(_) => return utils::html_chunk!("Could not login user"),
     };
-    if let Err(error) = session.insert(SESSION_KEY, *user.uid()) {
+    if let Err(error) = session.insert(EM_UID_SESSION_KEY, *user.uid()) {
+        log::error!("{error}");
+        return utils::internal_server_error!();
+    }
+    if let Err(error) = session.insert(USERNAME_SESSION_KEY, user.username()) {
         log::error!("{error}");
         return utils::internal_server_error!();
     }
