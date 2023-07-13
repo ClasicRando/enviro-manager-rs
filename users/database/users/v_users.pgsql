@@ -5,7 +5,7 @@ create or replace view users.v_users as
         group by ur.uid
     )
     select
-        u.uid, trim(u.first_name) || ' ' || trim(u.last_name) full_name,
+        u.uid, u.username, trim(u.first_name) || ' ' || trim(u.last_name) full_name,
         coalesce(ur.roles,'{}'::text[]) roles
     from users.users u
     left join user_roles ur

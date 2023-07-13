@@ -115,7 +115,7 @@ impl UserService for PgUserService {
 
         let users = sqlx::query_as(
             r#"
-            select u.uid, u.full_name, u.roles
+            select u.uid, u.username, u.full_name, u.roles
             from users.v_users u"#,
         )
         .fetch_all(&self.pool)
@@ -126,7 +126,7 @@ impl UserService for PgUserService {
     async fn read_one(&self, uuid: &Uuid) -> EmResult<User> {
         let user = sqlx::query_as(
             r#"
-            select u.uid, u.full_name, u.roles
+            select u.uid, u.username, u.full_name, u.roles
             from users.v_users u
             where u.uid = $1"#,
         )
@@ -169,7 +169,7 @@ impl UserService for PgUserService {
         let ValidateUserRequest { username, password } = request;
         let result = sqlx::query_as(
             r#"
-            select v.uid, v.full_name, v.roles
+            select v.uid, v.username, v.full_name, v.roles
             from users.validate_user($1, $2) v"#,
         )
         .bind(username)
