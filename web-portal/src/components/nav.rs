@@ -38,8 +38,8 @@ fn theme_selector(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-fn user_context(cx: Scope, username: String) -> impl IntoView {
-    if username.is_empty() {
+fn user_context(cx: Scope, user_full_name: String) -> impl IntoView {
+    if user_full_name.is_empty() {
         return view! { cx,
             <li class="nav-item">
                 <a class="nav-link disabled" href="#">"Login"</a>
@@ -50,7 +50,7 @@ fn user_context(cx: Scope, username: String) -> impl IntoView {
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
                 aria-expanded="false">
-                {username}
+                {user_full_name}
             </a>
             <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="/user">"Info"</a></li>
@@ -61,7 +61,7 @@ fn user_context(cx: Scope, username: String) -> impl IntoView {
 }
 
 #[component]
-pub fn nav(cx: Scope, username: String) -> impl IntoView {
+pub fn nav(cx: Scope, user_full_name: String) -> impl IntoView {
     view! { cx,
         <nav class="navbar navbar-expand-lg bg-body-tertiary" id="mainNavBar">
             <div class="container-fluid">
@@ -78,7 +78,7 @@ pub fn nav(cx: Scope, username: String) -> impl IntoView {
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto my-2 my-lg-0 navbar-nav-scroll" style="--bs-scroll-height: 100px;">
-                    <UserContext username=username/>
+                    <UserContext user_full_name=user_full_name/>
                     <ThemeSelector />
                 </ul>
             </div>

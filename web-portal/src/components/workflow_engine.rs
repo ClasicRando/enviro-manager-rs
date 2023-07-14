@@ -246,11 +246,11 @@ fn tabs(cx: Scope, selected_tab: WorkflowEngineMainPageTabs) -> impl IntoView {
 }
 
 #[component]
-pub fn workflow_engine(cx: Scope, username: String) -> impl IntoView {
+pub fn workflow_engine(cx: Scope, user_full_name: String) -> impl IntoView {
     view! { cx,
         <BasePage
             title="Index"
-            username=username
+            user_full_name=user_full_name
         >
             <div id="tabs" hx-get={WorkflowEngineMainPageTabs::Executors.get_url()} hx-trigger="load"
                 hx-target="#tabs" hx-swap="innerHTML"></div>

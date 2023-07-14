@@ -6,7 +6,7 @@ use super::nav::Nav;
 pub fn base_page(
     cx: Scope,
     title: &'static str,
-    #[prop(optional)] username: String,
+    #[prop(optional)] user_full_name: String,
     #[prop(optional)] stylesheet_href: &'static str,
     #[prop(optional)] script_src: &'static str,
     children: Children,
@@ -41,8 +41,10 @@ pub fn base_page(
             </head>
             <body class="p-3 m-0 border-0">
                 <div class="container-fluid">
-                    <Nav username=username/>
+                    <Nav user_full_name=user_full_name/>
                     {children(cx)}
+                </div>
+                <div class="toast-container top-0 end-0 p-3" id="toasts">
                 </div>
                 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
                     integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"

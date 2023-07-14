@@ -24,7 +24,7 @@ async fn index(session: Session) -> HttpResponse {
         Err(error) => return error.to_response(),
     };
     let mut html = leptos::ssr::render_to_string(move |cx| {
-        view! { cx, <Index username=user.full_name().to_owned()/> }
+        view! { cx, <Index user_full_name=user.full_name().to_owned()/> }
     });
     utils::html!(html)
 }
@@ -36,7 +36,7 @@ async fn workflow_engine(session: Session) -> HttpResponse {
         Err(error) => return error.to_response(),
     };
     let mut html = leptos::ssr::render_to_string(move |cx| {
-        view! { cx, <WorkflowEngine username=user.full_name().to_owned()/> }
+        view! { cx, <WorkflowEngine user_full_name=user.full_name().to_owned()/> }
     });
     utils::html!(html)
 }
@@ -48,7 +48,7 @@ async fn user(session: Session) -> HttpResponse {
         Err(error) => return error.to_response(),
     };
     let mut html = leptos::ssr::render_to_string(move |cx| {
-        view! { cx, <User username=user.full_name().to_owned()/>}
+        view! { cx, <User user=user/>}
     });
     utils::html!(html)
 }

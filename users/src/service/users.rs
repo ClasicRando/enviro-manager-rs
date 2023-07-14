@@ -39,10 +39,8 @@ fn validate_password(password: &str) -> EmResult<()> {
 pub struct CreateUserRequest {
     /// uuid of the user attempting to perform the action
     // pub(crate) current_uid: Uuid,
-    /// First name of the user to be created
-    pub(crate) first_name: String,
-    /// Last name of the user to be created
-    pub(crate) last_name: String,
+    /// Full name of the user to be created
+    pub(crate) full_name: String,
     /// Username of the user to be created. Must be unique for all users
     pub(crate) username: String,
     /// Password of the user to be created. Must follow rules specified here
@@ -59,11 +57,8 @@ impl ApiRequestValidator for CreateUserRequestValidator {
     type Request = CreateUserRequest;
 
     fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage> {
-        if request.first_name.trim().is_empty() {
-            Err("first_name cannot be empty or whitespace")?;
-        }
-        if request.last_name.trim().is_empty() {
-            Err("last_name cannot be empty or whitespace")?;
+        if request.full_name.trim().is_empty() {
+            Err("full_name cannot be empty or whitespace")?;
         }
         if request.username.trim().is_empty() {
             Err("username cannot be empty or whitespace")?;
@@ -115,15 +110,9 @@ impl ApiRequestValidator for UpdateUserRequestValidator {
                     Err("new_username cannot be empty or whitespace")?;
                 }
             }
-            UpdateUserType::FullName {
-                new_first_name,
-                new_last_name,
-            } => {
-                if new_first_name.trim().is_empty() {
+            UpdateUserType::FullName { new_name } => {
+                if new_name.trim().is_empty() {
                     Err("new_first_name cannot be empty or whitespace")?;
-                }
-                if new_last_name.trim().is_empty() {
-                    Err("new_last_name cannot be empty or whitespace")?;
                 }
             }
             UpdateUserType::ResetPassword { new_password } => {
@@ -152,10 +141,7 @@ pub enum UpdateUserType {
     Username { new_username: String },
     /// User is attempting to update the user's first and last name
     #[serde(rename = "full-name")]
-    FullName {
-        new_first_name: String,
-        new_last_name: String,
-    },
+    FullName { new_name: String },
     /// User is attempting to update the user's password to a new value
     #[serde(rename = "reset-password")]
     ResetPassword { new_password: String },
@@ -248,15 +234,13 @@ pub(crate) mod test {
     /// Utility method for creating a new [CreateUserRequest]
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn create_user_request(
-        first_name: &str,
-        last_name: &str,
+        full_name: &str,
         username: &str,
         password: &str,
         roles: &[&str],
     ) -> CreateUserRequest {
         CreateUserRequest {
-            first_name: first_name.to_owned(),
-            last_name: last_name.to_owned(),
+            full_name: full_name.to_owned(),
             username: username.to_owned(),
             password: password.to_owned(),
             roles: roles
@@ -294,10 +278,9 @@ pub(crate) mod test {
     }
 
     /// Utility method for creating a new [UpdateUserType::FullName]
-    pub(crate) fn update_full_name(new_first_name: &str, new_last_name: &str) -> UpdateUserType {
+    pub(crate) fn update_full_name(new_name: &str) -> UpdateUserType {
         UpdateUserType::FullName {
-            new_first_name: new_first_name.to_owned(),
-            new_last_name: new_last_name.to_owned(),
+            new_name: new_name.to_owned(),
         }
     }
 
@@ -330,17 +313,17 @@ pub(crate) mod test {
     }
 
     #[rstest]
-    #[case::valid_request(create_user_request("test", "test", "test", VALID_PASSWORD, &["admin"]))]
+    #[case::valid_request(create_user_request("test", "test", VALID_PASSWORD, &["admin"]))]
     fn create_user_request_should_validate_when(#[case] request: CreateUserRequest) {
         let result = CreateUserRequestValidator::validate(&request);
         assert!(result.is_ok(), "{:?}", result.unwrap_err());
     }
 
     #[rstest]
-    #[case::invalid_password(create_user_request("test", "test", "test", "test", &["admin"]))]
-    #[case::first_name_empty(create_user_request("", "test", "test", VALID_PASSWORD, &["admin"]))]
-    #[case::last_name_empty(create_user_request("test", "", "test", VALID_PASSWORD, &["admin"]))]
-    #[case::username_empty(create_user_request("test", "test", "", VALID_PASSWORD, &["admin"]))]
+    #[case::invalid_password(create_user_request("test", "test", "test", &["admin"]))]
+    #[case::first_name_empty(create_user_request("", "test", VALID_PASSWORD, &["admin"]))]
+    #[case::last_name_empty(create_user_request("test", "test", VALID_PASSWORD, &["admin"]))]
+    #[case::username_empty(create_user_request("test", "", VALID_PASSWORD, &["admin"]))]
     fn create_user_request_should_fail_when(#[case] request: CreateUserRequest) {
         let result = CreateUserRequestValidator::validate(&request);
         assert!(result.is_err());
@@ -348,11 +331,7 @@ pub(crate) mod test {
 
     #[rstest]
     #[case::valid_update_username_request("test", VALID_PASSWORD, update_username("test"))]
-    #[case::valid_update_full_name_request(
-        "test",
-        VALID_PASSWORD,
-        update_full_name("test", "test")
-    )]
+    #[case::valid_update_full_name_request("test", VALID_PASSWORD, update_full_name("test"))]
     #[case::valid_reset_password_request("test", VALID_PASSWORD, reset_password(VALID_PASSWORD))]
     fn update_user_request_should_validate_when(
         #[case] username: &str,
@@ -366,8 +345,7 @@ pub(crate) mod test {
 
     #[rstest]
     #[case::new_username_empty("test", VALID_PASSWORD, update_username(""))]
-    #[case::new_first_name_empty("test", VALID_PASSWORD, update_full_name("", "test"))]
-    #[case::new_last_name_empty("test", VALID_PASSWORD, update_full_name("test", ""))]
+    #[case::new_name_empty("test", VALID_PASSWORD, update_full_name(""))]
     #[case::new_password_invalid("test", VALID_PASSWORD, reset_password(""))]
     fn update_user_request_should_fail_when(
         #[case] username: &str,

@@ -31,17 +31,11 @@ impl PgUserService {
     }
 
     /// Update the full name of a user with the `uid` specified
-    async fn update_full_name(
-        &self,
-        uid: &Uuid,
-        new_first_name: &str,
-        new_last_name: &str,
-    ) -> EmResult<()> {
+    async fn update_full_name(&self, uid: &Uuid, new_name: &str) -> EmResult<()> {
         let mut connection = get_connection_with_em_uid(uid, &self.pool).await?;
-        sqlx::query("call users.update_full_name($1, $2, $3)")
+        sqlx::query("call users.update_full_name($1, $2)")
             .bind(uid)
-            .bind(new_first_name)
-            .bind(new_last_name)
+            .bind(new_name)
             .execute(&mut connection)
             .await?;
         Ok(())
@@ -78,8 +72,7 @@ impl UserService for PgUserService {
     async fn create_user(&self, current_uid: &Uuid, request: &CreateUserRequest) -> EmResult<User> {
         Self::CreateRequestValidator::validate(request)?;
         let CreateUserRequest {
-            first_name,
-            last_name,
+            full_name,
             username,
             password,
             roles,
@@ -89,9 +82,8 @@ impl UserService for PgUserService {
 
         let mut connection = get_connection_with_em_uid(current_uid, &self.pool).await?;
         let mut transaction = connection.begin().await?;
-        let uid: Uuid = sqlx::query_scalar("select users.create_user($1, $2, $3, $4)")
-            .bind(first_name)
-            .bind(last_name)
+        let uid: Uuid = sqlx::query_scalar("select users.create_user($1, $2, $3)")
+            .bind(full_name)
             .bind(username)
             .bind(password)
             .fetch_one(&mut transaction)
@@ -151,12 +143,8 @@ impl UserService for PgUserService {
             UpdateUserType::Username { new_username } => {
                 self.update_username(&user.uid, new_username).await?
             }
-            UpdateUserType::FullName {
-                new_first_name,
-                new_last_name,
-            } => {
-                self.update_full_name(&user.uid, new_first_name, new_last_name)
-                    .await?
+            UpdateUserType::FullName { new_name } => {
+                self.update_full_name(&user.uid, new_name).await?
             }
             UpdateUserType::ResetPassword { new_password } => {
                 self.reset_password(&user.uid, new_password).await?
@@ -234,7 +222,7 @@ mod test {
     }
 
     #[rstest]
-    #[case::valid_request(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), create_user_request("Mr", "Test", "test", "Test1!", &["admin"]))]
+    #[case::valid_request(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), create_user_request("Mr Test", "test", "Test1!", &["admin"]))]
     #[tokio::test]
     async fn create_user_should_succeed_when(
         database: PgPool,
@@ -249,19 +237,16 @@ mod test {
         let user = action?;
         let user_roles: Vec<RoleName> = user.roles.iter().map(|r| r.name).collect();
 
-        assert_eq!(
-            user.full_name,
-            format!("{} {}", user_request.first_name, user_request.last_name)
-        );
+        assert_eq!(user.full_name, user_request.full_name);
         assert_eq!(user_roles, user_request.roles);
 
         Ok(())
     }
 
     #[rstest]
-    #[case::user_does_not_exist(Uuid::new_v4(), create_user_request("Mr", "Test2", "test2", "Test1!", &["admin"]))]
-    #[case::missing_privilege(uuid!("728ac060-9d38-47e9-b2fa-66d2954110e3"), create_user_request("Mr", "Test3", "test3", "Test1!", &["admin"]))]
-    #[case::username_exists(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), create_user_request("Mr", "Test4", "none", "Test1!", &["admin"]))]
+    #[case::user_does_not_exist(Uuid::new_v4(), create_user_request("Mr Test2", "test2", "Test1!", &["admin"]))]
+    #[case::missing_privilege(uuid!("728ac060-9d38-47e9-b2fa-66d2954110e3"), create_user_request("Mr Test3", "test3", "Test1!", &["admin"]))]
+    #[case::username_exists(uuid!("9363ab3f-0d62-4b40-b408-898bdea56282"), create_user_request("Mr Test4", "none", "Test1!", &["admin"]))]
     #[tokio::test]
     async fn create_user_should_fail_when(
         database: PgPool,

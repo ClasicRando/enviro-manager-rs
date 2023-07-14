@@ -2,22 +2,21 @@ mod user;
 mod workflow_engine;
 
 use actix_session::Session;
-use actix_web::{
-    web::{self, Form},
-    HttpResponse,
-};
+use actix_web::{web, HttpResponse};
 use common::api::ApiResponseBody;
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use users::data::user::User;
 
 use crate::{
-    utils, ServerFnError, EM_UID_SESSION_KEY, INTERNAL_SERVICE_ERROR, USERNAME_SESSION_KEY,
+    components::toast, utils, ServerFnError, EM_UID_SESSION_KEY, INTERNAL_SERVICE_ERROR,
+    USERNAME_SESSION_KEY,
 };
 
 pub fn service() -> actix_web::Scope {
     web::scope("/api")
         .route("/login", web::post().to(login_user))
+        .route("/toast", web::post().to(toast))
         .service(workflow_engine::service())
         .service(user::service())
 }
@@ -28,7 +27,7 @@ pub struct Credentials {
     password: String,
 }
 
-pub async fn login_user(session: Session, credentials: Form<Credentials>) -> HttpResponse {
+pub async fn login_user(session: Session, credentials: web::Form<Credentials>) -> HttpResponse {
     let user = match login_user_api(credentials.0).await {
         Ok(inner) => inner,
         Err(_) => return utils::html_chunk!("Could not login user"),
@@ -64,4 +63,8 @@ async fn login_user_api(credentials: Credentials) -> Result<User, ServerFnError>
         }
     };
     Ok(user)
+}
+
+async fn toast(body: String) -> HttpResponse {
+    toast!(body)
 }
