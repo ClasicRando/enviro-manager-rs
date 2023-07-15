@@ -48,6 +48,8 @@ pub mod auth;
 pub mod components;
 #[cfg(feature = "ssr")]
 pub mod pages;
+#[cfg(feature = "ssr")]
+pub mod routes;
 use cfg_if::cfg_if;
 
 cfg_if! {

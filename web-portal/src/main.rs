@@ -1,7 +1,7 @@
 use cfg_if::cfg_if;
 
 // boilerplate to run in different modes
-cfg_if! {}
+// cfg_if! {}
 
 #[cfg(feature = "ssr")]
 #[actix_web::main]
