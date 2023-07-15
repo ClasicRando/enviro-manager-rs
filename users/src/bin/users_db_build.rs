@@ -11,9 +11,5 @@ async fn main() {
             return;
         }
     };
-    if let Err(error) = log4rs::init_file("users/users_db_build_log.yml", Default::default()) {
-        error!("Could not initialize log4rs. {error}");
-        return;
-    }
-    build_database::<PgDatabaseBuilder, _>(options).await
+    build_database::<PgDatabaseBuilder, _, _>("users/users_db_build_log.yml", options).await
 }

@@ -66,7 +66,7 @@ pub async fn check_for_composite(pool: &PgPool, file_name: &str) -> EmResult<()>
     let file_path = package_dir()?.join("database").join(file_name);
     let block = read_file(file_path).await?;
     let Some(captures) = COMPOSITE_REGEX.captures(&block) else {
-        return Ok(())
+        return Ok(());
     };
     let Some(schema) = captures.name("schema") else {
         Err("No 'schema' capture group present in composite definition")?

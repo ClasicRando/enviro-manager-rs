@@ -59,11 +59,15 @@ where
                 .route("/executors", get().to(executors_api::active_executors::<E>))
                 .route(
                     "/executors/shutdown/{executor_id}",
-                    get().to(executors_api::shutdown_executor::<E>),
+                    post().to(executors_api::shutdown_executor::<E>),
                 )
                 .route(
                     "/executors/cancel/{executor_id}",
-                    get().to(executors_api::cancel_executor::<E>),
+                    post().to(executors_api::cancel_executor::<E>),
+                )
+                .route(
+                    "/executors/clean",
+                    post().to(executors_api::clean_executors::<E>),
                 )
                 .route("/jobs", get().to(jobs_api::jobs::<J>))
                 .route("/jobs/{job_id}", get().to(jobs_api::job::<J>))
@@ -81,23 +85,27 @@ where
                 .route("/tasks", post().to(workflows_api::create_task::<T>))
                 .route("/tasks", post().to(workflows_api::create_task::<T>))
                 .route(
-                    "/workflow_runs/{workflow_run_id}",
+                    "/workflow-runs/{workflow_run_id}",
                     get().to(workflow_runs_api::workflow_run::<R>),
                 )
                 .route(
-                    "/workflow_runs/init/{workflow_id}",
+                    "/workflow-runs",
+                    get().to(workflow_runs_api::workflow_runs::<R>),
+                )
+                .route(
+                    "/workflow-runs/init/{workflow_id}",
                     get().to(workflow_runs_api::init_workflow_run::<R>),
                 )
                 .route(
-                    "/workflow_runs/cancel/{workflow_run_id}",
+                    "/workflow-runs/cancel/{workflow_run_id}",
                     get().to(workflow_runs_api::cancel_workflow_run::<R>),
                 )
                 .route(
-                    "/workflow_runs/schedule/{workflow_run_id}",
+                    "/workflow-runs/schedule/{workflow_run_id}",
                     get().to(workflow_runs_api::schedule_workflow_run::<R>),
                 )
                 .route(
-                    "/workflow_runs/restart/{workflow_run_id}",
+                    "/workflow-runs/restart/{workflow_run_id}",
                     get().to(workflow_runs_api::restart_workflow_run::<R>),
                 )
                 .route("/workflows", get().to(workflows_api::workflows::<W>))

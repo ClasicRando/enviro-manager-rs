@@ -25,6 +25,22 @@ where
     }
 }
 
+/// API endpoint to fetch all workflow runs Returns a single
+/// [WorkflowRun] if the run can be found
+pub async fn workflow_runs<R>(
+    service: actix_web::web::Data<R>,
+    query: actix_web::web::Query<QueryApiFormat>,
+) -> ApiResponse<Vec<WorkflowRun>>
+where
+    R: WorkflowRunsService,
+{
+    let format = query.into_inner();
+    match service.read_active().await {
+        Ok(workflow_run) => ApiResponse::success(workflow_run, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
+    }
+}
+
 /// API endpoint to initialize a workflow run for the specified `workflow_id`. Returns the new
 /// [WorkflowRun] if the `workflow_id` is valid and the init does not fail.
 pub async fn init_workflow_run<R>(

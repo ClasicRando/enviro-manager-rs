@@ -1,6 +1,5 @@
 use common::api::ApiResponseBody;
 use leptos::*;
-// use leptos_actix::redirect;
 use reqwest::Method;
 use users::{data::user::User, service::users::ValidateUserRequest};
 
@@ -8,6 +7,8 @@ use crate::{
     api,
     auth::{get_uid, set_session},
 };
+
+const SESSION_KEY: &str = "em_uid";
 
 #[server(LoginUser, "/api")]
 pub async fn login_user(
@@ -33,9 +34,17 @@ pub async fn login_user(
             return api::utils::server_fn_error!("Server error. {}", message)
         }
     };
-    set_session(cx, *user.uid()).await?;
+    let session = leptos_actix::extract(cx, |session: actix_session::Session| async move {
+        log::info!("Session {:?}", session.entries());
+        session
+    })
+    .await?;
+    session
+        .insert(SESSION_KEY, *user.uid())
+        .map_err(|e| ServerFnError::ServerError(format!("Could not create a new session. {e}")))?;
+    // set_session(cx, *user.uid()).await?;
 
-    // leptos_actix::redirect(cx, "index");
+    leptos_actix::redirect(cx, "/");
     Ok(())
 }
 

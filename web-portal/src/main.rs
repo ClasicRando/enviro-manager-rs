@@ -1,3 +1,8 @@
+use cfg_if::cfg_if;
+
+// boilerplate to run in different modes
+cfg_if! {}
+
 #[cfg(feature = "ssr")]
 #[actix_web::main]
 async fn main() -> common::error::EmResult<()> {
@@ -18,7 +23,8 @@ async fn main() -> common::error::EmResult<()> {
     // Generate the list of routes in your Leptos App
     let routes = generate_route_list(|cx| view! { cx, <App/> });
 
-    let secret_key = Key::generate();
+    let key_env = std::env::var("SECRET_KEY")?;
+    let secret_key = Key::from(key_env.as_bytes());
     let redis_connection_string = std::env::var("REDIS_CONNECTION")?;
 
     HttpServer::new(move || {

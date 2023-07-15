@@ -1,8 +1,6 @@
 use std::net::ToSocketAddrs;
 
-use actix_cors::Cors;
 use actix_web::{
-    http::header,
     middleware::Logger,
     web::{get, patch, post, Data},
     App, HttpServer,
@@ -73,17 +71,6 @@ where
         App::new().service(
             actix_web::web::scope("/api/v1")
                 .wrap(Logger::default())
-                .wrap(
-                    Cors::default()
-                        .allowed_origin("http://127.0.0.1:3000")
-                        .allowed_methods(vec!["GET", "POST"])
-                        .allowed_headers(vec![
-                            header::AUTHORIZATION,
-                            header::ACCEPT,
-                            header::CONTENT_TYPE,
-                        ])
-                        .max_age(3600),
-                )
                 .app_data(roles_service_data.clone())
                 .app_data(users_service_data.clone())
                 .route("/roles", get().to(roles::roles::<R>))

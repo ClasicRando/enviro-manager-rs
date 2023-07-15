@@ -30,7 +30,7 @@ async fn main() -> EmResult<()> {
         task_service,
         workflow_service,
         job_service,
-        ("127.0.0.1", 8080),
+        ("127.0.0.1", 8000),
     )
     .await?;
     Ok(())

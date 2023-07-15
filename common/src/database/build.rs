@@ -198,11 +198,16 @@ where
 
 /// Execute a build against the database specified by the connection `options` provided. All
 /// messages will be logged using the configuration specified by `log_config_path`.
-pub async fn build_database<B, D>(options: D::ConnectionOptions)
+pub async fn build_database<B, D, P>(log_config_path: P, options: D::ConnectionOptions)
 where
     B: DatabaseBuilder<Database = D>,
     D: Database,
+    P: AsRef<Path>,
 {
+    if let Err(error) = log4rs::init_file(log_config_path, Default::default()) {
+        error!("Could not initialize log4rs. {error}");
+        return;
+    }
     let pool = match D::create_pool(options, 1, 1).await {
         Ok(inner) => inner,
         Err(error) => {
