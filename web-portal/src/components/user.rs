@@ -110,7 +110,16 @@ pub enum UserEditSection {
 }
 
 #[component]
-pub fn user(cx: Scope, user: User) -> impl IntoView {
+pub fn user<S>(cx: Scope, user: User, #[prop(optional)] notification: S) -> impl IntoView
+where
+    S: Into<String> + Default,
+{
+    let notification = notification.into();
+    let toast = if notification.is_empty() {
+        view! { cx, }.into_view(cx)
+    } else {
+        view! { cx, <RequestToast body=message/> }.into_view(cx)
+    };
     view! { cx,
         <BasePage title="User" user_full_name=user.full_name().to_owned()>
             <Row>
@@ -120,6 +129,7 @@ pub fn user(cx: Scope, user: User) -> impl IntoView {
                 </Col>
                 <Col/>
             </Row>
+            {toast}
         </BasePage>
     }
 }

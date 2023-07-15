@@ -19,10 +19,13 @@ pub fn request_toast<S>(cx: Scope, body: S) -> impl IntoView
 where
     S: Into<String>,
 {
+    // view! { cx,
+    //     <div class="d-none" hx-target="#toasts" hx-swap="beforeend">
+    //         <input hx-trigger="DOMNodeInserted" hx-post="/api/toast" name="message"
+    // value=body.into()/>     </div>
+    // }
     view! { cx,
-        <div class="d-none" hx-target="#toasts" hx-swap="beforeend">
-            <input hx-trigger="DOMNodeInserted" hx-post="/api/toast" name="message" value=body.into()/>
-        </div>
+        <div class="d-none request-toast">{body.into()}</div>
     }
 }
 

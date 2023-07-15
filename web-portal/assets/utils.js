@@ -169,3 +169,51 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+/**
+ * 
+ * @param {string} body 
+ */
+function createToast(body) {
+    const container = document.getElementById('toasts');
+    if (container === null) {
+        return;
+    }
+    const toast = document.createElement('div');
+    toast.classList.add('toast', 'fade', 'show');
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    const header = document.createElement('div');
+    toast.appendChild(header);
+    header.classList.add('toast-header');
+    const img = document.createElement('img');
+    header.appendChild(img);
+    img.src = '/assets/bell_icon.png';
+    img.width = 20;
+    img.classList.add('me-1');
+    const title = document.createElement('strong');
+    header.appendChild(title);
+    title.textContent = 'EnviroManager';
+    title.classList.add('me-auto');
+    const dismiss = document.createElement('button');
+    header.appendChild(dismiss);
+    dismiss.type = 'button';
+    dismiss.classList.add('btn-close');
+    dismiss.setAttribute('data-bs-dismiss', 'toast');
+    dismiss.setAttribute('aria-label', 'Close');
+    const content = document.createElement('div');
+    toast.appendChild(content);
+    content.classList.add('toast-body');
+    content.textContent = body;
+    container.appendChild(toast);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    setInterval(() => {
+        for (const element of document.querySelectorAll('.request-toast')) {
+            const body = element.textContent;
+            createToast(body);
+        }
+    }, 500);
+});
