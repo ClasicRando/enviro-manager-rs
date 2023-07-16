@@ -53,7 +53,6 @@ fn UserContext(cx: Scope, user_full_name: String) -> impl IntoView {
                 {user_full_name}
             </a>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="/user">"Info"</a></li>
                 <li><a class="dropdown-item" href="/logout">"Logout"</a></li>
             </ul>
         </li>
