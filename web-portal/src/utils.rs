@@ -191,6 +191,14 @@ macro_rules! redirect_login {
     };
 }
 
+macro_rules! redirect_login_htmx {
+    () => {
+        HttpResponse::Found()
+            .insert_header(("HX-Redirect", "/login"))
+            .finish()
+    };
+}
+
 pub(crate) use html;
 pub(crate) use html_chunk;
 pub(crate) use internal_server_error;
@@ -199,5 +207,6 @@ pub(crate) use redirect_home;
 pub(crate) use redirect_home_htmx;
 pub(crate) use redirect_htmx;
 pub(crate) use redirect_login;
+pub(crate) use redirect_login_htmx;
 pub(crate) use server_fn_error;
 pub(crate) use server_fn_static_error;
