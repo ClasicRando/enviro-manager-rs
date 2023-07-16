@@ -32,4 +32,4 @@ pub use index::Index;
 pub use login::Login;
 pub use toast::{build_toast, error_toast, toast, RequestToast, Toast};
 
-pub use self::workflow_engine::{ActiveExecutors, ActiveWorkflowRuns, WorkflowEngine};
+pub use self::workflow_engine::main_page::{ActiveExecutors, ActiveWorkflowRuns, WorkflowEngine};

@@ -5,7 +5,7 @@ use workflow_engine::{
     workflow_run::data::{WorkflowRun, WorkflowRunStatus, WorkflowRunTask},
 };
 
-use super::{
+use crate::components::{
     base::BasePage,
     into_view, option_into_view,
     table::{DataTableExtras, ExtraTableButton, RowAction, RowWithDetails},
@@ -88,7 +88,13 @@ fn WorkflowRun(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
             <td>{into_view(workflow_run.status)}</td>
             <td>{option_into_view(workflow_run.executor_id)}</td>
             <td>{option_into_view(workflow_run.progress)}</td>
-            <td>{actions}</td>
+            <td>
+                {actions}
+                <RowAction
+                    title="Enter Workflow Run"
+                    api_url=""
+                    icon="fa-right-to-bracket"/>
+            </td>
         </RowWithDetails>
     }
 }
