@@ -30,7 +30,7 @@ pub fn service() -> actix_web::Scope {
 
 async fn active_executors(session: Session) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login!();
+        return utils::redirect_login_htmx!();
     }
     let executors = match get_active_executors().await {
         Ok(inner) => inner,
@@ -64,7 +64,7 @@ async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
 
 async fn active_workflow_runs(session: Session) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login!();
+        return utils::redirect_login_htmx!();
     }
     let workflow_runs = match get_active_workflow_runs().await {
         Ok(inner) => inner,
@@ -98,7 +98,7 @@ async fn get_active_workflow_runs() -> Result<Vec<WorkflowRun>, ServerFnError> {
 
 async fn clean_executors(session: Session) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login!();
+        return utils::redirect_login_htmx!();
     }
     if let Err(error) = post_clean_executors().await {
         return error.to_response();
@@ -130,7 +130,7 @@ async fn post_clean_executors() -> Result<(), ServerFnError> {
 
 async fn cancel_executor(session: Session, executor_id: web::Path<ExecutorId>) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login!();
+        return utils::redirect_login_htmx!();
     }
     if let Err(error) = post_cancel_executor(executor_id.into_inner()).await {
         return error.to_response();
@@ -162,7 +162,7 @@ async fn post_cancel_executor(executor_id: ExecutorId) -> Result<(), ServerFnErr
 
 async fn shutdown_executor(session: Session, executor_id: web::Path<ExecutorId>) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login!();
+        return utils::redirect_login_htmx!();
     }
     if let Err(error) = post_shutdown_executor(executor_id.into_inner()).await {
         return error.to_response();
