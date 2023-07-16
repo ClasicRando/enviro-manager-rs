@@ -30,6 +30,14 @@ pub fn service() -> actix_web::Scope {
             "/workflow-runs/schedule/{workflow_run_id}",
             web::post().to(schedule_workflow_run),
         )
+        .route(
+            "/workflow-runs/cancel/{workflow_run_id}",
+            web::post().to(cancel_workflow_run),
+        )
+        .route(
+            "/workflow-runs/restart/{workflow_run_id}",
+            web::post().to(restart_workflow_run),
+        )
 }
 
 async fn active_executors(session: Session) -> HttpResponse {
@@ -220,6 +228,76 @@ async fn post_schedule_workflow_run(workflow_run_id: WorkflowRunId) -> Result<()
     match clean_executors_response {
         ApiResponseBody::Success(workflow_run) => {
             log::info!("Scheduled workflow run: {}", workflow_run.workflow_run_id);
+            Ok(())
+        }
+        ApiResponseBody::Message(message) => {
+            utils::server_fn_error!("Expected data, got message. {}", message)
+        }
+        ApiResponseBody::Error(message) | ApiResponseBody::Failure(message) => {
+            utils::server_fn_error!(message)
+        }
+    }
+}
+
+async fn cancel_workflow_run(
+    session: Session,
+    workflow_run_id: web::Path<WorkflowRunId>,
+) -> HttpResponse {
+    if extract_session_uid(&session).is_err() {
+        return utils::redirect_login_htmx!();
+    }
+    if let Err(error) = post_cancel_workflow_run(workflow_run_id.into_inner()).await {
+        return error.to_response();
+    }
+    active_workflow_runs(session).await
+}
+
+async fn post_cancel_workflow_run(workflow_run_id: WorkflowRunId) -> Result<(), ServerFnError> {
+    let clean_executors_response: ApiResponseBody<WorkflowRun> = utils::api_request(
+        format!("http://127.0.0.1:8000/api/v1/workflow-runs/cancel/{workflow_run_id}?f=msgpack"),
+        Method::POST,
+        None::<String>,
+        None::<()>,
+    )
+    .await?;
+    match clean_executors_response {
+        ApiResponseBody::Success(workflow_run) => {
+            log::info!("Canceled workflow run: {}", workflow_run.workflow_run_id);
+            Ok(())
+        }
+        ApiResponseBody::Message(message) => {
+            utils::server_fn_error!("Expected data, got message. {}", message)
+        }
+        ApiResponseBody::Error(message) | ApiResponseBody::Failure(message) => {
+            utils::server_fn_error!(message)
+        }
+    }
+}
+
+async fn restart_workflow_run(
+    session: Session,
+    workflow_run_id: web::Path<WorkflowRunId>,
+) -> HttpResponse {
+    if extract_session_uid(&session).is_err() {
+        return utils::redirect_login_htmx!();
+    }
+    if let Err(error) = post_restart_workflow_run(workflow_run_id.into_inner()).await {
+        return error.to_response();
+    }
+    active_workflow_runs(session).await
+}
+
+async fn post_restart_workflow_run(workflow_run_id: WorkflowRunId) -> Result<(), ServerFnError> {
+    let clean_executors_response: ApiResponseBody<WorkflowRun> = utils::api_request(
+        format!("http://127.0.0.1:8000/api/v1/workflow-runs/restart/{workflow_run_id}?f=msgpack"),
+        Method::POST,
+        None::<String>,
+        None::<()>,
+    )
+    .await?;
+    match clean_executors_response {
+        ApiResponseBody::Success(workflow_run) => {
+            log::info!("Restarted workflow run: {}", workflow_run.workflow_run_id);
             Ok(())
         }
         ApiResponseBody::Message(message) => {

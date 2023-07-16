@@ -47,23 +47,21 @@ fn WorkflowRun(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
                 api_url=format!("/api/workflow-engine/workflow-runs/schedule/{}", workflow_run.workflow_run_id)
                 icon="fa-play"/>
         }),
-        WorkflowRunStatus::Scheduled => None,
         WorkflowRunStatus::Running => Some(view! { cx,
-            <RowAction title="Cancel Workflow Run" api_url="" icon="fa-stop"/>
+            <RowAction
+                title="Cancel Workflow Run"
+                api_url=format!("/api/workflow-engine/workflow-runs/cancel/{}", workflow_run.workflow_run_id)
+                icon="fa-stop"/>
         }),
-        WorkflowRunStatus::Paused => Some(view! { cx,
-            <RowAction title="Schedule Workflow Run" api_url="" icon="fa-play"/>
-        }),
-        WorkflowRunStatus::Failed => Some(view! { cx,
-            <RowAction title="Restart Workflow Run" api_url="" icon="fa-rotate-right"/>
-        }),
-        WorkflowRunStatus::Complete => None,
-        WorkflowRunStatus::Canceled => Some(view! { cx,
+        WorkflowRunStatus::Failed | WorkflowRunStatus::Canceled => Some(view! { cx,
             <RowAction
                 title="Restart Workflow Run"
-                api_url=""
+                api_url=format!("/api/workflow-engine/workflow-runs/restart/{}", workflow_run.workflow_run_id)
                 icon="fa-rotate-right"/>
         }),
+        WorkflowRunStatus::Complete | WorkflowRunStatus::Scheduled | WorkflowRunStatus::Paused => {
+            None
+        }
     };
     view! { cx,
         <RowWithDetails
