@@ -94,19 +94,19 @@ where
                 )
                 .route(
                     "/workflow-runs/init/{workflow_id}",
-                    get().to(workflow_runs_api::init_workflow_run::<R>),
+                    post().to(workflow_runs_api::init_workflow_run::<R>),
                 )
                 .route(
                     "/workflow-runs/cancel/{workflow_run_id}",
-                    get().to(workflow_runs_api::cancel_workflow_run::<R>),
+                    post().to(workflow_runs_api::cancel_workflow_run::<R>),
                 )
                 .route(
                     "/workflow-runs/schedule/{workflow_run_id}",
-                    get().to(workflow_runs_api::schedule_workflow_run::<R>),
+                    post().to(workflow_runs_api::schedule_workflow_run::<R>),
                 )
                 .route(
                     "/workflow-runs/restart/{workflow_run_id}",
-                    get().to(workflow_runs_api::restart_workflow_run::<R>),
+                    post().to(workflow_runs_api::restart_workflow_run::<R>),
                 )
                 .route("/workflows", get().to(workflows_api::workflows::<W>))
                 .route(
