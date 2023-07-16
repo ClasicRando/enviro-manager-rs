@@ -2,13 +2,13 @@ use leptos::*;
 use strum::{EnumIter, IntoEnumIterator};
 use workflow_engine::{
     executor::data::Executor,
-    workflow_run::data::{WorkflowRun, WorkflowRunTask},
+    workflow_run::data::{WorkflowRun, WorkflowRunStatus, WorkflowRunTask},
 };
 
 use super::{
     base::BasePage,
     into_view, option_into_view,
-    table::{DataTable, DataTableExtras, ExtraTableButton, RowWithDetails},
+    table::{DataTableExtras, ExtraTableButton, RowAction, RowWithDetails},
 };
 
 #[component]
@@ -40,10 +40,29 @@ fn WorkflowRunTask(cx: Scope, workflow_run_task: WorkflowRunTask) -> impl IntoVi
 #[component]
 fn WorkflowRun(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
     let details_id = format!("tasks{}", workflow_run.workflow_run_id);
+    let actions = match workflow_run.status {
+        WorkflowRunStatus::Waiting => Some(view! { cx,
+            <RowAction title="Schedule Workflow Run" api_url="" icon="fa-play"/>
+        }),
+        WorkflowRunStatus::Scheduled => None,
+        WorkflowRunStatus::Running => Some(view! { cx,
+            <RowAction title="Cancel Workflow Run" api_url="" icon="fa-stop"/>
+        }),
+        WorkflowRunStatus::Paused => Some(view! { cx,
+            <RowAction title="Schedule Workflow Run" api_url="" icon="fa-play"/>
+        }),
+        WorkflowRunStatus::Failed => Some(view! { cx,
+            <RowAction title="Restart Workflow Run" api_url="" icon="fa-rotate-right"/>
+        }),
+        WorkflowRunStatus::Complete => None,
+        WorkflowRunStatus::Canceled => Some(view! { cx,
+            <RowAction title="Restart Workflow Run" api_url="" icon="fa-rotate-right"/>
+        }),
+    };
     view! { cx,
         <RowWithDetails
             details_id=details_id
-            column_count=6
+            column_count=7
             details_header=view! { cx,
                 <th>"Order"</th>
                 <th>"Task ID"</th>
@@ -65,6 +84,7 @@ fn WorkflowRun(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
             <td>{into_view(workflow_run.status)}</td>
             <td>{option_into_view(workflow_run.executor_id)}</td>
             <td>{option_into_view(workflow_run.progress)}</td>
+            <td>{actions}</td>
         </RowWithDetails>
     }
 }
@@ -73,7 +93,7 @@ fn WorkflowRun(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
 pub fn ActiveWorkflowRuns(cx: Scope, workflow_runs: Vec<WorkflowRun>) -> impl IntoView {
     view! { cx,
         <Tabs selected_tab=WorkflowEngineMainPageTabs::WorkflowRuns/>
-        <DataTable
+        <DataTableExtras
             id="active-workflow-runs-tbl"
             caption="Active Workflow Runs"
             header=view! { cx,
@@ -83,28 +103,36 @@ pub fn ActiveWorkflowRuns(cx: Scope, workflow_runs: Vec<WorkflowRun>) -> impl In
                 <th>"Status"</th>
                 <th>"Executor ID"</th>
                 <th>"Progress"</th>
+                <th>"Actions"</th>
             }
             items=workflow_runs
             row_builder=|cx, workflow_run| view! { cx, <WorkflowRun workflow_run=workflow_run/> }
             data_source=WorkflowEngineMainPageTabs::WorkflowRuns.get_url()
-            refresh=true/>
+            refresh=true
+            extra_buttons=vec![
+                ExtraTableButton::new(
+                    "New Workflow Run",
+                    "#",
+                    "fa-plus"
+                )
+            ]/>
     }
 }
 
 #[component]
 fn Executor(cx: Scope, executor: Executor) -> impl IntoView {
-    let cancel_post: String = format!(
-        "/api/workflow-engine/executors/cancel/{}",
-        executor.executor_id
-    );
-    let shutdown_post: String = format!(
-        "/api/workflow-engine/executors/shutdown/{}",
-        executor.executor_id
-    );
     let actions = if executor.session_active {
+        let cancel_post: String = format!(
+            "/api/workflow-engine/executors/cancel/{}",
+            executor.executor_id
+        );
+        let shutdown_post: String = format!(
+            "/api/workflow-engine/executors/shutdown/{}",
+            executor.executor_id
+        );
         Some(view! { cx,
-            <i class="table-action fa-solid fa-stop fa-xl me-2 px-1" hx-trigger="click" hx-post=cancel_post></i>
-            <i class="table-action fa-solid fa-power-off fa-xl px-1" hx-trigger="click" hx-post=shutdown_post></i>
+            <RowAction title="Cancel Executor" api_url=cancel_post icon="fa-stop"/>
+            <RowAction title="Shutdown Executor" api_url=shutdown_post icon="fa-power-off"/>
         })
     } else {
         None
@@ -120,9 +148,7 @@ fn Executor(cx: Scope, executor: Executor) -> impl IntoView {
             <td>{into_view(executor.exec_start)}</td>
             <td>{into_view(executor.session_active)}</td>
             <td>{into_view(executor.workflow_run_count)}</td>
-            <td>
-                {actions}
-            </td>
+            <td>{actions}</td>
         </tr>
     }
 }

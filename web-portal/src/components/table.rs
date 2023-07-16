@@ -30,6 +30,18 @@ impl IntoView for ExtraTableButton {
 }
 
 #[component]
+pub fn RowAction<S>(cx: Scope, title: &'static str, api_url: S, icon: &'static str) -> impl IntoView
+where
+    S: Into<String>,
+{
+    view! { cx,
+        <button class="btn btn-primary me-1" hx-post=api_url.into() title=title>
+            <i class=format!("fa-solid {icon}")></i>
+        </button>
+    }
+}
+
+#[component]
 pub fn RowWithDetails<IV, R, F, IV2>(
     cx: Scope,
     children: Children,
