@@ -5,7 +5,7 @@ use leptos::*;
 use reqwest::Method;
 use workflow_engine::{
     executor::data::{Executor, ExecutorId},
-    workflow_run::data::WorkflowRun,
+    workflow_run::data::{WorkflowRun, WorkflowRunId},
 };
 
 use crate::{
@@ -17,7 +17,6 @@ pub fn service() -> actix_web::Scope {
     web::scope("/workflow-engine")
         .route("/executors", web::get().to(active_executors))
         .route("/executors/clean", web::post().to(clean_executors))
-        .route("/workflow-runs", web::get().to(active_workflow_runs))
         .route(
             "/executors/cancel/{executor_id}",
             web::post().to(cancel_executor),
@@ -25,6 +24,11 @@ pub fn service() -> actix_web::Scope {
         .route(
             "/executors/shutdown/{executor_id}",
             web::post().to(shutdown_executor),
+        )
+        .route("/workflow-runs", web::get().to(active_workflow_runs))
+        .route(
+            "/workflow-runs/schedule/{workflow_run_id}",
+            web::post().to(schedule_workflow_run),
         )
 }
 
@@ -181,6 +185,41 @@ async fn post_shutdown_executor(executor_id: ExecutorId) -> Result<(), ServerFnE
     match clean_executors_response {
         ApiResponseBody::Success(executor) => {
             log::info!("Canceled executor: {}", executor.executor_id);
+            Ok(())
+        }
+        ApiResponseBody::Message(message) => {
+            utils::server_fn_error!("Expected data, got message. {}", message)
+        }
+        ApiResponseBody::Error(message) | ApiResponseBody::Failure(message) => {
+            utils::server_fn_error!(message)
+        }
+    }
+}
+
+async fn schedule_workflow_run(
+    session: Session,
+    workflow_run_id: web::Path<WorkflowRunId>,
+) -> HttpResponse {
+    if extract_session_uid(&session).is_err() {
+        return utils::redirect_login_htmx!();
+    }
+    if let Err(error) = post_schedule_workflow_run(workflow_run_id.into_inner()).await {
+        return error.to_response();
+    }
+    active_workflow_runs(session).await
+}
+
+async fn post_schedule_workflow_run(workflow_run_id: WorkflowRunId) -> Result<(), ServerFnError> {
+    let clean_executors_response: ApiResponseBody<WorkflowRun> = utils::api_request(
+        format!("http://127.0.0.1:8000/api/v1/workflow-runs/schedule/{workflow_run_id}?f=msgpack"),
+        Method::POST,
+        None::<String>,
+        None::<()>,
+    )
+    .await?;
+    match clean_executors_response {
+        ApiResponseBody::Success(workflow_run) => {
+            log::info!("Scheduled workflow run: {}", workflow_run.workflow_run_id);
             Ok(())
         }
         ApiResponseBody::Message(message) => {

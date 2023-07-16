@@ -42,7 +42,10 @@ fn WorkflowRun(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
     let details_id = format!("tasks{}", workflow_run.workflow_run_id);
     let actions = match workflow_run.status {
         WorkflowRunStatus::Waiting => Some(view! { cx,
-            <RowAction title="Schedule Workflow Run" api_url="" icon="fa-play"/>
+            <RowAction
+                title="Schedule Workflow Run"
+                api_url=format!("/api/workflow-engine/workflow-runs/schedule/{}", workflow_run.workflow_run_id)
+                icon="fa-play"/>
         }),
         WorkflowRunStatus::Scheduled => None,
         WorkflowRunStatus::Running => Some(view! { cx,
@@ -56,7 +59,10 @@ fn WorkflowRun(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
         }),
         WorkflowRunStatus::Complete => None,
         WorkflowRunStatus::Canceled => Some(view! { cx,
-            <RowAction title="Restart Workflow Run" api_url="" icon="fa-rotate-right"/>
+            <RowAction
+                title="Restart Workflow Run"
+                api_url=""
+                icon="fa-rotate-right"/>
         }),
     };
     view! { cx,
