@@ -1,5 +1,3 @@
-use std::sync::LazyLock;
-
 use leptos::*;
 use strum::{EnumIter, IntoEnumIterator};
 use workflow_engine::{
@@ -10,11 +8,11 @@ use workflow_engine::{
 use super::{
     base::BasePage,
     into_view, option_into_view,
-    table::{DataTable, RowWithDetails},
+    table::{DataTable, DataTableExtras, ExtraTableButton, RowWithDetails},
 };
 
 #[component]
-fn workflow_run_task(cx: Scope, workflow_run_task: WorkflowRunTask) -> impl IntoView {
+fn WorkflowRunTask(cx: Scope, workflow_run_task: WorkflowRunTask) -> impl IntoView {
     view! { cx,
         <tr>
             <td>{into_view(workflow_run_task.task_order)}</td>
@@ -39,35 +37,28 @@ fn workflow_run_task(cx: Scope, workflow_run_task: WorkflowRunTask) -> impl Into
     }
 }
 
-static ACTIVE_WORKFLOW_RUN_TASK_COLUMNS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
-    vec![
-        "Order",
-        "Task ID",
-        "Name",
-        "Description",
-        "Status",
-        "Parameters",
-        "Output",
-        "Rules",
-        "Start",
-        "End",
-        "Progress",
-    ]
-});
-
 #[component]
-fn workflow_run(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
+fn WorkflowRun(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
     let details_id = format!("tasks{}", workflow_run.workflow_run_id);
-    let rows = workflow_run
-        .tasks
-        .into_iter()
-        .map(|wrt| view! { cx, <WorkflowRunTask workflow_run_task=wrt/> })
-        .collect_view(cx);
     view! { cx,
         <RowWithDetails
             details_id=details_id
-            detail_columns=&ACTIVE_WORKFLOW_RUN_TASK_COLUMNS
-            detail_rows=rows
+            column_count=6
+            details_header=view! { cx,
+                <th>"Order"</th>
+                <th>"Task ID"</th>
+                <th>"Name"</th>
+                <th>"Description"</th>
+                <th>"Status"</th>
+                <th>"Parameters"</th>
+                <th>"Output"</th>
+                <th>"Rules"</th>
+                <th>"Start"</th>
+                <th>"End"</th>
+                <th>"Progress"</th>
+            }
+            details=workflow_run.tasks
+            details_row_builder=|cx, task| view! { cx, <WorkflowRunTask workflow_run_task=task/> }
         >
             <td>{into_view(workflow_run.workflow_run_id)}</td>
             <td>{into_view(workflow_run.workflow_id)}</td>
@@ -78,37 +69,30 @@ fn workflow_run(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
     }
 }
 
-static ACTIVE_WORKFLOW_RUN_COLUMNS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
-    vec![
-        "Details",
-        "ID",
-        "Workflow ID",
-        "Status",
-        "Executor ID",
-        "Progress",
-    ]
-});
-
 #[component]
-pub fn active_workflow_runs(cx: Scope, workflow_runs: Vec<WorkflowRun>) -> impl IntoView {
-    let rows = workflow_runs
-        .into_iter()
-        .map(|wr| view! { cx, <WorkflowRun workflow_run=wr/> })
-        .collect_view(cx);
+pub fn ActiveWorkflowRuns(cx: Scope, workflow_runs: Vec<WorkflowRun>) -> impl IntoView {
     view! { cx,
         <Tabs selected_tab=WorkflowEngineMainPageTabs::WorkflowRuns/>
         <DataTable
             id="active-workflow-runs-tbl"
             caption="Active Workflow Runs"
-            columns=&ACTIVE_WORKFLOW_RUN_COLUMNS
-            rows=rows
+            header=view! { cx,
+                <th>"Details"</th>
+                <th>"ID"</th>
+                <th>"Workflow ID"</th>
+                <th>"Status"</th>
+                <th>"Executor ID"</th>
+                <th>"Progress"</th>
+            }
+            items=workflow_runs
+            row_builder=|cx, workflow_run| view! { cx, <WorkflowRun workflow_run=workflow_run/> }
             data_source=WorkflowEngineMainPageTabs::WorkflowRuns.get_url()
             refresh=true/>
     }
 }
 
 #[component]
-fn executor(cx: Scope, executor: Executor) -> impl IntoView {
+fn Executor(cx: Scope, executor: Executor) -> impl IntoView {
     let cancel_post: String = format!(
         "/api/workflow-engine/executors/cancel/{}",
         executor.executor_id
@@ -143,46 +127,36 @@ fn executor(cx: Scope, executor: Executor) -> impl IntoView {
     }
 }
 
-static ACTIVE_EXECUTOR_COLUMNS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
-    vec![
-        "ID",
-        "PID",
-        "Username",
-        "Application",
-        "Client Address",
-        "Client Port",
-        "Start",
-        "Active",
-        "Workflow Run Count",
-        "Actions",
-    ]
-});
-
 #[component]
-pub fn active_executors(cx: Scope, executors: Vec<Executor>) -> impl IntoView {
-    let rows = executors
-        .into_iter()
-        .map(|ex| view! { cx, <tr><Executor executor=ex/></tr> })
-        .collect_view(cx);
-    let extra_buttons = [view! { cx,
-        <button title="Clean Executors" type="button" class="btn btn-secondary"
-            hx-post="/api/workflow-engine/executors/clean" hx-trigger="click"
-        >
-            <i class="fa-solid fa-broom"></i>
-        </button>
-    }]
-    .into_iter()
-    .collect_view(cx);
+pub fn ActiveExecutors(cx: Scope, executors: Vec<Executor>) -> impl IntoView {
     view! { cx,
         <Tabs selected_tab=WorkflowEngineMainPageTabs::Executors/>
-        <DataTable
+        <DataTableExtras
             id="active-executors-tbl"
             caption="Active Executors"
-            columns=&ACTIVE_EXECUTOR_COLUMNS
-            rows=rows
+            header=view! { cx,
+                <th>"ID"</th>
+                <th>"PID"</th>
+                <th>"Username"</th>
+                <th>"Application"</th>
+                <th>"Client Address"</th>
+                <th>"Client Port"</th>
+                <th>"Start"</th>
+                <th>"Active"</th>
+                <th>"Workflow Run Count"</th>
+                <th>"Actions"</th>
+            }
+            items=executors
+            row_builder=|cx, executor| view! { cx, <Executor executor=executor/> }
             data_source=WorkflowEngineMainPageTabs::Executors.get_url()
             refresh=true
-            extra_buttons=extra_buttons/>
+            extra_buttons=vec![
+                ExtraTableButton::new(
+                    "Clean Executors",
+                    "/api/workflow-engine/executors/clean",
+                    "fa-broom"
+                ),
+            ]/>
     }
 }
 

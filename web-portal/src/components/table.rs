@@ -1,13 +1,49 @@
 use leptos::*;
 
+pub struct ExtraTableButton {
+    title: &'static str,
+    api_url: &'static str,
+    icon: &'static str,
+}
+
+impl ExtraTableButton {
+    pub fn new(title: &'static str, api_url: &'static str, icon: &'static str) -> Self {
+        Self {
+            title,
+            api_url,
+            icon,
+        }
+    }
+}
+
+impl IntoView for ExtraTableButton {
+    fn into_view(self, cx: Scope) -> View {
+        view! { cx,
+            <button title=self.title type="button" class="btn btn-secondary"
+                hx-post=self.api_url hx-trigger="click"
+            >
+                <i class=format!("fa-solid {}", self.icon)></i>
+            </button>
+        }
+        .into_view(cx)
+    }
+}
+
 #[component]
-pub fn row_with_details(
+pub fn RowWithDetails<IV, R, F, IV2>(
     cx: Scope,
     children: Children,
     details_id: String,
-    detail_columns: &'static [&'static str],
-    detail_rows: View,
-) -> impl IntoView {
+    details_header: IV,
+    details: Vec<R>,
+    details_row_builder: F,
+    column_count: u8,
+) -> impl IntoView
+where
+    IV: IntoView,
+    F: Fn(Scope, R) -> IV2,
+    IV2: IntoView,
+{
     let hm_on = format!(
         "click: toggleDisplay(document.getElementById('{}'))",
         details_id
@@ -21,30 +57,42 @@ pub fn row_with_details(
             </td>
             {children(cx)}
         </tr>
-        <DetailsTable details_id=details_id columns=detail_columns rows=detail_rows/>
+        <DetailsTable
+            details_id=details_id
+            column_count=column_count
+            header=details_header
+            items=details
+            row_builder=details_row_builder/>
     }
 }
 
 #[component]
-pub fn details_table(
+pub fn DetailsTable<IV, R, F, IV2>(
     cx: Scope,
     details_id: String,
-    columns: &'static [&'static str],
-    rows: View,
-) -> impl IntoView {
+    column_count: u8,
+    header: IV,
+    items: Vec<R>,
+    row_builder: F,
+) -> impl IntoView
+where
+    IV: IntoView,
+    F: Fn(Scope, R) -> IV2,
+    IV2: IntoView,
+{
+    let row_elements = items
+        .into_iter()
+        .map(|row| row_builder(cx, row))
+        .collect_view(cx);
     view! { cx,
         <tr id=details_id class="d-none">
-            <td colspan=columns.len()>
+            <td colspan=column_count>
                 <table class="table table-stripped">
                     <thead>
-                        <tr>
-                        {columns.iter()
-                            .map(|c| view! { cx, <th>{c}</th> })
-                            .collect::<Vec<_>>()}
-                        </tr>
+                        {header}
                     </thead>
                     <tbody>
-                    {rows}
+                    {row_elements}
                     </tbody>
                 </table>
             </td>
@@ -53,17 +101,24 @@ pub fn details_table(
 }
 
 #[component]
-pub fn data_table(
+pub fn DataTableExtras<IV, R, F, IV2, E>(
     cx: Scope,
     id: &'static str,
     caption: &'static str,
-    columns: &'static [&'static str],
-    rows: View,
+    header: IV,
+    items: Vec<R>,
+    row_builder: F,
     data_source: &'static str,
     #[prop(optional)] refresh: bool,
     #[prop(optional)] search: bool,
-    #[prop(optional)] extra_buttons: View,
-) -> impl IntoView {
+    #[prop(optional)] extra_buttons: E,
+) -> impl IntoView
+where
+    IV: IntoView,
+    F: Fn(Scope, R) -> IV2,
+    IV2: IntoView,
+    E: IntoIterator<Item = ExtraTableButton> + Default,
+{
     let body_id = format!("{id}Body");
     let search_form = if search {
         let search_source = format!("{data_source}/search");
@@ -91,13 +146,17 @@ pub fn data_table(
     } else {
         "btn-group ms-auto"
     };
+    let row_elements = items
+        .into_iter()
+        .map(|row| row_builder(cx, row))
+        .collect_view(cx);
     view! { cx,
         <div class="table-responsive-sm">
             <div class="btn-toolbar mt-1" role="toolbar">
                 {search_form}
                 <div class=button_group_class>
                 {refresh_button}
-                {extra_buttons}
+                {extra_buttons.collect_view(cx)}
                 </div>
             </div>
             <table class="table table-striped caption-top" id=id>
@@ -105,17 +164,42 @@ pub fn data_table(
                     {caption}
                     <div class="spinner-border htmx-indicator" role="status"></div>
                 </caption>
-                <thead>
-                    <tr>
-                    {columns.iter()
-                        .map(|c| view! { cx, <th>{c}</th> })
-                        .collect::<Vec<_>>()}
-                    </tr>
-                </thead>
+                <thead>{header}</thead>
                 <tbody id=body_id>
-                {rows}
+                    {row_elements}
                 </tbody>
             </table>
         </div>
+    }
+}
+
+#[component]
+pub fn DataTable<IV, R, F, IV2>(
+    cx: Scope,
+    id: &'static str,
+    caption: &'static str,
+    header: IV,
+    items: Vec<R>,
+    row_builder: F,
+    data_source: &'static str,
+    #[prop(optional)] refresh: bool,
+    #[prop(optional)] search: bool,
+) -> impl IntoView
+where
+    IV: IntoView,
+    F: Fn(Scope, R) -> IV2,
+    IV2: IntoView,
+{
+    view! { cx,
+        <DataTableExtras
+            id=id
+            caption=caption
+            header=header
+            items=items
+            row_builder=row_builder
+            extra_buttons=vec![]
+            data_source=data_source
+            refresh=refresh
+            search=search/>
     }
 }
