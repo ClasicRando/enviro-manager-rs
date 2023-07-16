@@ -5,7 +5,6 @@ mod login;
 mod nav;
 mod table;
 mod toast;
-mod user;
 mod workflow_engine;
 
 use leptos::IntoView;
@@ -32,6 +31,5 @@ fn option_into_view_default<T: ToString>(val: Option<T>, default: &'static str) 
 pub use index::Index;
 pub use login::Login;
 pub use toast::{build_toast, error_toast, toast, RequestToast, Toast};
-pub use user::{User, UserEditSection, UserInfo};
 
 pub use self::workflow_engine::{ActiveExecutors, ActiveWorkflowRuns, WorkflowEngine};

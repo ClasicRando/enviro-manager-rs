@@ -1,5 +1,3 @@
-#![feature(lazy_cell)]
-
 pub mod api;
 pub mod components;
 pub mod pages;
@@ -57,13 +55,6 @@ impl ServerFnError {
 
 fn extract_session_uid(session: &Session) -> Result<Uuid, ServerFnError> {
     let Some(user) = session.get(EM_UID_SESSION_KEY)? else {
-        return Err(ServerFnError::InvalidUser);
-    };
-    Ok(user)
-}
-
-fn extract_session_username(session: &Session) -> Result<String, ServerFnError> {
-    let Some(user) = session.get(USERNAME_SESSION_KEY)? else {
         return Err(ServerFnError::InvalidUser);
     };
     Ok(user)

@@ -3,7 +3,7 @@ use actix_web::{web, HttpResponse};
 use leptos::view;
 
 use crate::{
-    components::{Index, Login, User, WorkflowEngine},
+    components::{Index, Login, WorkflowEngine},
     extract_session_uid, utils, ServerFnError,
 };
 
@@ -41,18 +41,6 @@ async fn workflow_engine(session: Session) -> HttpResponse {
     utils::html!(html)
 }
 
-async fn user(session: Session) -> HttpResponse {
-    let user = match utils::get_user(session).await {
-        Ok(inner) => inner,
-        Err(ServerFnError::InvalidUser) => return utils::redirect_login!(),
-        Err(error) => return error.to_response(),
-    };
-    let mut html = leptos::ssr::render_to_string(move |cx| {
-        view! { cx, <User user=user/>}
-    });
-    utils::html!(html)
-}
-
 async fn logout_user(session: Option<Session>) -> HttpResponse {
     if let Some(session) = session {
         session.clear()
@@ -83,6 +71,5 @@ where
             .route("/login", web::get().to(login))
             .route("/workflow-engine", web::get().to(workflow_engine))
             .route("/logout", web::get().to(logout_user))
-            .route("/user", web::get().to(user))
     }
 }

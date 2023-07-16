@@ -1,4 +1,3 @@
-mod user;
 mod workflow_engine;
 
 use actix_session::Session;
@@ -18,7 +17,6 @@ pub fn service() -> actix_web::Scope {
         .route("/login", web::post().to(login_user))
         .route("/toast", web::post().to(toast))
         .service(workflow_engine::service())
-        .service(user::service())
 }
 
 #[derive(Deserialize, Serialize)]
