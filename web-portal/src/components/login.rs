@@ -3,7 +3,7 @@ use leptos::*;
 use super::base::BasePage;
 
 #[component]
-pub fn login(cx: Scope) -> impl IntoView {
+pub fn Login(cx: Scope) -> impl IntoView {
     view! { cx,
         <BasePage
             title="Index"

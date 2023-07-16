@@ -1,7 +1,7 @@
 use leptos::*;
 
 #[component]
-pub fn row(cx: Scope, children: Children, #[prop(optional)] size: u8) -> impl IntoView {
+pub fn Row(cx: Scope, children: Children, #[prop(optional)] size: u8) -> impl IntoView {
     let class = if size > 0 {
         format!("row{size}")
     } else {
@@ -15,7 +15,7 @@ pub fn row(cx: Scope, children: Children, #[prop(optional)] size: u8) -> impl In
 }
 
 #[component]
-pub fn col(
+pub fn Col(
     cx: Scope,
     #[prop(optional)] children: Option<Children>,
     #[prop(optional)] size: u8,

@@ -3,7 +3,7 @@ use leptos::*;
 use super::nav::Nav;
 
 #[component]
-pub fn base_page(
+pub fn BasePage(
     cx: Scope,
     title: &'static str,
     #[prop(optional)] user_full_name: String,

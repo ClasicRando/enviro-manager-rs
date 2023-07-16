@@ -1,7 +1,7 @@
 use leptos::*;
 
 #[component]
-fn theme_selector(cx: Scope) -> impl IntoView {
+fn ThemeSelector(cx: Scope) -> impl IntoView {
     view! { cx,
         <li class="nav-item dropdown">
             <button class="btn btn-link nav-link py-2 px-0 px-lg-2 dropdown-toggle align-items-center"
@@ -38,7 +38,7 @@ fn theme_selector(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-fn user_context(cx: Scope, user_full_name: String) -> impl IntoView {
+fn UserContext(cx: Scope, user_full_name: String) -> impl IntoView {
     if user_full_name.is_empty() {
         return view! { cx,
             <li class="nav-item">
@@ -61,7 +61,7 @@ fn user_context(cx: Scope, user_full_name: String) -> impl IntoView {
 }
 
 #[component]
-pub fn nav(cx: Scope, user_full_name: String) -> impl IntoView {
+pub fn Nav(cx: Scope, user_full_name: String) -> impl IntoView {
     view! { cx,
         <nav class="navbar navbar-expand-lg bg-body-tertiary" id="mainNavBar">
             <div class="container-fluid">

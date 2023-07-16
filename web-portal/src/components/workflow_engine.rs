@@ -206,7 +206,7 @@ impl WorkflowEngineMainPageTabs {
 }
 
 #[component]
-fn tabs(cx: Scope, selected_tab: WorkflowEngineMainPageTabs) -> impl IntoView {
+fn Tabs(cx: Scope, selected_tab: WorkflowEngineMainPageTabs) -> impl IntoView {
     view! { cx,
         <ul class="nav nav-tabs" id="tabs" role="tablist">
             {WorkflowEngineMainPageTabs::iter()
@@ -220,7 +220,7 @@ fn tabs(cx: Scope, selected_tab: WorkflowEngineMainPageTabs) -> impl IntoView {
 }
 
 #[component]
-pub fn workflow_engine(cx: Scope, user_full_name: String) -> impl IntoView {
+pub fn WorkflowEngine(cx: Scope, user_full_name: String) -> impl IntoView {
     view! { cx,
         <BasePage
             title="Index"
