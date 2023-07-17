@@ -25,6 +25,10 @@ pub fn service() -> actix_web::Scope {
             "/executors/shutdown/{executor_id}",
             web::post().to(shutdown_executor),
         )
+        .route(
+            "/workflow-run/{workflow_run_id}",
+            web::post().to(enter_workflow_run),
+        )
         .route("/workflow-runs", web::get().to(active_workflow_runs))
         .route(
             "/workflow-runs/schedule/{workflow_run_id}",
@@ -300,6 +304,38 @@ async fn post_restart_workflow_run(workflow_run_id: WorkflowRunId) -> Result<(),
             log::info!("Restarted workflow run: {}", workflow_run.workflow_run_id);
             Ok(())
         }
+        ApiResponseBody::Message(message) => {
+            utils::server_fn_error!("Expected data, got message. {}", message)
+        }
+        ApiResponseBody::Error(message) | ApiResponseBody::Failure(message) => {
+            utils::server_fn_error!(message)
+        }
+    }
+}
+
+async fn enter_workflow_run(
+    session: Session,
+    workflow_run_id: web::Path<WorkflowRunId>,
+) -> HttpResponse {
+    if extract_session_uid(&session).is_err() {
+        return utils::redirect_login_htmx!();
+    }
+    let workflow_run_id = workflow_run_id.into_inner();
+    utils::redirect_htmx!("/workflow-engine/workflow_run/{}", workflow_run_id)
+}
+
+pub async fn get_workflow_run(
+    workflow_run_id: WorkflowRunId,
+) -> Result<WorkflowRun, ServerFnError> {
+    let clean_executors_response: ApiResponseBody<WorkflowRun> = utils::api_request(
+        format!("http://127.0.0.1:8000/api/v1/workflow-runs/{workflow_run_id}?f=msgpack"),
+        Method::GET,
+        None::<String>,
+        None::<()>,
+    )
+    .await?;
+    match clean_executors_response {
+        ApiResponseBody::Success(workflow_run) => Ok(workflow_run),
         ApiResponseBody::Message(message) => {
             utils::server_fn_error!("Expected data, got message. {}", message)
         }

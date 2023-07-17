@@ -1,4 +1,4 @@
-mod workflow_engine;
+pub mod workflow_engine;
 
 use actix_session::Session;
 use actix_web::{web, HttpResponse};

@@ -7,12 +7,12 @@ use workflow_engine::{
 
 use crate::components::{
     base::BasePage,
-    into_view, option_into_view,
+    display_option, into_view,
     table::{DataTableExtras, ExtraTableButton, RowAction, RowWithDetails},
 };
 
 #[component]
-fn WorkflowRunTask(cx: Scope, workflow_run_task: WorkflowRunTask) -> impl IntoView {
+pub fn WorkflowRunTask(cx: Scope, workflow_run_task: WorkflowRunTask) -> impl IntoView {
     view! { cx,
         <tr>
             <td>{into_view(workflow_run_task.task_order)}</td>
@@ -20,8 +20,8 @@ fn WorkflowRunTask(cx: Scope, workflow_run_task: WorkflowRunTask) -> impl IntoVi
             <td>{into_view(workflow_run_task.name)}</td>
             <td>{into_view(workflow_run_task.description)}</td>
             <td>{into_view(workflow_run_task.task_status)}</td>
-            <td>{option_into_view(workflow_run_task.parameters)}</td>
-            <td>{option_into_view(workflow_run_task.output)}</td>
+            <td>{display_option(workflow_run_task.parameters)}</td>
+            <td>{display_option(workflow_run_task.output)}</td>
             <td>
             {
                 match workflow_run_task.rules {
@@ -30,9 +30,9 @@ fn WorkflowRunTask(cx: Scope, workflow_run_task: WorkflowRunTask) -> impl IntoVi
                 }
             }
             </td>
-            <td>{option_into_view(workflow_run_task.task_start)}</td>
-            <td>{option_into_view(workflow_run_task.task_end)}</td>
-            <td>{option_into_view(workflow_run_task.progress)}</td>
+            <td>{display_option(workflow_run_task.task_start)}</td>
+            <td>{display_option(workflow_run_task.task_end)}</td>
+            <td>{display_option(workflow_run_task.progress)}</td>
         </tr>
     }
 }
@@ -86,13 +86,13 @@ fn WorkflowRun(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
             <td>{into_view(workflow_run.workflow_run_id)}</td>
             <td>{into_view(workflow_run.workflow_id)}</td>
             <td>{into_view(workflow_run.status)}</td>
-            <td>{option_into_view(workflow_run.executor_id)}</td>
-            <td>{option_into_view(workflow_run.progress)}</td>
+            <td>{display_option(workflow_run.executor_id)}</td>
+            <td>{display_option(workflow_run.progress)}</td>
             <td>
                 {actions}
                 <RowAction
                     title="Enter Workflow Run"
-                    api_url=""
+                    api_url=format!("/api/workflow-engine/workflow-run/{}", workflow_run.workflow_run_id)
                     icon="fa-right-to-bracket"/>
             </td>
         </RowWithDetails>

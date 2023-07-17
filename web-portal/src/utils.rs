@@ -165,6 +165,12 @@ macro_rules! redirect_htmx {
             .insert_header(("HX-Redirect", $location))
             .finish()
     };
+
+    ($f:literal, $($item:ident)+) => {
+        HttpResponse::Found()
+            .insert_header(("HX-Redirect", format!($f, $($item)+)))
+            .finish()
+    };
 }
 
 macro_rules! redirect_home {

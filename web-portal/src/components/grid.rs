@@ -1,11 +1,11 @@
 use leptos::*;
 
 #[component]
-pub fn Row(cx: Scope, children: Children, #[prop(optional)] size: u8) -> impl IntoView {
-    let class = if size > 0 {
-        format!("row{size}")
-    } else {
+pub fn Row(cx: Scope, children: Children, #[prop(optional)] class: &'static str) -> impl IntoView {
+    let class = if class.is_empty() {
         "row".to_owned()
+    } else {
+        format!("row {class}")
     };
     view! { cx,
         <div class=class>
@@ -21,7 +21,7 @@ pub fn Col(
     #[prop(optional)] size: u8,
 ) -> impl IntoView {
     let class = if size > 0 {
-        format!("col{size}")
+        format!("col-{size}")
     } else {
         "col".to_owned()
     };
