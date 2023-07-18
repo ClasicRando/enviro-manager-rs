@@ -16,7 +16,7 @@ where
     view! { cx,
         <label class="col-sm-1 col-form-label" for=id>{label}</label>
         <div class=format!("col-sm-{column_width}")>
-            <input id=id class="form-control" value=format!("{data}")/>
+            <input id=id class="data-field form-control" value=format!("{data}")/>
         </div>
     }
 }
