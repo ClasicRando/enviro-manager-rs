@@ -1,5 +1,5 @@
 use leptos::*;
-use workflow_engine::workflow_run::data::WorkflowRun;
+use workflow_engine::workflow_run::data::{WorkflowRun, WorkflowRunId, WorkflowRunTask};
 
 use crate::components::{
     base::BasePage,
@@ -9,6 +9,38 @@ use crate::components::{
     table::DataTable,
     workflow_engine::main_page::WorkflowRunTask,
 };
+
+#[component]
+pub fn WorkflowRunTaskTable(
+    cx: Scope,
+    workflow_run_id: WorkflowRunId,
+    tasks: Vec<WorkflowRunTask>,
+) -> impl IntoView {
+    view! { cx,
+        <DataTable
+            id="workflow_run_tasks"
+            caption="Tasks"
+            header=view! { cx,
+                <th>"Order"</th>
+                <th>"Task ID"</th>
+                <th>"Name"</th>
+                <th>"Description"</th>
+                <th>"Status"</th>
+                <th>"Parameters"</th>
+                <th>"Output"</th>
+                <th>"Rules"</th>
+                <th>"Start"</th>
+                <th>"End"</th>
+                <th>"Progress"</th>
+            }
+            items=tasks
+            row_builder=|cx, task| view! { cx,
+                <WorkflowRunTask workflow_run_task=task/>
+            }
+            data_source=format!("/api/workflow-engine/workflow-run/tasks/{workflow_run_id}")
+            refresh=true/>
+    }
+}
 
 #[component]
 pub fn WorkflowRunPage(
@@ -35,7 +67,7 @@ pub fn WorkflowRunPage(
                             id="status"
                             label="Status"
                             column_width=2
-                            data=workflow_run.workflow_id/>
+                            data=workflow_run.status/>
                     </Row>
                     <Row class="mb-3">
                         <DataField
@@ -51,29 +83,11 @@ pub fn WorkflowRunPage(
                     </Row>
                 </DataDisplay>
             </div>
-            <DataTable
-                id="workflow_run_tasks"
-                caption="Tasks"
-                header=view! { cx,
-                    <th>"Order"</th>
-                    <th>"Task ID"</th>
-                    <th>"Name"</th>
-                    <th>"Description"</th>
-                    <th>"Status"</th>
-                    <th>"Parameters"</th>
-                    <th>"Output"</th>
-                    <th>"Rules"</th>
-                    <th>"Start"</th>
-                    <th>"End"</th>
-                    <th>"Progress"</th>
-                }
-                items=workflow_run.tasks
-                row_builder=|cx, task| view! { cx,
-                    <WorkflowRunTask workflow_run_task=task/>
-                }
-                data_source=""
-                refresh=true
-                search=true/>
+            <div id="taskTable" hx-swap="innerHTML" hx-target="#taskTable">
+                <WorkflowRunTaskTable
+                    tasks=workflow_run.tasks
+                    workflow_run_id=workflow_run.workflow_run_id/>
+            </div>
         </BasePage>
     }
 }

@@ -35,5 +35,5 @@ pub use toast::{build_toast, error_toast, toast, RequestToast, Toast};
 
 pub use self::workflow_engine::{
     main_page::{ActiveExecutors, ActiveWorkflowRuns, WorkflowEngine},
-    workflow_run_page::WorkflowRunPage,
+    workflow_run_page::{WorkflowRunPage, WorkflowRunTaskTable},
 };
