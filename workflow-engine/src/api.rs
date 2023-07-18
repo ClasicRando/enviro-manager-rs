@@ -89,6 +89,10 @@ where
                     get().to(workflow_runs_api::workflow_run::<R>),
                 )
                 .route(
+                    "/workflow-runs/tasks/{workflow_run_id}",
+                    get().to(workflow_runs_api::workflow_run_tasks::<R>),
+                )
+                .route(
                     "/workflow-runs",
                     get().to(workflow_runs_api::workflow_runs::<R>),
                 )

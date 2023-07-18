@@ -1,5 +1,6 @@
 use common::api::{request::ApiRequest, ApiResponse, QueryApiFormat};
 
+use super::data::WorkflowRunTask;
 use crate::{
     workflow::data::WorkflowId,
     workflow_run::{
@@ -21,6 +22,23 @@ where
     let format = query.into_inner();
     match service.read_one(&workflow_run_id).await {
         Ok(workflow_run) => ApiResponse::success(workflow_run, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
+    }
+}
+
+/// API endpoint to fetch the specified workflow run by the `workflow_run_id`. Returns a single
+/// [WorkflowRun] if the run can be found
+pub async fn workflow_run_tasks<R>(
+    workflow_run_id: actix_web::web::Path<WorkflowRunId>,
+    service: actix_web::web::Data<R>,
+    query: actix_web::web::Query<QueryApiFormat>,
+) -> ApiResponse<Vec<WorkflowRunTask>>
+where
+    R: WorkflowRunsService,
+{
+    let format = query.into_inner();
+    match service.read_one(&workflow_run_id).await {
+        Ok(workflow_run) => ApiResponse::success(workflow_run.tasks, format.f),
         Err(error) => ApiResponse::error(error, format.f),
     }
 }
