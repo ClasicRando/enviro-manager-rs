@@ -113,14 +113,14 @@ where
 }
 
 #[component]
-pub fn DataTableExtras<IV, R, F, IV2, E>(
+pub fn DataTableExtras<IV, R, F, IV2, S, E>(
     cx: Scope,
     id: &'static str,
     caption: &'static str,
     header: IV,
     items: Vec<R>,
     row_builder: F,
-    data_source: &'static str,
+    data_source: S,
     #[prop(optional)] refresh: bool,
     #[prop(optional)] search: bool,
     #[prop(optional)] extra_buttons: E,
@@ -129,9 +129,11 @@ where
     IV: IntoView,
     F: Fn(Scope, R) -> IV2,
     IV2: IntoView,
+    S: Into<String>,
     E: IntoIterator<Item = ExtraTableButton> + Default,
 {
     let body_id = format!("{id}Body");
+    let data_source = data_source.into();
     let search_form = if search {
         let search_source = format!("{data_source}/search");
         Some(view! { cx,
@@ -186,14 +188,14 @@ where
 }
 
 #[component]
-pub fn DataTable<IV, R, F, IV2>(
+pub fn DataTable<IV, R, F, IV2, S>(
     cx: Scope,
     id: &'static str,
     caption: &'static str,
     header: IV,
     items: Vec<R>,
     row_builder: F,
-    data_source: &'static str,
+    data_source: S,
     #[prop(optional)] refresh: bool,
     #[prop(optional)] search: bool,
 ) -> impl IntoView
@@ -201,6 +203,7 @@ where
     IV: IntoView,
     F: Fn(Scope, R) -> IV2,
     IV2: IntoView,
+    S: Into<String>,
 {
     view! { cx,
         <DataTableExtras
