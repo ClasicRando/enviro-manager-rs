@@ -1,5 +1,6 @@
 use leptos::*;
 use strum::{EnumIter, IntoEnumIterator};
+use users::data::user::User;
 use workflow_engine::{
     executor::data::Executor,
     workflow_run::data::{WorkflowRun, WorkflowRunStatus, WorkflowRunTask},
@@ -107,13 +108,15 @@ pub fn ActiveWorkflowRuns(cx: Scope, workflow_runs: Vec<WorkflowRun>) -> impl In
             id="active-workflow-runs-tbl"
             caption="Active Workflow Runs"
             header=view! { cx,
-                <th>"Details"</th>
-                <th>"ID"</th>
-                <th>"Workflow ID"</th>
-                <th>"Status"</th>
-                <th>"Executor ID"</th>
-                <th>"Progress"</th>
-                <th>"Actions"</th>
+                <tr>
+                    <th>"Tasks"</th>
+                    <th>"ID"</th>
+                    <th>"Workflow ID"</th>
+                    <th>"Status"</th>
+                    <th>"Executor ID"</th>
+                    <th>"Progress"</th>
+                    <th>"Actions"</th>
+                </tr>
             }
             items=workflow_runs
             row_builder=|cx, workflow_run| view! { cx, <WorkflowRun workflow_run=workflow_run/> }
@@ -256,12 +259,9 @@ fn Tabs(cx: Scope, selected_tab: WorkflowEngineMainPageTabs) -> impl IntoView {
 }
 
 #[component]
-pub fn WorkflowEngine(cx: Scope, user_full_name: String) -> impl IntoView {
+pub fn WorkflowEngine(cx: Scope, user: User) -> impl IntoView {
     view! { cx,
-        <BasePage
-            title="Index"
-            user_full_name=user_full_name
-        >
+        <BasePage title="Index" user=user>
             <div id="tabs" hx-get={WorkflowEngineMainPageTabs::Executors.get_url()} hx-trigger="load"
                 hx-target="#tabs" hx-swap="innerHTML"></div>
         </BasePage>

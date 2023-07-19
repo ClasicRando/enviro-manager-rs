@@ -1,4 +1,5 @@
 use leptos::*;
+use users::data::user::User;
 
 use super::nav::Nav;
 
@@ -6,7 +7,7 @@ use super::nav::Nav;
 pub fn BasePage(
     cx: Scope,
     title: &'static str,
-    #[prop(optional)] user_full_name: String,
+    #[prop(optional)] user: Option<User>,
     #[prop(optional)] stylesheet_href: &'static str,
     #[prop(optional)] script_src: &'static str,
     children: Children,
@@ -20,6 +21,10 @@ pub fn BasePage(
         Some(view! { cx, <script type="module" src=script_src></script> })
     } else {
         None
+    };
+    let nav = match user {
+        Some(user) => view! { cx, <Nav user=user/> },
+        None => view! { cx, <Nav/> },
     };
     view! { cx,
         <html lang="en" data-bs-theme="dark">
@@ -41,7 +46,7 @@ pub fn BasePage(
             </head>
             <body class="p-3 m-0 border-0">
                 <div class="container-fluid">
-                    <Nav user_full_name=user_full_name/>
+                    {nav}
                     {children(cx)}
                 </div>
                 <div class="toast-container top-0 end-0 p-3" id="toasts">

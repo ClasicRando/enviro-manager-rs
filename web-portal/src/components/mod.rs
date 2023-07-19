@@ -1,11 +1,13 @@
 mod base;
 mod data_display;
+mod error;
 mod grid;
 mod index;
 mod login;
 mod nav;
 mod table;
 mod toast;
+mod users;
 mod workflow_engine;
 
 use leptos::IntoView;
@@ -29,11 +31,15 @@ fn option_into_view_default<T: ToString>(val: Option<T>, default: &'static str) 
     default.to_owned()
 }
 
+pub use error::UserMissingRole;
 pub use index::Index;
 pub use login::Login;
 pub use toast::{build_toast, error_toast, toast, RequestToast, Toast};
 
-pub use self::workflow_engine::{
-    main_page::{ActiveExecutors, ActiveWorkflowRuns, WorkflowEngine},
-    workflow_run_page::{WorkflowRunPage, WorkflowRunTaskTable},
+pub use self::{
+    users::{UsersPage, UsersTable},
+    workflow_engine::{
+        main_page::{ActiveExecutors, ActiveWorkflowRuns, WorkflowEngine},
+        workflow_run_page::{WorkflowRunPage, WorkflowRunTaskTable},
+    },
 };

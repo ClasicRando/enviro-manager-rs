@@ -1,4 +1,5 @@
 use leptos::*;
+use users::data::{role::RoleName, user::User};
 
 #[component]
 fn ThemeSelector(cx: Scope) -> impl IntoView {
@@ -60,7 +61,16 @@ fn UserContext(cx: Scope, user_full_name: String) -> impl IntoView {
 }
 
 #[component]
-pub fn Nav(cx: Scope, user_full_name: String) -> impl IntoView {
+pub fn Nav(cx: Scope, #[prop(optional)] user: Option<User>) -> impl IntoView {
+    let users_page = match user.as_ref().map(|u| u.check_role(RoleName::Admin)) {
+        Some(Ok(_)) => Some(view! { cx,
+            <li class="nav-item">
+                <a class="nav-link" href="/users">"Users"</a>
+            </li>
+        }),
+        Some(Err(_)) | None => None,
+    };
+    let user_context = user.map(|u| view! { cx, <UserContext user_full_name=u.full_name/> });
     view! { cx,
         <nav class="navbar navbar-expand-lg bg-body-tertiary" id="mainNavBar">
             <div class="container-fluid">
@@ -75,9 +85,10 @@ pub fn Nav(cx: Scope, user_full_name: String) -> impl IntoView {
                     <li class="nav-item">
                         <a class="nav-link" href="/workflow-engine">"Workflow Engine"</a>
                     </li>
+                    {users_page}
                 </ul>
                 <ul class="navbar-nav ms-auto my-2 my-lg-0 navbar-nav-scroll" style="--bs-scroll-height: 100px;">
-                    <UserContext user_full_name=user_full_name/>
+                    {user_context}
                     <ThemeSelector />
                 </ul>
             </div>

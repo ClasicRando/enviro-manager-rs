@@ -1,11 +1,12 @@
 use actix_session::Session;
 use actix_web::{web, HttpResponse};
 use leptos::view;
+use users::data::{role::RoleName, user::User};
 use workflow_engine::workflow_run::data::WorkflowRunId;
 
 use crate::{
-    api::workflow_engine::get_workflow_run,
-    components::{Index, Login, WorkflowEngine, WorkflowRunPage},
+    api::{users::get_all_users, workflow_engine::get_workflow_run},
+    components::{Index, Login, UserMissingRole, UsersPage, WorkflowEngine, WorkflowRunPage},
     extract_session_uid, utils, ServerFnError,
 };
 
@@ -26,7 +27,7 @@ async fn index(session: Session) -> HttpResponse {
         Err(error) => return error.to_response(),
     };
     let mut html = leptos::ssr::render_to_string(move |cx| {
-        view! { cx, <Index user_full_name=user.full_name().to_owned()/> }
+        view! { cx, <Index user=user/> }
     });
     utils::html!(html)
 }
@@ -38,7 +39,7 @@ async fn workflow_engine(session: Session) -> HttpResponse {
         Err(error) => return error.to_response(),
     };
     let mut html = leptos::ssr::render_to_string(move |cx| {
-        view! { cx, <WorkflowEngine user_full_name=user.full_name().to_owned()/> }
+        view! { cx, <WorkflowEngine user=user/> }
     });
     utils::html!(html)
 }
@@ -54,11 +55,41 @@ async fn workflow_run(session: Session, workflow_run_id: web::Path<WorkflowRunId
         Err(error) => return error.to_response(),
     };
     let mut html = leptos::ssr::render_to_string(move |cx| {
+        view! { cx, <WorkflowRunPage user=user workflow_run=workflow_run/> }
+    });
+    utils::html!(html)
+}
+
+async fn users(session: Session) -> HttpResponse {
+    let user = match utils::get_user(session).await {
+        Ok(inner) => inner,
+        Err(ServerFnError::InvalidUser) => return utils::redirect_login!(),
+        Err(error) => return error.to_response(),
+    };
+
+    let required_role = RoleName::Admin;
+    if let Err(error) = user.check_role(required_role) {
+        log::info!("{error}");
+        return missing_role(user, required_role);
+    }
+
+    let users = match get_all_users(user.uid).await {
+        Ok(inner) => inner,
+        Err(error) => return error.to_response(),
+    };
+    let mut html = leptos::ssr::render_to_string(move |cx| {
         view! { cx,
-            <WorkflowRunPage
-                user_full_name=user.full_name().to_owned()
-                workflow_run=workflow_run/>
+            <UsersPage
+                user=user
+                users=users/>
         }
+    });
+    utils::html!(html)
+}
+
+fn missing_role(user: User, missing_role: RoleName) -> HttpResponse {
+    let mut html = leptos::ssr::render_to_string(move |cx| {
+        view! { cx, <UserMissingRole user=user missing_role=missing_role/> }
     });
     utils::html!(html)
 }
@@ -97,5 +128,6 @@ where
                 "/workflow-engine/workflow_run/{workflow_run_id}",
                 web::get().to(workflow_run),
             )
+            .route("/users", web::get().to(users))
     }
 }

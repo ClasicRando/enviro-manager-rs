@@ -1,4 +1,5 @@
 use leptos::*;
+use users::data::user::User;
 use workflow_engine::workflow_run::data::{WorkflowRun, WorkflowRunId, WorkflowRunTask};
 
 use crate::components::{
@@ -43,13 +44,9 @@ pub fn WorkflowRunTaskTable(
 }
 
 #[component]
-pub fn WorkflowRunPage(
-    cx: Scope,
-    user_full_name: String,
-    workflow_run: WorkflowRun,
-) -> impl IntoView {
+pub fn WorkflowRunPage(cx: Scope, user: User, workflow_run: WorkflowRun) -> impl IntoView {
     view! { cx,
-        <BasePage title="Workflow Run" user_full_name=user_full_name>
+        <BasePage title="Workflow Run" user=user>
             <div class="my-1">
                 <DataDisplay>
                     <Row class="mb-3">

@@ -5,9 +5,9 @@ use strum::{AsRefStr, EnumIter, EnumString, IntoStaticStr};
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Role {
     /// Name of the role. Unique within all roles
-    pub(crate) name: RoleName,
+    pub name: RoleName,
     /// Short description of the role
-    pub(crate) description: String,
+    pub description: String,
 }
 
 /// All role names that exist as their common name
