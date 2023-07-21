@@ -59,3 +59,13 @@ fn extract_session_uid(session: &Session) -> Result<Uuid, ServerFnError> {
     };
     Ok(user)
 }
+
+fn take_if<T, F>(value: T, predicate: F) -> Option<T>
+where
+    F: FnOnce(&T) -> bool,
+{
+    if predicate(&value) {
+        return Some(value);
+    }
+    None
+}

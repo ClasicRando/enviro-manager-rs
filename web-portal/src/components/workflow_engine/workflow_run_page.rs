@@ -80,11 +80,9 @@ pub fn WorkflowRunPage(cx: Scope, user: User, workflow_run: WorkflowRun) -> impl
                     </Row>
                 </DataDisplay>
             </div>
-            <div id="taskTable" hx-swap="innerHTML" hx-target="#taskTable">
-                <WorkflowRunTaskTable
-                    tasks=workflow_run.tasks
-                    workflow_run_id=workflow_run.workflow_run_id/>
-            </div>
+            <WorkflowRunTaskTable
+                tasks=workflow_run.tasks
+                workflow_run_id=workflow_run.workflow_run_id/>
         </BasePage>
     }
 }

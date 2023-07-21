@@ -9,13 +9,17 @@ use workflow_engine::{
 };
 
 use crate::{
-    components::{ActiveExecutors, ActiveWorkflowRuns, WorkflowRunTaskTable},
+    components::{
+        ActiveExecutors, ActiveExecutorsTab, ActiveWorkflowRuns, ActiveWorkflowRunsTab,
+        WorkflowRunTaskTable,
+    },
     extract_session_uid, utils, ServerFnError,
 };
 
 pub fn service() -> actix_web::Scope {
     web::scope("/workflow-engine")
         .route("/executors", web::get().to(active_executors))
+        .route("/executors-tab", web::get().to(active_executors_tab))
         .route("/executors/clean", web::post().to(clean_executors))
         .route(
             "/executors/cancel/{executor_id}",
@@ -34,6 +38,10 @@ pub fn service() -> actix_web::Scope {
             web::get().to(workflow_run_tasks),
         )
         .route("/workflow-runs", web::get().to(active_workflow_runs))
+        .route(
+            "/workflow-runs-tab",
+            web::get().to(active_workflow_runs_tab),
+        )
         .route(
             "/workflow-runs/schedule/{workflow_run_id}",
             web::post().to(schedule_workflow_run),
@@ -58,6 +66,20 @@ async fn active_executors(session: Session) -> HttpResponse {
     };
     let html = leptos::ssr::render_to_string(|cx| {
         view! { cx, <ActiveExecutors executors=executors /> }
+    });
+    utils::html_chunk!(html)
+}
+
+async fn active_executors_tab(session: Session) -> HttpResponse {
+    if extract_session_uid(&session).is_err() {
+        return utils::redirect_login_htmx!();
+    }
+    let executors = match get_active_executors().await {
+        Ok(inner) => inner,
+        Err(error) => return error.to_response(),
+    };
+    let html = leptos::ssr::render_to_string(|cx| {
+        view! { cx, <ActiveExecutorsTab executors=executors /> }
     });
     utils::html_chunk!(html)
 }
@@ -92,6 +114,20 @@ async fn active_workflow_runs(session: Session) -> HttpResponse {
     };
     let html = leptos::ssr::render_to_string(|cx| {
         view! { cx, <ActiveWorkflowRuns workflow_runs=workflow_runs /> }
+    });
+    utils::html_chunk!(html)
+}
+
+async fn active_workflow_runs_tab(session: Session) -> HttpResponse {
+    if extract_session_uid(&session).is_err() {
+        return utils::redirect_login_htmx!();
+    }
+    let workflow_runs = match get_active_workflow_runs().await {
+        Ok(inner) => inner,
+        Err(error) => return error.to_response(),
+    };
+    let html = leptos::ssr::render_to_string(|cx| {
+        view! { cx, <ActiveWorkflowRunsTab workflow_runs=workflow_runs /> }
     });
     utils::html_chunk!(html)
 }

@@ -1,5 +1,7 @@
 use leptos::*;
 
+use crate::take_if;
+
 pub struct ExtraTableButton {
     title: &'static str,
     api_url: &'static str,
@@ -30,12 +32,21 @@ impl IntoView for ExtraTableButton {
 }
 
 #[component]
-pub fn RowAction<S>(cx: Scope, title: &'static str, api_url: S, icon: &'static str) -> impl IntoView
+pub fn RowAction<S>(
+    cx: Scope,
+    title: &'static str,
+    api_url: S,
+    icon: &'static str,
+    #[prop(optional)] target: &'static str,
+    #[prop(optional)] swap: &'static str,
+) -> impl IntoView
 where
     S: Into<String>,
 {
+    let target = take_if(target, |t| !t.is_empty());
+    let swap = take_if(swap, |s| !s.is_empty());
     view! { cx,
-        <button class="btn btn-primary me-1" hx-post=api_url.into() title=title>
+        <button class="btn btn-primary me-1" hx-post=api_url.into() title=title hx-target=target hx-swap=swap>
             <i class=format!("fa-solid {icon}")></i>
         </button>
     }
@@ -132,6 +143,7 @@ where
     S: Into<String>,
     E: IntoIterator<Item = ExtraTableButton> + Default,
 {
+    let container_id = format!("{id}Container");
     let body_id = format!("{id}Body");
     let data_source = data_source.into();
     let search_form = if search {
@@ -140,7 +152,8 @@ where
             <form role="search" class="d-flex ms-auto">
                 <input class="form-control me-2" type="search" placeholder="Search" name="search"
                     aria-label="Search" hx-trigger="keyup changed delay:500ms, search"
-                    hx-post=search_source hx-indicator=".htmx-indicator" hx-target=format!("#{body_id}")/>
+                    hx-post=search_source hx-indicator=".htmx-indicator"
+                    hx-target=format!("#{body_id}")/>
             </form>
         })
     } else {
@@ -148,7 +161,8 @@ where
     };
     let refresh_button = if refresh {
         Some(view! { cx,
-            <button type="button" title="Refresh" class="btn btn-secondary" hx-get=data_source>
+            <button type="button" title="Refresh" class="btn btn-secondary"
+                hx-get=data_source hx-target=format!("#{container_id}") hx-swap="outerHTML">
                 <i class="fa-solid fa-refresh"></i>
             </button>
         })
@@ -165,7 +179,7 @@ where
         .map(|row| row_builder(cx, row))
         .collect_view(cx);
     view! { cx,
-        <div class="table-responsive-sm">
+        <div id=container_id class="table-responsive-sm">
             <div class="btn-toolbar mt-1" role="toolbar">
                 {search_form}
                 <div class=button_group_class>

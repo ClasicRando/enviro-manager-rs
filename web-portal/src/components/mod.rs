@@ -4,6 +4,7 @@ mod error;
 mod grid;
 mod index;
 mod login;
+mod modal;
 mod nav;
 mod table;
 mod toast;
@@ -37,9 +38,12 @@ pub use login::Login;
 pub use toast::{build_toast, error_toast, toast, RequestToast, Toast};
 
 pub use self::{
-    users::{UsersPage, UsersTable},
+    users::{EditUser, UsersPage, UsersTable},
     workflow_engine::{
-        main_page::{ActiveExecutors, ActiveWorkflowRuns, WorkflowEngine},
+        main_page::{
+            ActiveExecutors, ActiveExecutorsTab, ActiveWorkflowRuns, ActiveWorkflowRunsTab,
+            WorkflowEngine,
+        },
         workflow_run_page::{WorkflowRunPage, WorkflowRunTaskTable},
     },
 };

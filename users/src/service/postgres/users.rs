@@ -126,8 +126,8 @@ impl UserService for PgUserService {
         let mut connection = get_connection_with_em_uid(current_uid, &self.pool).await?;
         sqlx::query("call users.update_user($1, $2, $3)")
             .bind(update_uid)
-            .bind(new_name)
             .bind(new_username)
+            .bind(new_name)
             .execute(&mut connection)
             .await?;
         self.read_one(update_uid).await
