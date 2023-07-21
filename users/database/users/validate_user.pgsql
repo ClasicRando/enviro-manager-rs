@@ -5,6 +5,7 @@ create or replace function users.validate_user(
 returns table
 (
     uid uuid,
+    username text,
     full_name text,
     roles text[]
 )

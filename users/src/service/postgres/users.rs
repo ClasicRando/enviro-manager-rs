@@ -4,7 +4,10 @@ use common::{
         connection::{finalize_transaction, get_connection_with_em_uid},
         postgres::Postgres,
     },
-    error::{EmError::InvalidUser, EmResult},
+    error::{
+        EmError::{self, InvalidUser},
+        EmResult,
+    },
 };
 use sqlx::{Connection, PgPool};
 use uuid::Uuid;
@@ -13,7 +16,7 @@ use crate::{
     data::{role::RoleName, user::User},
     service::users::{
         CreateUserRequest, CreateUserRequestValidator, ModifyUserRoleRequest, UpdateUserRequest,
-        UpdateUserRequestValidator, UpdateUserType, UserService, ValidateUserRequest,
+        UpdateUserRequestValidator, UserService, ValidateUserRequest,
     },
 };
 
@@ -30,29 +33,8 @@ impl PgUserService {
         Self { pool: pool.clone() }
     }
 
-    /// Update the full name of a user with the `uid` specified
-    async fn update_full_name(&self, uid: &Uuid, new_name: &str) -> EmResult<()> {
-        let mut connection = get_connection_with_em_uid(uid, &self.pool).await?;
-        sqlx::query("call users.update_full_name($1, $2)")
-            .bind(uid)
-            .bind(new_name)
-            .execute(&mut connection)
-            .await?;
-        Ok(())
-    }
-
-    /// Update the username of a user with the `uid` specified
-    async fn update_username(&self, uid: &Uuid, new_username: &str) -> EmResult<()> {
-        let mut connection = get_connection_with_em_uid(uid, &self.pool).await?;
-        sqlx::query("call users.update_username($1, $2)")
-            .bind(uid)
-            .bind(new_username)
-            .execute(&mut connection)
-            .await?;
-        Ok(())
-    }
-
     /// Update the password of a user with the `uid` specified
+    #[allow(unused)]
     async fn reset_password(&self, uid: &Uuid, new_password: &str) -> EmResult<()> {
         let mut connection = get_connection_with_em_uid(uid, &self.pool).await?;
         sqlx::query("call users.reset_password($1, $2)")
@@ -129,28 +111,26 @@ impl UserService for PgUserService {
     }
 
     async fn update(&self, current_uid: &Uuid, request: &UpdateUserRequest) -> EmResult<User> {
-        Self::UpdateRequestValidator::validate(request)?;
-        let UpdateUserRequest {
-            validate_user,
-            update_type,
-        } = request;
-        let user = self.validate_user(validate_user).await?;
-        if user.uid != *current_uid {
-            return Err(InvalidUser);
+        let user = self.read_one(current_uid).await?;
+        if user.check_role(RoleName::Admin).is_err() {
+            return Err(EmError::InvalidUser);
         }
 
-        match update_type {
-            UpdateUserType::Username { new_username } => {
-                self.update_username(&user.uid, new_username).await?
-            }
-            UpdateUserType::FullName { new_name } => {
-                self.update_full_name(&user.uid, new_name).await?
-            }
-            UpdateUserType::ResetPassword { new_password } => {
-                self.reset_password(&user.uid, new_password).await?
-            }
-        }
-        self.read_one(&user.uid).await
+        Self::UpdateRequestValidator::validate(request)?;
+        let UpdateUserRequest {
+            update_uid,
+            new_name,
+            new_username,
+        } = request;
+
+        let mut connection = get_connection_with_em_uid(current_uid, &self.pool).await?;
+        sqlx::query("call users.update_user($1, $2, $3)")
+            .bind(update_uid)
+            .bind(new_name)
+            .bind(new_username)
+            .execute(&mut connection)
+            .await?;
+        self.read_one(update_uid).await
     }
 
     async fn validate_user(&self, request: &ValidateUserRequest) -> EmResult<User> {

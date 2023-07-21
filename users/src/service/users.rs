@@ -74,21 +74,24 @@ impl ApiRequestValidator for CreateUserRequestValidator {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UpdateUserRequest {
     /// uuid of the user attempting to perform the action
-    // pub(crate) current_uid: Uuid,
-    /// Username of the user to updated. Required to verify user before updating.
-    // #[serde(flatten)]
-    pub(crate) validate_user: ValidateUserRequest,
-    /// Update variation the is required to be performed
-    // #[serde(flatten)]
-    pub(crate) update_type: UpdateUserType,
+    pub(crate) update_uid: Uuid,
+    /// User is attempting to update the user's username to a new value if Some
+    pub(crate) new_username: Option<String>,
+    /// User is attempting to update the user's full name if Some
+    pub(crate) new_name: Option<String>,
 }
 
 impl UpdateUserRequest {
     /// Create a new [UpdateUserRequest] as the 2 components of a request
-    pub const fn new(validate_user: ValidateUserRequest, update_type: UpdateUserType) -> Self {
+    pub const fn new(
+        update_uid: Uuid,
+        new_username: Option<String>,
+        new_name: Option<String>,
+    ) -> Self {
         Self {
-            validate_user,
-            update_type,
+            update_uid,
+            new_username,
+            new_name,
         }
     }
 }
@@ -101,50 +104,18 @@ impl ApiRequestValidator for UpdateUserRequestValidator {
     type Request = UpdateUserRequest;
 
     fn validate(request: &Self::Request) -> Result<(), Self::ErrorMessage> {
-        if request.validate_user.username.trim().is_empty() {
-            Err("username cannot be empty or whitespace")?;
+        if let Some(new_username) = &request.new_username {
+            if new_username.trim().is_empty() {
+                Err("new_username cannot be empty or whitespace")?;
+            }
         }
-        match &request.update_type {
-            UpdateUserType::Username { new_username } => {
-                if new_username.trim().is_empty() {
-                    Err("new_username cannot be empty or whitespace")?;
-                }
-            }
-            UpdateUserType::FullName { new_name } => {
-                if new_name.trim().is_empty() {
-                    Err("new_first_name cannot be empty or whitespace")?;
-                }
-            }
-            UpdateUserType::ResetPassword { new_password } => {
-                if let Err(error) = validate_password(new_password) {
-                    Err(format!("{error}"))?
-                }
+        if let Some(new_name) = &request.new_name {
+            if new_name.trim().is_empty() {
+                Err("new_name cannot be empty or whitespace")?;
             }
         }
         Ok(())
     }
-}
-
-impl UpdateUserRequest {
-    /// Get the username of the update request as a string slice
-    pub fn username(&self) -> &str {
-        &self.validate_user.username
-    }
-}
-
-/// User update type variations
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(tag = "type")]
-pub enum UpdateUserType {
-    /// User is attempting to update the user's username to a new value
-    #[serde(rename = "username")]
-    Username { new_username: String },
-    /// User is attempting to update the user's first and last name
-    #[serde(rename = "full-name")]
-    FullName { new_name: String },
-    /// User is attempting to update the user's password to a new value
-    #[serde(rename = "reset-password")]
-    ResetPassword { new_password: String },
 }
 
 /// Request object to validate the user given their username and password
@@ -220,12 +191,13 @@ pub(crate) mod test {
 
     use common::api::ApiRequestValidator;
     use rstest::rstest;
+    use uuid::Uuid;
 
     use crate::{
         data::role::RoleName,
         service::users::{
             validate_password, CreateUserRequest, CreateUserRequestValidator, UpdateUserRequest,
-            UpdateUserRequestValidator, UpdateUserType, ValidateUserRequest,
+            UpdateUserRequestValidator, ValidateUserRequest,
         },
     };
 
@@ -255,39 +227,6 @@ pub(crate) mod test {
         ValidateUserRequest {
             username: username.to_owned(),
             password: password.to_owned(),
-        }
-    }
-
-    /// Utility method for creating a new [UpdateUserRequest]
-    pub(crate) fn update_user_request(
-        username: &str,
-        password: &str,
-        update_type: UpdateUserType,
-    ) -> UpdateUserRequest {
-        UpdateUserRequest {
-            validate_user: validate_user_request(username, password),
-            update_type,
-        }
-    }
-
-    /// Utility method for creating a new [UpdateUserType::Username]
-    pub(crate) fn update_username(new_username: &str) -> UpdateUserType {
-        UpdateUserType::Username {
-            new_username: new_username.to_owned(),
-        }
-    }
-
-    /// Utility method for creating a new [UpdateUserType::FullName]
-    pub(crate) fn update_full_name(new_name: &str) -> UpdateUserType {
-        UpdateUserType::FullName {
-            new_name: new_name.to_owned(),
-        }
-    }
-
-    /// Utility method for creating a new [UpdateUserType::ResetPassword]
-    pub(crate) fn reset_password(new_password: &str) -> UpdateUserType {
-        UpdateUserType::ResetPassword {
-            new_password: new_password.to_owned(),
         }
     }
 
@@ -321,8 +260,7 @@ pub(crate) mod test {
 
     #[rstest]
     #[case::invalid_password(create_user_request("test", "test", "test", &["admin"]))]
-    #[case::first_name_empty(create_user_request("", "test", VALID_PASSWORD, &["admin"]))]
-    #[case::last_name_empty(create_user_request("test", "test", VALID_PASSWORD, &["admin"]))]
+    #[case::name_empty(create_user_request("", "test", VALID_PASSWORD, &["admin"]))]
     #[case::username_empty(create_user_request("test", "", VALID_PASSWORD, &["admin"]))]
     fn create_user_request_should_fail_when(#[case] request: CreateUserRequest) {
         let result = CreateUserRequestValidator::validate(&request);
@@ -330,29 +268,32 @@ pub(crate) mod test {
     }
 
     #[rstest]
-    #[case::valid_update_username_request("test", VALID_PASSWORD, update_username("test"))]
-    #[case::valid_update_full_name_request("test", VALID_PASSWORD, update_full_name("test"))]
-    #[case::valid_reset_password_request("test", VALID_PASSWORD, reset_password(VALID_PASSWORD))]
+    #[case::valid_update_username_request(Uuid::new_v4(), Some(String::from("test")), None)]
+    #[case::valid_update_full_name_request(Uuid::new_v4(), None, Some(String::from("test")))]
+    #[case::valid_update_all_request(
+        Uuid::new_v4(),
+        Some(String::from("test")),
+        Some(String::from("test"))
+    )]
     fn update_user_request_should_validate_when(
-        #[case] username: &str,
-        #[case] password: &str,
-        #[case] update_type: UpdateUserType,
+        #[case] uid: Uuid,
+        #[case] new_name: Option<String>,
+        #[case] new_username: Option<String>,
     ) {
-        let request = update_user_request(username, password, update_type);
+        let request = UpdateUserRequest::new(uid, new_name, new_username);
         let result = UpdateUserRequestValidator::validate(&request);
         assert!(result.is_ok(), "{:?}", result.unwrap_err());
     }
 
     #[rstest]
-    #[case::new_username_empty("test", VALID_PASSWORD, update_username(""))]
-    #[case::new_name_empty("test", VALID_PASSWORD, update_full_name(""))]
-    #[case::new_password_invalid("test", VALID_PASSWORD, reset_password(""))]
+    #[case::new_username_empty(Uuid::new_v4(), Some(String::new()), None)]
+    #[case::new_name_empty(Uuid::new_v4(), None, Some(String::new()))]
     fn update_user_request_should_fail_when(
-        #[case] username: &str,
-        #[case] password: &str,
-        #[case] update_type: UpdateUserType,
+        #[case] uid: Uuid,
+        #[case] new_name: Option<String>,
+        #[case] new_username: Option<String>,
     ) {
-        let request = update_user_request(username, password, update_type);
+        let request = UpdateUserRequest::new(uid, new_name, new_username);
         let result = UpdateUserRequestValidator::validate(&request);
         assert!(result.is_err());
     }
