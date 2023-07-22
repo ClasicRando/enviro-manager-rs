@@ -5,12 +5,9 @@ use common::{
     error::{EmError, EmResult},
 };
 
-use crate::{
-    executor::{
-        data::{Executor, ExecutorId, ExecutorStatus},
-        utilities::ExecutorStatusUpdate,
-    },
-    workflow_run::data::WorkflowRunId,
+use crate::executor::{
+    data::{Executor, ExecutorId, ExecutorStatus},
+    utilities::ExecutorStatusUpdate,
 };
 
 /// Service for fetching and interacting with executor data. Wraps a [Pool] and provides
@@ -39,9 +36,6 @@ where
     /// Read all [Executor] records, excluding those that are labeled as inactive. The output does
     /// include records with an underlining session/pool that is no longer active.
     async fn read_active(&self) -> EmResult<Vec<Executor>>;
-    /// Process the next workflow run, setting it's state for execution before returning the
-    /// [WorkflowRunId]. If no workflow run is available, then the function returns [None].
-    async fn next_workflow_run(&self, executor_id: &ExecutorId) -> EmResult<Option<WorkflowRunId>>;
     /// Update the status of the executor specified by `executor_id` to [ExecutorStatus::Shutdown].
     /// This internally sends a signal to the [Executor][crate::executor::Executor] instance to
     /// gracefully shutdown all operation and close.

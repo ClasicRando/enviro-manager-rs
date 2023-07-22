@@ -276,8 +276,9 @@ where
     async fn next_workflow_run(
         &self,
     ) -> EmResult<Option<(WorkflowRunId, WorkflowRunWorkerResult)>> {
-        let Some(workflow_run_id) = self.executor_service.next_workflow_run(&self.executor_id).await? else {
-            return Ok(None)
+        let Some(workflow_run_id) = self.wr_service.next_workflow_run(&self.executor_id).await?
+        else {
+            return Ok(None);
         };
         let wr_handle = self.spawn_workflow_run_worker(&workflow_run_id);
         Ok(Some((workflow_run_id, wr_handle)))
@@ -328,10 +329,10 @@ where
         message: WorkflowRunCancelMessage,
     ) -> EmResult<ExecutorNextOperation> {
         let WorkflowRunCancelMessage(Some(workflow_run_id)) = message else {
-            return Ok(ExecutorNextOperation::Continue)
+            return Ok(ExecutorNextOperation::Continue);
         };
         let Some(handle) = self.wr_handles.remove(&workflow_run_id) else {
-            return Ok(ExecutorNextOperation::Continue)
+            return Ok(ExecutorNextOperation::Continue);
         };
 
         if !handle.is_finished() {

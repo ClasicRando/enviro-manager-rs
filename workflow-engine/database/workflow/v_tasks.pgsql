@@ -1,6 +1,6 @@
 create or replace view workflow.v_tasks as
 select
-    t.task_id, t.name, t.description, rtrim(ts.base_url,'\')||'\'||ltrim(t.url,'\') url,
+    t.task_id, t.name, t.description, rtrim(ts.base_url,'/')||'/'||ltrim(t.url,'/') url,
     ts.name task_service_name
 from workflow.tasks t
 join workflow.task_services ts on t.task_service_id = ts.service_id;
