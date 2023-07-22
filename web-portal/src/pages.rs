@@ -1,12 +1,14 @@
 use actix_session::Session;
 use actix_web::{web, HttpResponse};
-use leptos::view;
+use leptos::*;
 use users::data::{role::RoleName, user::User};
 use workflow_engine::workflow_run::data::WorkflowRunId;
 
 use crate::{
     api::{users::get_all_users, workflow_engine::get_workflow_run},
-    components::{Index, Login, UserMissingRole, UsersPage, WorkflowEngine, WorkflowRunPage},
+    components::{
+        BasePage, Index, Login, UserMissingRole, UsersPage, WorkflowEngine, WorkflowRunDisplay,
+    },
     extract_session_uid, utils, ServerFnError,
 };
 
@@ -55,7 +57,11 @@ async fn workflow_run(session: Session, workflow_run_id: web::Path<WorkflowRunId
         Err(error) => return error.to_response(),
     };
     let mut html = leptos::ssr::render_to_string(move |cx| {
-        view! { cx, <WorkflowRunPage user=user workflow_run=workflow_run/> }
+        view! { cx,
+            <BasePage title="Workflow Run" user=user>
+                <WorkflowRunDisplay workflow_run=workflow_run/>
+            </BasePage>
+        }
     });
     utils::html!(html)
 }
@@ -122,12 +128,15 @@ where
         self.route("/", web::get().to(index))
             .route("/index", web::get().to(redirect_home))
             .route("/login", web::get().to(login))
-            .route("/workflow-engine", web::get().to(workflow_engine))
-            .route("/logout", web::get().to(logout_user))
-            .route(
-                "/workflow-engine/workflow_run/{workflow_run_id}",
-                web::get().to(workflow_run),
+            .service(
+                web::scope("/workflow-engine")
+                    .route("", web::get().to(workflow_engine))
+                    .route(
+                        "/workflow-run/{workflow_run_id}",
+                        web::get().to(workflow_run),
+                    ),
             )
+            .route("/logout", web::get().to(logout_user))
             .route("/users", web::get().to(users))
     }
 }

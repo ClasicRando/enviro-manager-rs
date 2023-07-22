@@ -61,6 +61,9 @@ export const fetchApi = async (url, options = undefined) => {
     }
 };
 
+const CLASS_NAME_SHOW = 'show';
+const ATTRIBUTE_NAME_POPPER = 'data-bs-popper';
+
 /** @type {(classList: DOMTokenList) => Array<string>} */
 const filterIconClassList = (classList) => {
     return Array.from(classList.values()).filter(c => c.startsWith('fa-') && c !== 'fa-solid')
@@ -168,6 +171,9 @@ window.addEventListener('DOMContentLoaded', () => {
             navLink.classList.add('active');
         }
     }
+    for (const dropdownToggle of document.querySelectorAll('.nav-link.dropdown-toggle')) {
+        new DropDown(dropdownToggle);
+    }
 });
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -183,7 +189,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 element.remove();
             }, autoDismissTimeout);
         }
-    }, 500);
+    }, 1000);
 });
 
 /** @type {(element: HTMLElement) => void} */
@@ -197,8 +203,8 @@ window.closeModal = (element) => {
     const modal = document.getElementById(modalId);
     const modalBackdrop = document.getElementById(`${modalId}-backdrop`);
 
-    modal.classList.remove('show');
-    modalBackdrop.classList.remove('show');
+    modal.classList.remove(CLASS_NAME_SHOW);
+    modalBackdrop.classList.remove(CLASS_NAME_SHOW);
 
     setTimeout(() => {
         container.removeChild(modal);
@@ -211,9 +217,53 @@ window.closeToast = (element) => {
     const container = document.getElementById('toasts');
     const toast = element.parentElement.parentElement;
 
-    toast.classList.remove('show');
+    toast.classList.remove(CLASS_NAME_SHOW);
 
     setTimeout(() => {
         container.removeChild(toast);
     }, 200);
+}
+
+class DropDown {
+    /** @param {HTMLElement} element */
+    constructor(element) {
+        /** @type {HTMLElement} */
+        this.element = element;
+        /** @type {HTMLUListElement} */
+        this.menu = element.parentElement.querySelector('ul.dropdown-menu');
+        this.element.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.toggle();
+        });
+        for (const item of this.menu.querySelectorAll('.dropdown-item')) {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggle();
+            });
+        }
+    }
+
+    toggle() {
+        if (this.isShown) {
+            this._hide();
+        } else {
+            this._show();
+        }
+    }
+
+    get isShown() {
+        return this.element.classList.contains(CLASS_NAME_SHOW);
+    }
+
+    _show() {
+        this.element.classList.add(CLASS_NAME_SHOW);
+        this.menu.classList.add(CLASS_NAME_SHOW);
+        this.menu.setAttribute(ATTRIBUTE_NAME_POPPER, 'static');
+    }
+
+    _hide() {
+        this.element.classList.remove(CLASS_NAME_SHOW);
+        this.menu.classList.remove(CLASS_NAME_SHOW);
+        this.menu.removeAttribute(ATTRIBUTE_NAME_POPPER);
+    }
 }

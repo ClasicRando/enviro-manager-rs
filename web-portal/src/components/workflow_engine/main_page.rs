@@ -119,7 +119,7 @@ pub fn ActiveWorkflowRuns(cx: Scope, workflow_runs: Vec<WorkflowRun>) -> impl In
             }
             items=workflow_runs
             row_builder=|cx, workflow_run| view! { cx, <WorkflowRun workflow_run=workflow_run/> }
-            data_source=WorkflowEngineMainPageTabs::WorkflowRuns.get_url().trim_end_matches("-tab")
+            data_source=WorkflowEngineMainPageTabs::WorkflowRuns.get_url().trim_end_matches("-tab").to_owned()
             refresh=true
             extra_buttons=vec![
                 ExtraTableButton::new(
@@ -193,7 +193,7 @@ pub fn ActiveExecutors(cx: Scope, executors: Vec<Executor>) -> impl IntoView {
             }
             items=executors
             row_builder=|cx, executor| view! { cx, <Executor executor=executor/> }
-            data_source=WorkflowEngineMainPageTabs::Executors.get_url().trim_end_matches("-tab")
+            data_source=WorkflowEngineMainPageTabs::Executors.get_url().trim_end_matches("-tab").to_owned()
             refresh=true
             extra_buttons=vec![
                 ExtraTableButton::new(

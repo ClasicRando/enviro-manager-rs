@@ -5,11 +5,12 @@ mod grid;
 mod index;
 mod login;
 mod modal;
-mod nav;
 mod table;
 mod toast;
 mod users;
 mod workflow_engine;
+
+use std::fmt::Display;
 
 use leptos::IntoView;
 
@@ -17,21 +18,25 @@ fn into_view<T: ToString>(val: T) -> impl IntoView {
     val.to_string()
 }
 
-fn display_option<T: ToString>(val: Option<T>) -> String {
-    if let Some(val) = val {
-        return val.to_string();
-    }
-    "-".to_owned()
+fn display_option<T>(val: Option<T>) -> String
+where
+    T: Display,
+{
+    option_into_view_default(val, "-")
 }
 
-#[allow(unused)]
-fn option_into_view_default<T: ToString>(val: Option<T>, default: &'static str) -> impl IntoView {
+#[inline(always)]
+fn option_into_view_default<T>(val: Option<T>, default: &'static str) -> String
+where
+    T: Display,
+{
     if let Some(val) = val {
-        return val.to_string();
+        return format!("{}", val);
     }
     default.to_owned()
 }
 
+pub use base::BasePage;
 pub use error::UserMissingRole;
 pub use index::Index;
 pub use login::Login;
@@ -44,6 +49,6 @@ pub use self::{
             ActiveExecutors, ActiveExecutorsTab, ActiveWorkflowRuns, ActiveWorkflowRunsTab,
             WorkflowEngine,
         },
-        workflow_run_page::{WorkflowRunPage, WorkflowRunTaskTable},
+        workflow_run_page::{WorkflowRunDisplay, WorkflowRunTaskTable},
     },
 };

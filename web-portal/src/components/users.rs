@@ -95,7 +95,7 @@ pub fn UsersTable(cx: Scope, uid: Uuid, users: Vec<User>) -> impl IntoView {
             }
             items=users
             row_builder=|cx, user| view! { cx, <UserRow uid=uid user=user/> }
-            data_source="/api/users"
+            data_source="/api/users".to_owned()
             refresh=true
             search=true
             extra_buttons=vec![

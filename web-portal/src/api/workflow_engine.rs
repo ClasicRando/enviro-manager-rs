@@ -5,13 +5,13 @@ use leptos::*;
 use reqwest::Method;
 use workflow_engine::{
     executor::data::{Executor, ExecutorId},
-    workflow_run::data::{WorkflowRun, WorkflowRunId, WorkflowRunTask},
+    workflow_run::data::{WorkflowRun, WorkflowRunId},
 };
 
 use crate::{
     components::{
         ActiveExecutors, ActiveExecutorsTab, ActiveWorkflowRuns, ActiveWorkflowRunsTab,
-        WorkflowRunTaskTable,
+        WorkflowRunDisplay,
     },
     extract_session_uid, utils, ServerFnError,
 };
@@ -29,13 +29,10 @@ pub fn service() -> actix_web::Scope {
             "/executors/shutdown/{executor_id}",
             web::post().to(shutdown_executor),
         )
-        .route(
-            "/workflow-run/{workflow_run_id}",
-            web::post().to(enter_workflow_run),
-        )
-        .route(
-            "/workflow-run/tasks/{workflow_run_id}",
-            web::get().to(workflow_run_tasks),
+        .service(
+            web::resource("/workflow-run/{workflow_run_id}")
+                .route(web::post().to(enter_workflow_run))
+                .route(web::get().to(workflow_run)),
         )
         .route("/workflow-runs", web::get().to(active_workflow_runs))
         .route(
@@ -361,7 +358,22 @@ async fn enter_workflow_run(
         return utils::redirect_login_htmx!();
     }
     let workflow_run_id = workflow_run_id.into_inner();
-    utils::redirect_htmx!("/workflow-engine/workflow_run/{}", workflow_run_id)
+    utils::redirect_htmx!("/workflow-engine/workflow-run/{}", workflow_run_id)
+}
+
+async fn workflow_run(session: Session, workflow_run_id: web::Path<WorkflowRunId>) -> HttpResponse {
+    if extract_session_uid(&session).is_err() {
+        return utils::redirect_login_htmx!();
+    }
+    let workflow_run_id = workflow_run_id.into_inner();
+    let workflow_run = match get_workflow_run(workflow_run_id).await {
+        Ok(inner) => inner,
+        Err(error) => return error.to_response(),
+    };
+    let html = leptos::ssr::render_to_string(move |cx| {
+        view! { cx, <WorkflowRunDisplay workflow_run=workflow_run/> }
+    });
+    utils::html_chunk!(html)
 }
 
 pub async fn get_workflow_run(
@@ -376,45 +388,6 @@ pub async fn get_workflow_run(
     .await?;
     match clean_executors_response {
         ApiResponseBody::Success(workflow_run) => Ok(workflow_run),
-        ApiResponseBody::Message(message) => {
-            utils::server_fn_error!("Expected data, got message. {}", message)
-        }
-        ApiResponseBody::Error(message) | ApiResponseBody::Failure(message) => {
-            utils::server_fn_error!(message)
-        }
-    }
-}
-
-async fn workflow_run_tasks(
-    session: Session,
-    workflow_run_id: web::Path<WorkflowRunId>,
-) -> HttpResponse {
-    if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
-    }
-    let workflow_run_id = workflow_run_id.into_inner();
-    let tasks = match get_workflow_run_tasks(workflow_run_id).await {
-        Ok(inner) => inner,
-        Err(error) => return error.to_response(),
-    };
-    let html = leptos::ssr::render_to_string(move |cx| {
-        view! { cx, <WorkflowRunTaskTable tasks=tasks workflow_run_id=workflow_run_id/> }
-    });
-    utils::html_chunk!(html)
-}
-
-async fn get_workflow_run_tasks(
-    workflow_run_id: WorkflowRunId,
-) -> Result<Vec<WorkflowRunTask>, ServerFnError> {
-    let clean_executors_response: ApiResponseBody<Vec<WorkflowRunTask>> = utils::api_request(
-        format!("http://127.0.0.1:8000/api/v1/workflow-runs/tasks/{workflow_run_id}?f=msgpack"),
-        Method::GET,
-        None::<String>,
-        None::<()>,
-    )
-    .await?;
-    match clean_executors_response {
-        ApiResponseBody::Success(tasks) => Ok(tasks),
         ApiResponseBody::Message(message) => {
             utils::server_fn_error!("Expected data, got message. {}", message)
         }

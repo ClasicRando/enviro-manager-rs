@@ -124,14 +124,14 @@ where
 }
 
 #[component]
-pub fn DataTableExtras<IV, R, F, IV2, S, E>(
+pub fn DataTableExtras<IV, R, F, IV2, E>(
     cx: Scope,
     id: &'static str,
     caption: &'static str,
     header: IV,
     items: Vec<R>,
     row_builder: F,
-    data_source: S,
+    #[prop(optional)] data_source: String,
     #[prop(optional)] refresh: bool,
     #[prop(optional)] search: bool,
     #[prop(optional)] extra_buttons: E,
@@ -140,12 +140,10 @@ where
     IV: IntoView,
     F: Fn(Scope, R) -> IV2,
     IV2: IntoView,
-    S: Into<String>,
     E: IntoIterator<Item = ExtraTableButton> + Default,
 {
     let container_id = format!("{id}Container");
     let body_id = format!("{id}Body");
-    let data_source = data_source.into();
     let search_form = if search {
         let search_source = format!("{data_source}/search");
         Some(view! { cx,
@@ -161,8 +159,7 @@ where
     };
     let refresh_button = if refresh {
         Some(view! { cx,
-            <button type="button" title="Refresh" class="btn btn-secondary"
-                hx-get=data_source hx-target=format!("#{container_id}") hx-swap="outerHTML">
+            <button type="button" title="Refresh" class="btn btn-secondary" hx-get=data_source>
                 <i class="fa-solid fa-refresh"></i>
             </button>
         })
@@ -179,7 +176,9 @@ where
         .map(|row| row_builder(cx, row))
         .collect_view(cx);
     view! { cx,
-        <div id=container_id class="table-responsive-sm">
+        <div class="table-responsive-sm" hx-target=format!("#{container_id}") hx-swap="outerHTML"
+            id=container_id
+        >
             <div class="btn-toolbar mt-1" role="toolbar">
                 {search_form}
                 <div class=button_group_class>
@@ -202,14 +201,14 @@ where
 }
 
 #[component]
-pub fn DataTable<IV, R, F, IV2, S>(
+pub fn DataTable<IV, R, F, IV2>(
     cx: Scope,
     id: &'static str,
     caption: &'static str,
     header: IV,
     items: Vec<R>,
     row_builder: F,
-    data_source: S,
+    #[prop(optional)] data_source: String,
     #[prop(optional)] refresh: bool,
     #[prop(optional)] search: bool,
 ) -> impl IntoView
@@ -217,7 +216,6 @@ where
     IV: IntoView,
     F: Fn(Scope, R) -> IV2,
     IV2: IntoView,
-    S: Into<String>,
 {
     view! { cx,
         <DataTableExtras

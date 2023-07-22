@@ -22,10 +22,42 @@ where
 }
 
 #[component]
-pub fn DataDisplay(cx: Scope, children: Children) -> impl IntoView {
+pub fn DataDisplay<S, IV, IV2>(
+    cx: Scope,
+    id: &'static str,
+    title: S,
+    fields: IV,
+    table: IV2,
+    #[prop(optional)] refresh: Option<String>,
+) -> impl IntoView
+where
+    S: Into<String>,
+    IV: IntoView,
+    IV2: IntoView,
+{
+    let refresh_button = refresh.map(|data_source| {
+        view! { cx,
+            <button type="button" title="Refresh" class="btn btn-secondary"
+                hx-get=data_source hx-target=format!("#{id}") hx-swap="outerHTML">
+                <i class="fa-solid fa-refresh"></i>
+            </button>
+        }
+    });
     view! { cx,
-        <fieldset disabled>
-            {children(cx)}
-        </fieldset>
+        <div id=id>
+            <div class="btn-toolbar mt-1" role="toolbar">
+                <h3>{title.into()}</h3>
+                <div class="btn-group ms-auto">
+                {refresh_button}
+                </div>
+            </div>
+            <hr class="border border-primary border-3 opacity-75 mt-1" />
+            <div class="my-1">
+                <fieldset disabled>
+                    {fields}
+                </fieldset>
+            </div>
+            {table}
+        </div>
     }
 }
