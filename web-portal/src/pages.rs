@@ -7,7 +7,8 @@ use workflow_engine::workflow_run::data::WorkflowRunId;
 use crate::{
     api::{users::get_all_users, workflow_engine::get_workflow_run},
     components::{
-        BasePage, Index, Login, UserMissingRole, UsersPage, WorkflowEngine, WorkflowRunDisplay,
+        default_workflow_engine_tab_url, BasePage, LoginForm, UserMissingRole, UsersTable,
+        WorkflowRunDisplay,
     },
     extract_session_uid, utils, ServerFnError,
 };
@@ -17,7 +18,14 @@ async fn login(session: Session) -> HttpResponse {
         return utils::redirect!("/");
     }
     let mut html = leptos::ssr::render_to_string(|cx| {
-        view! { cx, <Login /> }
+        view! { cx,
+            <BasePage
+                title="Index"
+                stylesheet_href="/assets/login.css"
+            >
+                <LoginForm />
+            </BasePage>
+        }
     });
     utils::html!(html)
 }
@@ -29,7 +37,10 @@ async fn index(session: Session) -> HttpResponse {
         Err(error) => return error.to_response(),
     };
     let mut html = leptos::ssr::render_to_string(move |cx| {
-        view! { cx, <Index user=user/> }
+        view! { cx,
+            <BasePage title="Index" user=user>
+            </BasePage>
+        }
     });
     utils::html!(html)
 }
@@ -41,7 +52,12 @@ async fn workflow_engine(session: Session) -> HttpResponse {
         Err(error) => return error.to_response(),
     };
     let mut html = leptos::ssr::render_to_string(move |cx| {
-        view! { cx, <WorkflowEngine user=user/> }
+        view! { cx,
+            <BasePage title="Index" user=user>
+                <div id="tabs" hx-get={default_workflow_engine_tab_url()} hx-trigger="load"
+                    hx-target="#tabs" hx-swap="innerHTML"></div>
+            </BasePage>
+        }
     });
     utils::html!(html)
 }
@@ -83,11 +99,12 @@ async fn users(session: Session) -> HttpResponse {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
+    let uid = user.uid;
     let mut html = leptos::ssr::render_to_string(move |cx| {
         view! { cx,
-            <UsersPage
-                user=user
-                users=users/>
+            <BasePage title="Users" user=user>
+                <UsersTable uid=uid users=users/>
+            </BasePage>
         }
     });
     utils::html!(html)

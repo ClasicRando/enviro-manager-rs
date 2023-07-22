@@ -26,8 +26,8 @@ pub fn DataDisplay<S, IV, IV2>(
     cx: Scope,
     id: &'static str,
     title: S,
-    fields: IV,
-    table: IV2,
+    #[prop(optional)] fields: Option<IV>,
+    #[prop(optional)] table: Option<IV2>,
     #[prop(optional)] refresh: Option<String>,
 ) -> impl IntoView
 where

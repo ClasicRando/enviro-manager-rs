@@ -103,7 +103,7 @@ pub fn BasePage(
     #[prop(optional)] user: Option<User>,
     #[prop(optional)] stylesheet_href: &'static str,
     #[prop(optional)] script_src: &'static str,
-    children: Children,
+    #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let page_stylesheet = if !stylesheet_href.is_empty() {
         Some(view! { cx, <link rel="stylesheet" href=stylesheet_href /> })
@@ -139,7 +139,7 @@ pub fn BasePage(
             <body class="p-3 m-0 border-0">
                 <div class="container-fluid">
                     {nav}
-                    {children(cx)}
+                    {children.map(|f| f(cx))}
                 </div>
                 <div class="toast-container top-0 end-0 p-3" id="toasts"></div>
                 <div id="modals"></div>

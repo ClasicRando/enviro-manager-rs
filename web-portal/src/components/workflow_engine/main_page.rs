@@ -1,14 +1,12 @@
 use leptos::*;
 use strum::{EnumIter, IntoEnumIterator};
-use users::data::user::User;
 use workflow_engine::{
     executor::data::Executor,
     workflow_run::data::{WorkflowRun, WorkflowRunStatus, WorkflowRunTask},
 };
 
 use crate::components::{
-    base::BasePage,
-    display_option, into_view,
+    into_view, into_view_option,
     table::{DataTableExtras, ExtraTableButton, RowAction, RowWithDetails},
 };
 
@@ -21,8 +19,8 @@ pub fn WorkflowRunTask(cx: Scope, workflow_run_task: WorkflowRunTask) -> impl In
             <td>{into_view(workflow_run_task.name)}</td>
             <td>{into_view(workflow_run_task.description)}</td>
             <td>{into_view(workflow_run_task.task_status)}</td>
-            <td>{display_option(workflow_run_task.parameters)}</td>
-            <td>{display_option(workflow_run_task.output)}</td>
+            <td>{into_view_option(workflow_run_task.parameters)}</td>
+            <td>{into_view_option(workflow_run_task.output)}</td>
             <td>
             {
                 match workflow_run_task.rules {
@@ -31,9 +29,9 @@ pub fn WorkflowRunTask(cx: Scope, workflow_run_task: WorkflowRunTask) -> impl In
                 }
             }
             </td>
-            <td>{display_option(workflow_run_task.task_start)}</td>
-            <td>{display_option(workflow_run_task.task_end)}</td>
-            <td>{display_option(workflow_run_task.progress)}</td>
+            <td>{into_view_option(workflow_run_task.task_start)}</td>
+            <td>{into_view_option(workflow_run_task.task_end)}</td>
+            <td>{into_view_option(workflow_run_task.progress)}</td>
         </tr>
     }
 }
@@ -87,8 +85,8 @@ fn WorkflowRun(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
             <td>{into_view(workflow_run.workflow_run_id)}</td>
             <td>{into_view(workflow_run.workflow_id)}</td>
             <td>{into_view(workflow_run.status)}</td>
-            <td>{display_option(workflow_run.executor_id)}</td>
-            <td>{display_option(workflow_run.progress)}</td>
+            <td>{into_view_option(workflow_run.executor_id)}</td>
+            <td>{into_view_option(workflow_run.progress)}</td>
             <td>
                 {actions}
                 <RowAction
@@ -272,12 +270,6 @@ fn Tabs(cx: Scope, selected_tab: WorkflowEngineMainPageTabs) -> impl IntoView {
     }
 }
 
-#[component]
-pub fn WorkflowEngine(cx: Scope, user: User) -> impl IntoView {
-    view! { cx,
-        <BasePage title="Index" user=user>
-            <div id="tabs" hx-get={WorkflowEngineMainPageTabs::Executors.get_url()} hx-trigger="load"
-                hx-target="#tabs" hx-swap="innerHTML"></div>
-        </BasePage>
-    }
+pub fn default_workflow_engine_tab_url() -> &'static str {
+    WorkflowEngineMainPageTabs::Executors.get_url()
 }

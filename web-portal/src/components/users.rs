@@ -6,7 +6,6 @@ use users::data::{
 use uuid::Uuid;
 
 use crate::components::{
-    base::BasePage,
     into_view,
     modal::EditModal,
     table::{DataTableExtras, ExtraTableButton, RowAction, RowWithDetails},
@@ -105,16 +104,6 @@ pub fn UsersTable(cx: Scope, uid: Uuid, users: Vec<User>) -> impl IntoView {
                     "fa-plus"
                 ),
             ]/>
-    }
-}
-
-#[component]
-pub fn UsersPage(cx: Scope, user: User, users: Vec<User>) -> impl IntoView {
-    let uid = user.uid;
-    view! { cx,
-        <BasePage title="Users" user=user>
-            <UsersTable uid=uid users=users/>
-        </BasePage>
     }
 }
 

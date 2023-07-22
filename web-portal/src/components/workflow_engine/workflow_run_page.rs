@@ -3,14 +3,14 @@ use workflow_engine::workflow_run::data::{WorkflowRun, WorkflowRunTask};
 
 use crate::components::{
     data_display::{DataDisplay, DataField},
-    display_option,
     grid::Row,
+    into_view_option,
     table::DataTable,
     workflow_engine::main_page::WorkflowRunTask,
 };
 
 #[component]
-pub fn WorkflowRunTaskTable(cx: Scope, tasks: Vec<WorkflowRunTask>) -> impl IntoView {
+fn WorkflowRunTaskTable(cx: Scope, tasks: Vec<WorkflowRunTask>) -> impl IntoView {
     view! { cx,
         <DataTable
             id="workflow_run_tasks"
@@ -64,12 +64,12 @@ pub fn WorkflowRunDisplay(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView
                         id="executor_id"
                         label="Executor ID"
                         column_width=2
-                        data=display_option(workflow_run.executor_id)/>
+                        data=into_view_option(workflow_run.executor_id)/>
                     <DataField
                         id="progress"
                         label="Progress"
                         column_width=2
-                        data=display_option(workflow_run.progress)/>
+                        data=into_view_option(workflow_run.progress)/>
                 </Row>
             }
             table=view! { cx,
