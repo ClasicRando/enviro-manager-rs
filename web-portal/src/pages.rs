@@ -5,7 +5,7 @@ use users::data::{role::RoleName, user::User};
 use workflow_engine::workflow_run::data::WorkflowRunId;
 
 use crate::{
-    api::{users::get_all_users, workflow_engine::get_workflow_run},
+    api::{users::get_all_users, workflow_engine::workflow_run::get_workflow_run},
     components::{
         default_workflow_engine_tab_url, BasePage, LoginForm, UserMissingRole, UsersTable,
         WorkflowRunDisplay,
