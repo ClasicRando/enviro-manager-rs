@@ -100,7 +100,7 @@ impl DatabaseBuilder for PgDatabaseBuilder {
         .await?;
         let Some(schema_names) = schema_names_option else {
             warn!("Current user does not own any schemas");
-            return Ok(())
+            return Ok(());
         };
 
         sqlx::query(&format!("drop schema if exists {schema_names} cascade"))

@@ -1,7 +1,9 @@
-use sqlx::{PgPool, Postgres};
-use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use crate::database::connection::ConnectionBuilder;
-use crate::error::EmResult;
+use sqlx::{
+    postgres::{PgConnectOptions, PgPoolOptions},
+    PgPool, Postgres,
+};
+
+use crate::{database::connection::ConnectionBuilder, error::EmResult};
 
 pub struct PgConnectionBuilder;
 

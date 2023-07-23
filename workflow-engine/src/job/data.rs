@@ -242,7 +242,7 @@ impl ApiRequestValidator for JobRequestValidator {
         }
 
         let JobType::Scheduled(entries) = &request.job_type else {
-            return Ok(())
+            return Ok(());
         };
 
         let mut seen = std::collections::HashSet::new();

@@ -29,7 +29,7 @@ impl<'m> From<&'m str> for NotificationAction {
             return Self::LoadJobs;
         }
         let Ok(job_id) = s.parse::<i64>() else {
-            return Self::MalformedPayload(s.to_owned())
+            return Self::MalformedPayload(s.to_owned());
         };
         info!("Received notification of \"{}\"", s);
         Self::CompleteJob(job_id.into())
@@ -156,8 +156,11 @@ where
     /// queue refresh should follow.
     async fn run_next_job(&self) -> EmResult<()> {
         let Some(next_run) = self.jobs.get(&self.next_job) else {
-            warn!("Attempted to run a job that is not in the job queue. Job_id = {}", self.next_job);
-            return Ok(())
+            warn!(
+                "Attempted to run a job that is not in the job queue. Job_id = {}",
+                self.next_job
+            );
+            return Ok(());
         };
         let now = Utc::now().naive_utc();
         if next_run > &now {
@@ -186,7 +189,7 @@ where
         let job = self.job_service.read_one(job_id).await?;
         info!("Completing run for job_id = {}", job_id);
         let Err(error) = self.job_service.complete_job(job_id).await else {
-            return Ok(())
+            return Ok(());
         };
         self.send_error_email(job.maintainer(), format!("{error}"))
             .await?;
