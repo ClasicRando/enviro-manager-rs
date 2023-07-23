@@ -31,7 +31,7 @@ async fn login(session: Session) -> HttpResponse {
 }
 
 async fn index(session: Session) -> HttpResponse {
-    let user = match utils::get_user(session).await {
+    let user = match utils::get_user_session(session).await {
         Ok(inner) => inner,
         Err(ServerFnError::InvalidUser) => return utils::redirect_login!(),
         Err(error) => return error.to_response(),
@@ -46,7 +46,7 @@ async fn index(session: Session) -> HttpResponse {
 }
 
 async fn workflow_engine(session: Session) -> HttpResponse {
-    let user = match utils::get_user(session).await {
+    let user = match utils::get_user_session(session).await {
         Ok(inner) => inner,
         Err(ServerFnError::InvalidUser) => return utils::redirect_login!(),
         Err(error) => return error.to_response(),
@@ -63,7 +63,7 @@ async fn workflow_engine(session: Session) -> HttpResponse {
 }
 
 async fn workflow_run(session: Session, workflow_run_id: web::Path<WorkflowRunId>) -> HttpResponse {
-    let user = match utils::get_user(session).await {
+    let user = match utils::get_user_session(session).await {
         Ok(inner) => inner,
         Err(ServerFnError::InvalidUser) => return utils::redirect_login!(),
         Err(error) => return error.to_response(),
@@ -83,7 +83,7 @@ async fn workflow_run(session: Session, workflow_run_id: web::Path<WorkflowRunId
 }
 
 async fn users(session: Session) -> HttpResponse {
-    let user = match utils::get_user(session).await {
+    let user = match utils::get_user_session(session).await {
         Ok(inner) => inner,
         Err(ServerFnError::InvalidUser) => return utils::redirect_login!(),
         Err(error) => return error.to_response(),

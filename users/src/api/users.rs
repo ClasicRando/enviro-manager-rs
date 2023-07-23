@@ -4,10 +4,11 @@ use common::{
     error::EmError,
 };
 use log::error;
+use uuid::Uuid;
 
 use super::{validate_bearer, BearerValidation};
 use crate::{
-    data::user::User,
+    data::{role::RoleName, user::User},
     service::users::{
         CreateUserRequest, ModifyUserRoleRequest, UpdateUserRequest, UserService,
         ValidateUserRequest,
@@ -58,6 +59,40 @@ where
 
 /// API endpoint to read a single user
 pub async fn read_user<U>(
+    bearer: BearerAuth,
+    get_uid: actix_web::web::Path<Uuid>,
+    service: actix_web::web::Data<U>,
+    query: actix_web::web::Query<QueryApiFormat>,
+) -> ApiResponse<User>
+where
+    U: UserService,
+{
+    let format = query.into_inner();
+    let uid = match validate_bearer(&bearer, format.f) {
+        BearerValidation::Valid(uid) => uid,
+        BearerValidation::InValid(response) => return response,
+    };
+
+    let current_user = match service.read_one(&uid).await {
+        Ok(inner) => inner,
+        Err(error) => return ApiResponse::error(error, format.f),
+    };
+    if let Err(error) = current_user.check_role(RoleName::Admin) {
+        log::error!("{error}");
+        return ApiResponse::failure(
+            "Non-admin user attempted to fetch another user's data",
+            format.f,
+        );
+    }
+
+    match service.read_one(&get_uid.into_inner()).await {
+        Ok(user) => ApiResponse::success(user, format.f),
+        Err(error) => ApiResponse::error(error, format.f),
+    }
+}
+
+/// API endpoint to read the current user
+pub async fn read_current_user<U>(
     bearer: BearerAuth,
     service: actix_web::web::Data<U>,
     query: actix_web::web::Query<QueryApiFormat>,

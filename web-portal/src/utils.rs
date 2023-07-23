@@ -6,6 +6,7 @@ use leptos::*;
 use reqwest::{Client, IntoUrl, Method, Response};
 use serde::{Deserialize, Serialize};
 use users::data::user::User;
+use uuid::Uuid;
 
 use crate::{extract_session_uid, ServerFnError};
 
@@ -75,15 +76,17 @@ where
     Ok(data)
 }
 
-pub async fn get_user(session: Session) -> Result<User, ServerFnError> {
+pub async fn get_user_session(session: Session) -> Result<User, ServerFnError> {
     let uid = extract_session_uid(&session)?;
-    let user_response = api_request(
-        "http://127.0.0.1:8001/api/v1/user?f=msgpack",
-        Method::GET,
-        Some(uid),
-        None::<()>,
-    )
-    .await?;
+    get_user(uid, None).await
+}
+
+pub async fn get_user(current_uid: Uuid, other_uid: Option<Uuid>) -> Result<User, ServerFnError> {
+    let url = match other_uid {
+        Some(uid) => format!("http://127.0.0.1:8001/api/v1/user/{uid}?f=msgpack"),
+        None => "http://127.0.0.1:8001/api/v1/user?f=msgpack".to_owned(),
+    };
+    let user_response = api_request(url, Method::GET, Some(current_uid), None::<()>).await?;
     let user = match user_response {
         ApiResponseBody::Success(inner) => inner,
         ApiResponseBody::Message(message) => {

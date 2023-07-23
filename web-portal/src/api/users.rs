@@ -9,7 +9,9 @@ use uuid::Uuid;
 
 use crate::{
     components::{EditUser, Toast, UsersTable},
-    extract_session_uid, take_if, utils, ServerFnError,
+    extract_session_uid, take_if, utils,
+    utils::get_user,
+    ServerFnError,
 };
 
 pub fn service() -> actix_web::Scope {
@@ -62,13 +64,9 @@ async fn edit_user_modal(session: Session, get_uid: web::Path<Uuid>) -> HttpResp
         return utils::redirect_login_htmx!();
     };
 
-    let users = match get_all_users(session_uid).await {
+    let get_user = match get_user(session_uid, Some(get_uid)).await {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
-    };
-
-    let Some(get_user) = users.into_iter().find(|user| user.uid == get_uid) else {
-        return utils::internal_server_error!("Could not find user specified to edit");
     };
 
     let html = leptos::ssr::render_to_string(move |cx| {
@@ -119,7 +117,7 @@ async fn edit_user(session: Session, form: web::Form<UserEditForm>) -> HttpRespo
     utils::html_chunk!(html)
 }
 
-pub async fn update_user(
+async fn update_user(
     session_uid: Uuid,
     update_request: UpdateUserRequest,
 ) -> Result<(), ServerFnError> {

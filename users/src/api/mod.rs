@@ -42,7 +42,7 @@ where
 {
     let Ok(uid) = bearer.token().parse() else {
         error!("Got invalid bearer token. Token = '{}'", bearer.token());
-        return BearerValidation::InValid(ApiResponse::failure(BEARER_ERROR, format))
+        return BearerValidation::InValid(ApiResponse::failure(BEARER_ERROR, format));
     };
     BearerValidation::Valid(uid)
 }
@@ -74,7 +74,8 @@ where
                 .app_data(roles_service_data.clone())
                 .app_data(users_service_data.clone())
                 .route("/roles", get().to(roles::roles::<R>))
-                .route("/user", get().to(users::read_user::<U>))
+                .route("/user", get().to(users::read_current_user::<U>))
+                .route("/user/{uid}", get().to(users::read_user::<U>))
                 .route("/users", get().to(users::read_users::<U>))
                 .route("/users", post().to(users::create_user::<U>))
                 .route("/users", patch().to(users::update_user::<U>))
