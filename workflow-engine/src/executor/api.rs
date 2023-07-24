@@ -1,3 +1,4 @@
+use actix_web::{web, Scope};
 use common::api::{ApiResponse, QueryApiFormat};
 
 use crate::executor::{
@@ -5,8 +6,25 @@ use crate::executor::{
     service::ExecutorService,
 };
 
+pub fn service<E>() -> Scope
+where
+    E: ExecutorService + Send + Sync + 'static,
+{
+    web::scope("/executors")
+        .route("", web::get().to(active_executors::<E>))
+        .route(
+            "/shutdown/{executor_id}",
+            web::post().to(shutdown_executor::<E>),
+        )
+        .route(
+            "/cancel/{executor_id}",
+            web::post().to(cancel_executor::<E>),
+        )
+        .route("/clean", web::post().to(clean_executors::<E>))
+}
+
 /// API endpoint to fetch all active executors
-pub async fn active_executors<E>(
+async fn active_executors<E>(
     service: actix_web::web::Data<E>,
     query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<Vec<Executor>>
@@ -21,7 +39,7 @@ where
 }
 
 /// API endpoint to start the graceful shutdown of the executor specified by `executor_id`
-pub async fn shutdown_executor<E>(
+async fn shutdown_executor<E>(
     executor_id: actix_web::web::Path<ExecutorId>,
     service: actix_web::web::Data<E>,
     query: actix_web::web::Query<QueryApiFormat>,
@@ -37,7 +55,7 @@ where
 }
 
 /// API endpoint to the forceful shutdown of the executor specified by `executor_id`
-pub async fn cancel_executor<E>(
+async fn cancel_executor<E>(
     executor_id: actix_web::web::Path<ExecutorId>,
     service: actix_web::web::Data<E>,
     query: actix_web::web::Query<QueryApiFormat>,
@@ -53,7 +71,7 @@ where
 }
 
 /// API endpoint to perform a cleaning of all inactive but not closed executors
-pub async fn clean_executors<E>(
+async fn clean_executors<E>(
     service: actix_web::web::Data<E>,
     query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<Executor>

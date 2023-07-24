@@ -1,9 +1,6 @@
 use std::net::ToSocketAddrs;
 
-use actix_web::{
-    web::{get, patch, post, Data},
-    App, HttpServer,
-};
+use actix_web::{web::Data, App, HttpServer};
 use common::{database::Database, error::EmResult};
 
 use crate::{
@@ -19,8 +16,14 @@ use crate::{
     },
 };
 
-/// Temp
+/// Run generic API server. Creates all the required endpoints and resources. To run the api server,
+/// you must have created an [ExecutorService], [WorkflowRunsService], [TaskQueueService],
+/// [TaskService], [WorkflowsService] and [JobService] for your desired [Database] implementation.
+/// Each component depends on a [Database] type so the system cannot contain disjointed service
+/// implementations to operate.
 /// # Errors
+/// This function will return an error if the server is unable to bind to the specified `address` or
+/// the server's `run` method returns an error
 #[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 pub async fn spawn_api_server<A, D, E, J, Q, R, T, W>(
     executor_service: E,
@@ -56,76 +59,12 @@ where
                 .app_data(tasks_service_data.clone())
                 .app_data(workflow_runs_service_data.clone())
                 .app_data(workflows_service_data.clone())
-                .route("/executors", get().to(executors_api::active_executors::<E>))
-                .route(
-                    "/executors/shutdown/{executor_id}",
-                    post().to(executors_api::shutdown_executor::<E>),
-                )
-                .route(
-                    "/executors/cancel/{executor_id}",
-                    post().to(executors_api::cancel_executor::<E>),
-                )
-                .route(
-                    "/executors/clean",
-                    post().to(executors_api::clean_executors::<E>),
-                )
-                .route("/jobs", get().to(jobs_api::jobs::<J>))
-                .route("/jobs/{job_id}", get().to(jobs_api::job::<J>))
-                .route("/jobs", post().to(jobs_api::create_job::<J>))
-                .route(
-                    "/task-queue/retry",
-                    post().to(workflow_runs_api::task_queue_retry::<Q>),
-                )
-                .route(
-                    "/task-queue/complete",
-                    post().to(workflow_runs_api::task_queue_complete::<Q>),
-                )
-                .route("/tasks", get().to(workflows_api::tasks::<T>))
-                .route("/tasks/{task_id}", get().to(workflows_api::task::<T>))
-                .route("/tasks", post().to(workflows_api::create_task::<T>))
-                .route("/tasks", post().to(workflows_api::create_task::<T>))
-                .route(
-                    "/workflow-runs/{workflow_run_id}",
-                    get().to(workflow_runs_api::workflow_run::<R>),
-                )
-                .route(
-                    "/workflow-runs/tasks/{workflow_run_id}",
-                    get().to(workflow_runs_api::workflow_run_tasks::<R>),
-                )
-                .route(
-                    "/workflow-runs",
-                    get().to(workflow_runs_api::workflow_runs::<R>),
-                )
-                .route(
-                    "/workflow-runs/init/{workflow_id}",
-                    post().to(workflow_runs_api::init_workflow_run::<R>),
-                )
-                .route(
-                    "/workflow-runs/cancel/{workflow_run_id}",
-                    post().to(workflow_runs_api::cancel_workflow_run::<R>),
-                )
-                .route(
-                    "/workflow-runs/schedule/{workflow_run_id}",
-                    post().to(workflow_runs_api::schedule_workflow_run::<R>),
-                )
-                .route(
-                    "/workflow-runs/restart/{workflow_run_id}",
-                    post().to(workflow_runs_api::restart_workflow_run::<R>),
-                )
-                .route("/workflows", get().to(workflows_api::workflows::<W>))
-                .route(
-                    "/workflows/{workflow_id}",
-                    get().to(workflows_api::workflow::<W>),
-                )
-                .route("/workflows", post().to(workflows_api::create_workflow::<W>))
-                .route(
-                    "/workflows",
-                    patch().to(workflows_api::update_workflow::<W>),
-                )
-                .route(
-                    "/workflows/deprecate",
-                    post().to(workflows_api::deprecate_workflow::<W>),
-                ),
+                .service(executors_api::service::<E>())
+                .service(jobs_api::service::<J>())
+                .service(workflow_runs_api::task_queue_service::<Q, R>())
+                .service(workflow_runs_api::workflow_runs_service::<R>())
+                .service(workflows_api::tasks_service::<T>())
+                .service(workflows_api::workflows_service::<W>()),
         )
     })
     .bind(address)? //("127.0.0.1", 8080))?;
