@@ -8,7 +8,10 @@ use users::{data::user::User, service::users::UpdateUserRequest};
 use uuid::Uuid;
 
 use crate::{
-    components::{EditUser, Toast, UsersTable},
+    components::{
+        toast::{ADD_TOAST_SWAP, ADD_TOAST_TARGET},
+        EditUser, Toast, UsersTable,
+    },
     extract_session_uid, take_if, utils,
     utils::get_user,
     ServerFnError,
@@ -102,8 +105,8 @@ async fn edit_user(session: Session, form: web::Form<UserEditForm>) -> HttpRespo
             view! { cx, <Toast body="Could not update user"/> }
         });
         return HttpResponse::Ok()
-            .insert_header(("HX-Retarget", "#toasts"))
-            .insert_header(("HX-Reswap", "beforeend"))
+            .insert_header(("HX-Retarget", ADD_TOAST_TARGET))
+            .insert_header(("HX-Reswap", ADD_TOAST_SWAP))
             .body(html);
     }
 

@@ -3,15 +3,23 @@ use actix_web::{web, HttpResponse};
 use common::api::ApiResponseBody;
 use leptos::*;
 use reqwest::Method;
-use workflow_engine::workflow_run::data::{WorkflowRun, WorkflowRunId};
+use serde::Deserialize;
+use workflow_engine::{
+    workflow::data::WorkflowId,
+    workflow_run::data::{WorkflowRun, WorkflowRunId},
+};
 
 use crate::{
-    components::{ActiveWorkflowRuns, ActiveWorkflowRunsTab},
+    api::workflow_engine::workflows::get_workflows,
+    components::workflow_engine::main_page::{
+        ActiveWorkflowRuns, ActiveWorkflowRunsTab, NewWorkflowRunModal,
+    },
     extract_session_uid, utils, ServerFnError,
 };
 
 pub fn service() -> actix_web::Scope {
     web::scope("/workflow-runs")
+        .route("", web::get().to(active_workflow_runs))
         .route("/tab", web::get().to(active_workflow_runs_tab))
         .route(
             "/schedule/{workflow_run_id}",
@@ -25,6 +33,8 @@ pub fn service() -> actix_web::Scope {
             "/restart/{workflow_run_id}",
             web::post().to(restart_workflow_run),
         )
+        .route("/init-modal", web::post().to(new_workflow_run_modal))
+        .route("/init", web::post().to(new_workflow_run))
 }
 
 async fn active_workflow_runs(session: Session) -> HttpResponse {
@@ -89,14 +99,14 @@ async fn schedule_workflow_run(
 }
 
 async fn post_schedule_workflow_run(workflow_run_id: WorkflowRunId) -> Result<(), ServerFnError> {
-    let clean_executors_response: ApiResponseBody<WorkflowRun> = utils::api_request(
+    let schedule_workflow_run_response: ApiResponseBody<WorkflowRun> = utils::api_request(
         format!("http://127.0.0.1:8000/api/v1/workflow-runs/schedule/{workflow_run_id}?f=msgpack"),
         Method::POST,
         None::<String>,
         None::<()>,
     )
     .await?;
-    match clean_executors_response {
+    match schedule_workflow_run_response {
         ApiResponseBody::Success(workflow_run) => {
             log::info!("Scheduled workflow run: {}", workflow_run.workflow_run_id);
             Ok(())
@@ -124,14 +134,14 @@ async fn cancel_workflow_run(
 }
 
 async fn post_cancel_workflow_run(workflow_run_id: WorkflowRunId) -> Result<(), ServerFnError> {
-    let clean_executors_response: ApiResponseBody<WorkflowRun> = utils::api_request(
+    let cancel_workflow_run_response: ApiResponseBody<WorkflowRun> = utils::api_request(
         format!("http://127.0.0.1:8000/api/v1/workflow-runs/cancel/{workflow_run_id}?f=msgpack"),
         Method::POST,
         None::<String>,
         None::<()>,
     )
     .await?;
-    match clean_executors_response {
+    match cancel_workflow_run_response {
         ApiResponseBody::Success(workflow_run) => {
             log::info!("Canceled workflow run: {}", workflow_run.workflow_run_id);
             Ok(())
@@ -159,16 +169,66 @@ async fn restart_workflow_run(
 }
 
 async fn post_restart_workflow_run(workflow_run_id: WorkflowRunId) -> Result<(), ServerFnError> {
-    let clean_executors_response: ApiResponseBody<WorkflowRun> = utils::api_request(
+    let restart_workflow_run_response: ApiResponseBody<WorkflowRun> = utils::api_request(
         format!("http://127.0.0.1:8000/api/v1/workflow-runs/restart/{workflow_run_id}?f=msgpack"),
         Method::POST,
         None::<String>,
         None::<()>,
     )
     .await?;
-    match clean_executors_response {
+    match restart_workflow_run_response {
         ApiResponseBody::Success(workflow_run) => {
             log::info!("Restarted workflow run: {}", workflow_run.workflow_run_id);
+            Ok(())
+        }
+        ApiResponseBody::Message(message) => {
+            utils::server_fn_error!("Expected data, got message. {}", message)
+        }
+        ApiResponseBody::Error(message) | ApiResponseBody::Failure(message) => {
+            utils::server_fn_error!(message)
+        }
+    }
+}
+
+async fn new_workflow_run_modal() -> HttpResponse {
+    let workflows = match get_workflows().await {
+        Ok(inner) => inner,
+        Err(error) => return error.to_response(),
+    };
+    let html = leptos::ssr::render_to_string(|cx| {
+        view! { cx, <NewWorkflowRunModal workflows=workflows /> }
+    });
+    utils::html_chunk!(html)
+}
+
+#[derive(Deserialize)]
+struct NewWorkflowForm {
+    workflow_id: WorkflowId,
+}
+
+async fn new_workflow_run(session: Session, form: web::Form<NewWorkflowForm>) -> HttpResponse {
+    if extract_session_uid(&session).is_err() {
+        return utils::redirect_login_htmx!();
+    }
+    let NewWorkflowForm { workflow_id } = form.into_inner();
+
+    if let Err(error) = post_init_workflow_run(workflow_id).await {
+        return error.to_response();
+    }
+    active_workflow_runs(session).await
+}
+
+async fn post_init_workflow_run(workflow_id: WorkflowId) -> Result<(), ServerFnError> {
+    let restart_workflow_run_response: ApiResponseBody<WorkflowRun> = utils::api_request(
+        format!("http://127.0.0.1:8000/api/v1/workflow-runs/init/{workflow_id}?f=msgpack"),
+        Method::POST,
+        None::<String>,
+        None::<()>,
+    )
+    .await?;
+    match restart_workflow_run_response {
+        ApiResponseBody::Success(workflow_run) => {
+            log::info!("Created workflow run: {}", workflow_run.workflow_run_id);
             Ok(())
         }
         ApiResponseBody::Message(message) => {

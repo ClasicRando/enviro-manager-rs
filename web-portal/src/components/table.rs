@@ -6,6 +6,8 @@ pub struct ExtraTableButton {
     title: &'static str,
     api_url: &'static str,
     icon: &'static str,
+    target: Option<String>,
+    swap: Option<String>,
 }
 
 impl ExtraTableButton {
@@ -14,7 +16,25 @@ impl ExtraTableButton {
             title,
             api_url,
             icon,
+            target: None,
+            swap: None,
         }
+    }
+
+    pub fn add_target<S>(mut self, target: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.target = Some(target.into());
+        self
+    }
+
+    pub fn add_swap<S>(mut self, swap: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.swap = Some(swap.into());
+        self
     }
 }
 
@@ -22,7 +42,8 @@ impl IntoView for ExtraTableButton {
     fn into_view(self, cx: Scope) -> View {
         view! { cx,
             <button title=self.title type="button" class="btn btn-secondary"
-                hx-post=self.api_url hx-trigger="click"
+                hx-post=self.api_url hx-trigger="click" hx-target=self.target
+                hx-swap=self.swap
             >
                 <i class=format!("fa-solid {}", self.icon)></i>
             </button>

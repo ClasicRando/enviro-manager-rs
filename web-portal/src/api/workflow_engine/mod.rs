@@ -1,6 +1,7 @@
 mod executors;
 pub mod workflow_run;
 mod workflow_runs;
+mod workflows;
 
 use actix_web::web;
 

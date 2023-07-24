@@ -1,5 +1,8 @@
 use leptos::*;
 
+pub const ADD_TOAST_TARGET: &str = "#toasts";
+pub const ADD_TOAST_SWAP: &str = "beforeend";
+
 #[component]
 pub fn toast<S>(cx: Scope, body: S) -> impl IntoView
 where

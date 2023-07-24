@@ -2,11 +2,13 @@ use leptos::*;
 use strum::{EnumIter, IntoEnumIterator};
 use workflow_engine::{
     executor::data::Executor,
+    workflow::data::Workflow,
     workflow_run::data::{WorkflowRun, WorkflowRunStatus, WorkflowRunTask},
 };
 
 use crate::components::{
     into_view, into_view_option,
+    modal::{CreateModal, ADD_MODAL_SWAP, ADD_MODAL_TARGET},
     table::{DataTableExtras, ExtraTableButton, RowAction, RowWithDetails},
 };
 
@@ -117,14 +119,16 @@ pub fn ActiveWorkflowRuns(cx: Scope, workflow_runs: Vec<WorkflowRun>) -> impl In
             }
             items=workflow_runs
             row_builder=|cx, workflow_run| view! { cx, <WorkflowRun workflow_run=workflow_run/> }
-            data_source=WorkflowEngineMainPageTabs::WorkflowRuns.get_url().trim_end_matches("-tab").to_owned()
+            data_source=WorkflowEngineMainPageTabs::WorkflowRuns.get_url().trim_end_matches("/tab").to_owned()
             refresh=true
             extra_buttons=vec![
                 ExtraTableButton::new(
                     "New Workflow Run",
-                    "#",
+                    "/api/workflow-engine/workflow-runs/init-modal",
                     "fa-plus"
                 )
+                .add_target(ADD_MODAL_TARGET)
+                .add_swap(ADD_MODAL_SWAP)
             ]/>
     }
 }
@@ -191,7 +195,7 @@ pub fn ActiveExecutors(cx: Scope, executors: Vec<Executor>) -> impl IntoView {
             }
             items=executors
             row_builder=|cx, executor| view! { cx, <Executor executor=executor/> }
-            data_source=WorkflowEngineMainPageTabs::Executors.get_url().trim_end_matches("-tab").to_owned()
+            data_source=WorkflowEngineMainPageTabs::Executors.get_url().trim_end_matches("/tab").to_owned()
             refresh=true
             extra_buttons=vec![
                 ExtraTableButton::new(
@@ -272,4 +276,28 @@ fn Tabs(cx: Scope, selected_tab: WorkflowEngineMainPageTabs) -> impl IntoView {
 
 pub fn default_workflow_engine_tab_url() -> &'static str {
     WorkflowEngineMainPageTabs::Executors.get_url()
+}
+
+#[component]
+pub fn NewWorkflowRunModal(cx: Scope, workflows: Vec<Workflow>) -> impl IntoView {
+    let options = workflows
+        .into_iter()
+        .map(|w| view! { cx, <option value=w.workflow_id.to_string()>{w.name}</option> })
+        .collect_view(cx);
+    view! { cx,
+        <CreateModal
+            id="initWorkflowRun"
+            title="New Workflow Run"
+            form=view! { cx,
+                <div class="row mb-3">
+                    <label for="workflow" class="col-sm-3 col-form-label">"Workflow"</label>
+                    <div class="col-sm-9">
+                        <select class="form-select" id="workflow" name="workflow_id">
+                            {options}
+                        </select>
+                    </div>
+                </div>
+            }
+            post_url="/api/workflow-engine/workflow-runs/init"/>
+    }
 }

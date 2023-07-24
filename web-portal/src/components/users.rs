@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use crate::components::{
     into_view,
-    modal::EditModal,
+    modal::{EditModal, ADD_MODAL_SWAP, ADD_MODAL_TARGET},
     table::{DataTableExtras, ExtraTableButton, RowAction, RowWithDetails},
 };
 
@@ -32,8 +32,8 @@ fn UserRow(cx: Scope, uid: Uuid, user: User) -> impl IntoView {
                     title="Edit User"
                     api_url=edit_url()
                     icon="fa-edit"
-                    target="#modals"
-                    swap="beforeend"/>
+                    target=ADD_MODAL_TARGET
+                    swap=ADD_MODAL_SWAP/>
             }
             .into_view(cx),
         ),
@@ -44,14 +44,14 @@ fn UserRow(cx: Scope, uid: Uuid, user: User) -> impl IntoView {
                     title="Edit User"
                     api_url=edit_url()
                     icon="fa-edit"
-                    target="#modals"
-                    swap="beforeend"/>
+                    target=ADD_MODAL_TARGET
+                    swap=ADD_MODAL_SWAP/>
                 <RowAction
                     title="Add Role"
                     api_url=format!("/api/users/add-role/{}", user.uid)
                     icon="fa-plus"
-                    target="#modals"
-                    swap="beforeend"/>
+                    target=ADD_MODAL_TARGET
+                    swap=ADD_MODAL_SWAP/>
             }
             .into_view(cx),
         ),

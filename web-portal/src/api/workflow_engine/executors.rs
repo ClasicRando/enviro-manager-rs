@@ -12,7 +12,7 @@ use crate::{
 
 pub fn service() -> actix_web::Scope {
     web::scope("/executors")
-        .route("/", web::get().to(active_executors))
+        .route("", web::get().to(active_executors))
         .route("/tab", web::get().to(active_executors_tab))
         .route("/clean", web::post().to(clean_executors))
         .route("/cancel/{executor_id}", web::post().to(cancel_executor))
