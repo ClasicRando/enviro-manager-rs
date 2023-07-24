@@ -9,8 +9,8 @@ use uuid::Uuid;
 
 use crate::{
     components::{
-        toast::{ADD_TOAST_SWAP, ADD_TOAST_TARGET},
-        EditUser, Toast, UsersTable,
+        toast::{Toast, ADD_TOAST_SWAP, ADD_TOAST_TARGET},
+        users::{EditUser, UsersTable},
     },
     extract_session_uid, take_if, utils,
     utils::get_user,

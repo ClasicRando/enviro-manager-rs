@@ -7,8 +7,13 @@ use workflow_engine::workflow_run::data::WorkflowRunId;
 use crate::{
     api::{users::get_all_users, workflow_engine::workflow_run::get_workflow_run},
     components::{
-        default_workflow_engine_tab_url, BasePage, LoginForm, UserMissingRole, UsersTable,
-        WorkflowRunDisplay,
+        base::BasePage,
+        error::UserMissingRole,
+        login::LoginForm,
+        users::UsersTable,
+        workflow_engine::{
+            main_page::default_workflow_engine_tab_url, workflow_run_page::WorkflowRunDisplay,
+        },
     },
     extract_session_uid, utils, ServerFnError,
 };

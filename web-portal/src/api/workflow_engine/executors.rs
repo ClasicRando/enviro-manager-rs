@@ -6,7 +6,7 @@ use reqwest::Method;
 use workflow_engine::executor::data::{Executor, ExecutorId};
 
 use crate::{
-    components::{ActiveExecutors, ActiveExecutorsTab},
+    components::workflow_engine::main_page::{ActiveExecutors, ActiveExecutorsTab},
     extract_session_uid, utils, ServerFnError,
 };
 

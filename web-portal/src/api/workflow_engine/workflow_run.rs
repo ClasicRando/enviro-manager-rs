@@ -5,7 +5,10 @@ use leptos::*;
 use reqwest::Method;
 use workflow_engine::workflow_run::data::{WorkflowRun, WorkflowRunId};
 
-use crate::{components::WorkflowRunDisplay, extract_session_uid, utils, ServerFnError};
+use crate::{
+    components::workflow_engine::workflow_run_page::WorkflowRunDisplay, extract_session_uid, utils,
+    ServerFnError,
+};
 
 pub fn service() -> actix_web::Scope {
     web::scope("/workflow-run").service(
