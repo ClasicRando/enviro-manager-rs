@@ -10,7 +10,8 @@ use workflow_engine::{
 };
 
 use crate::{
-    components::workflow_engine::main_page::{Jobs, JobsTab},
+    api::workflow_engine::workflows::get_workflows,
+    components::workflow_engine::main_page::{Jobs, JobsTab, NewJobModal, NewJobNextRun},
     extract_session_uid, utils, ServerFnError,
 };
 
@@ -23,6 +24,7 @@ pub fn service() -> actix_web::Scope {
         )
         .route("/create-modal", web::post().to(create_job_modal))
         .route("/tab", web::get().to(jobs_tab))
+        .route("/next-run", web::get().to(next_run_input))
 }
 
 async fn jobs_html(session: Session, is_tab: bool) -> HttpResponse {
@@ -77,7 +79,32 @@ async fn create_job_modal(session: Session) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
         return utils::redirect_login_htmx!();
     }
-    jobs_html(session, false).await
+
+    let workflows = match get_workflows().await {
+        Ok(inner) => inner,
+        Err(error) => return error.to_response(),
+    };
+
+    let html = leptos::ssr::render_to_string(move |cx| {
+        view! { cx, <NewJobModal workflows=workflows/> }
+    });
+    utils::html_chunk!(html)
+}
+
+#[derive(Deserialize)]
+struct NextRun {
+    #[serde(default)]
+    next_run_chk: Option<String>,
+}
+
+async fn next_run_input(next_run: web::Query<NextRun>) -> HttpResponse {
+    if next_run.next_run_chk.is_some() {
+        let html = leptos::ssr::render_to_string(move |cx| {
+            view! { cx, <NewJobNextRun/> }
+        });
+        return utils::html_chunk!(html);
+    }
+    utils::html_chunk!("")
 }
 
 #[derive(Deserialize, Debug)]

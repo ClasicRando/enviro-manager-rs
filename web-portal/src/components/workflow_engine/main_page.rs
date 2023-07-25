@@ -415,14 +415,30 @@ pub fn NewJobModal(cx: Scope, workflows: Vec<Workflow>) -> impl IntoView {
                     </div>
                 </div>
                 <div class="row mb-3">
-                    <div class="form-check">
-                        <label for="next_run_chk" class="col-sm-3 col-form-label form-check-label">
-                            "Set Next Run?"
-                        </label>
-                        <div class="col-sm-9">
-                            <input class="form-check-input" type="checkbox" name="next_run_chk"
-                                id="next_run_chk" value=""/>
-                        </div>
+                    <label for="maintainer" class="col-sm-3 col-form-label">"Maintainer"</label>
+                    <div class="col-sm-9">
+                        <input class="form-control" type="text" name="maintainer" id="maintainer"/>
+                    </div>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="jobType" id="jobTypeScheduled" checked/>
+                    <label class="form-check-label" for="jobTypeScheduled">
+                        "Scheduled"
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="jobType" id="jobTypeInterval"/>
+                    <label class="form-check-label" for="jobTypeInterval">
+                        "Interval"
+                    </label>
+                </div>
+                <div id="jobTypeContainer"></div>
+                <div class="row mb-3">
+                    <div class="form-check ms-2">
+                        <input class="form-check-input" type="checkbox" name="next_run_chk"
+                            id="next_run_chk" value="" hx-get="/api/workflow-engine/jobs/next-run"
+                            hx-target="#nextRunContainer" hx-swap="innerHTML"/>
+                        <label for="next_run_chk" class="form-check-label">"Set Next Run?"</label>
                     </div>
                     <div id="nextRunContainer"></div>
                 </div>
