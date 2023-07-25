@@ -15,10 +15,12 @@ use crate::{
 
 /// Represents the `job_type` Postgresql enum value within the database. Should never be used by
 /// itself but rather used to parse into the [JobType] enum that hold the job running details.
-#[derive(sqlx::Type)]
+#[derive(sqlx::Type, Deserialize, Debug)]
 #[sqlx(type_name = "job_type")]
 pub enum JobTypeEnum {
+    #[serde(rename = "scheduled")]
     Scheduled,
+    #[serde(rename = "interval")]
     Interval,
 }
 
@@ -145,26 +147,19 @@ pub enum JobType {
 
 /// Job details as fetched from `job.v_jobs`. Contains the job and underlining workflow details as
 /// well as the current workflow run (if any) for the job.
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Job {
-    job_id: JobId,
-    workflow_id: WorkflowId,
-    workflow_name: String,
-    job_type: JobType,
-    maintainer: String,
-    is_paused: bool,
-    next_run: NaiveDateTime,
-    current_workflow_run_id: WorkflowRunId,
-    workflow_run_status: Option<WorkflowRunStatus>,
-    executor_id: Option<ExecutorId>,
-    progress: i16,
-}
-
-impl Job {
-    ///
-    pub fn maintainer(&self) -> &str {
-        &self.maintainer
-    }
+    pub job_id: JobId,
+    pub workflow_id: WorkflowId,
+    pub workflow_name: String,
+    pub job_type: JobType,
+    pub maintainer: String,
+    pub is_paused: bool,
+    pub next_run: NaiveDateTime,
+    pub current_workflow_run_id: Option<WorkflowRunId>,
+    pub workflow_run_status: Option<WorkflowRunStatus>,
+    pub executor_id: Option<ExecutorId>,
+    pub progress: Option<i16>,
 }
 
 impl<'r, R> sqlx::FromRow<'r, R> for Job
@@ -216,7 +211,7 @@ where
 
 /// API request data for updating a job entry. Specifies all fields within the record except for
 /// the `job_id` which should be provided by a path parameter
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct JobRequest {
     /// ID of the workflow that is to be executed as the [Job]
     pub(crate) workflow_id: WorkflowId,
@@ -227,6 +222,22 @@ pub struct JobRequest {
     /// Optional datetime that defines when the next run of the job is to be executed. If [None]
     /// then the system will calculate when the next run should be.
     pub(crate) next_run: Option<NaiveDateTime>,
+}
+
+impl JobRequest {
+    pub const fn new(
+        workflow_id: WorkflowId,
+        maintainer: String,
+        job_type: JobType,
+        next_run: Option<NaiveDateTime>,
+    ) -> Self {
+        Self {
+            workflow_id,
+            maintainer,
+            job_type,
+            next_run,
+        }
+    }
 }
 
 /// API request validator for [JobRequest]

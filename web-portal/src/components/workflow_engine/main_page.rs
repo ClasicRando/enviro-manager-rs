@@ -2,6 +2,7 @@ use leptos::*;
 use strum::{EnumIter, IntoEnumIterator};
 use workflow_engine::{
     executor::data::Executor,
+    job::data::Job,
     workflow::data::Workflow,
     workflow_run::data::{WorkflowRun, WorkflowRunStatus, WorkflowRunTask},
 };
@@ -69,17 +70,19 @@ fn WorkflowRun(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
             details_id=details_id
             column_count=7
             details_header=view! { cx,
-                <th>"Order"</th>
-                <th>"Task ID"</th>
-                <th>"Name"</th>
-                <th>"Description"</th>
-                <th>"Status"</th>
-                <th>"Parameters"</th>
-                <th>"Output"</th>
-                <th>"Rules"</th>
-                <th>"Start"</th>
-                <th>"End"</th>
-                <th>"Progress"</th>
+                <tr>
+                    <th>"Order"</th>
+                    <th>"Task ID"</th>
+                    <th>"Name"</th>
+                    <th>"Description"</th>
+                    <th>"Status"</th>
+                    <th>"Parameters"</th>
+                    <th>"Output"</th>
+                    <th>"Rules"</th>
+                    <th>"Start"</th>
+                    <th>"End"</th>
+                    <th>"Progress"</th>
+                </tr>
             }
             details=workflow_run.tasks
             details_row_builder=|cx, task| view! { cx, <WorkflowRunTask workflow_run_task=task/> }
@@ -182,16 +185,18 @@ pub fn ActiveExecutors(cx: Scope, executors: Vec<Executor>) -> impl IntoView {
             id="active-executors-tbl"
             caption="Active Executors"
             header=view! { cx,
-                <th>"ID"</th>
-                <th>"PID"</th>
-                <th>"Username"</th>
-                <th>"Application"</th>
-                <th>"Client Address"</th>
-                <th>"Client Port"</th>
-                <th>"Start"</th>
-                <th>"Active"</th>
-                <th>"Workflow Run Count"</th>
-                <th>"Actions"</th>
+                <tr>
+                    <th>"ID"</th>
+                    <th>"PID"</th>
+                    <th>"Username"</th>
+                    <th>"Application"</th>
+                    <th>"Client Address"</th>
+                    <th>"Client Port"</th>
+                    <th>"Start"</th>
+                    <th>"Active"</th>
+                    <th>"Workflow Run Count"</th>
+                    <th>"Actions"</th>
+                </tr>
             }
             items=executors
             row_builder=|cx, executor| view! { cx, <Executor executor=executor/> }
@@ -215,10 +220,78 @@ pub fn ActiveExecutorsTab(cx: Scope, executors: Vec<Executor>) -> impl IntoView 
     }
 }
 
+#[component]
+fn Job(cx: Scope, job: Job) -> impl IntoView {
+    view! { cx,
+        <tr>
+            <td>{into_view(job.job_id)}</td>
+            <td>{into_view(job.workflow_id)}</td>
+            <td>{job.workflow_name}</td>
+            <td>""</td>
+            <td>{job.maintainer}</td>
+            <td>{into_view(job.is_paused)}</td>
+            <td>{into_view(job.next_run)}</td>
+            <td>{into_view_option(job.current_workflow_run_id)}</td>
+            <td>{into_view_option(job.workflow_run_status)}</td>
+            <td>{into_view_option(job.executor_id)}</td>
+            <td>{into_view_option(job.progress)}</td>
+        </tr>
+    }
+}
+
+#[component]
+pub fn Jobs(cx: Scope, jobs: Vec<Job>) -> impl IntoView {
+    view! { cx,
+        <DataTableExtras
+            id="jobs-tbl"
+            caption="Jobs"
+            header=view! { cx,
+                <tr>
+                    <th rowspan=2>"ID"</th>
+                    <th rowspan=2>"Workflow ID"</th>
+                    <th rowspan=2>"Workflow Name"</th>
+                    <th rowspan=2>"Type"</th>
+                    <th rowspan=2>"Maintainer"</th>
+                    <th rowspan=2>"Paused?"</th>
+                    <th rowspan=2>"Next Run"</th>
+                    <th colspan=4>"Current Workflow Run"</th>
+                </tr>
+                <tr>
+                    <th>"ID"</th>
+                    <th>"Status"</th>
+                    <th>"Executor ID"</th>
+                    <th>"Progress"</th>
+                </tr>
+            }
+            items=jobs
+            row_builder=|cx, job| view! { cx, <Job job=job/> }
+            data_source=WorkflowEngineMainPageTabs::Jobs.get_url().trim_end_matches("/tab").to_owned()
+            refresh=true
+            extra_buttons=vec![
+                ExtraTableButton::new(
+                    "Create new Job",
+                    "/api/workflow-engine/jobs/create-modal",
+                    "fa-plus"
+                )
+                .add_target(ADD_MODAL_TARGET)
+                .add_swap(ADD_MODAL_SWAP)
+            ]/>
+    }
+}
+
+#[component]
+pub fn JobsTab(cx: Scope, jobs: Vec<Job>) -> impl IntoView {
+    view! { cx,
+        <Tabs selected_tab=WorkflowEngineMainPageTabs::Jobs/>
+        <Jobs jobs=jobs/>
+    }
+}
+
 #[derive(EnumIter, PartialEq)]
 pub enum WorkflowEngineMainPageTabs {
     Executors,
     WorkflowRuns,
+    Jobs,
 }
 
 impl WorkflowEngineMainPageTabs {
@@ -226,6 +299,7 @@ impl WorkflowEngineMainPageTabs {
         match self {
             Self::Executors => "executors-tab",
             Self::WorkflowRuns => "workflow-runs-tab",
+            Self::Jobs => "jobs-tab",
         }
     }
 
@@ -233,6 +307,7 @@ impl WorkflowEngineMainPageTabs {
         match self {
             Self::Executors => "Executors",
             Self::WorkflowRuns => "Workflow Runs",
+            Self::Jobs => "Jobs",
         }
     }
 
@@ -240,6 +315,7 @@ impl WorkflowEngineMainPageTabs {
         match self {
             Self::Executors => "/api/workflow-engine/executors/tab",
             Self::WorkflowRuns => "/api/workflow-engine/workflow-runs/tab",
+            Self::Jobs => "/api/workflow-engine/jobs/tab",
         }
     }
 
@@ -299,5 +375,58 @@ pub fn NewWorkflowRunModal(cx: Scope, workflows: Vec<Workflow>) -> impl IntoView
                 </div>
             }
             post_url="/api/workflow-engine/workflow-runs/init"/>
+    }
+}
+
+#[component]
+pub fn NewJobNextRun(cx: Scope) -> impl IntoView {
+    view! { cx,
+        <div class="row mb-3">
+            <label for="next_run" class="col-sm-3 col-form-label">"Next Run"</label>
+            <div class="col-sm-9">
+                <input class="form-control" type="datetime-local" name="next_run" id="next_run"/>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn NewJobModal(cx: Scope, workflows: Vec<Workflow>) -> impl IntoView {
+    let options = workflows
+        .into_iter()
+        .enumerate()
+        .map(|(i, w)| {
+            view! { cx,
+                <option value=w.workflow_id.to_string() selected=i == 0>{w.name}</option>
+            }
+        })
+        .collect_view(cx);
+    view! { cx,
+        <CreateModal
+            id="createJob"
+            title="Create Job"
+            form=view! { cx,
+                <div class="row mb-3">
+                    <label for="workflow" class="col-sm-3 col-form-label">"Workflow"</label>
+                    <div class="col-sm-9">
+                        <select class="form-select" id="workflow" name="workflow_id" required>
+                            {options}
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="form-check">
+                        <label for="next_run_chk" class="col-sm-3 col-form-label form-check-label">
+                            "Set Next Run?"
+                        </label>
+                        <div class="col-sm-9">
+                            <input class="form-check-input" type="checkbox" name="next_run_chk"
+                                id="next_run_chk" value=""/>
+                        </div>
+                    </div>
+                    <div id="nextRunContainer"></div>
+                </div>
+            }
+            post_url="/api/workflow-engine/jobs"/>
     }
 }

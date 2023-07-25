@@ -191,7 +191,7 @@ where
         let Err(error) = self.job_service.complete_job(job_id).await else {
             return Ok(());
         };
-        self.send_error_email(job.maintainer(), format!("{error}"))
+        self.send_error_email(&job.maintainer, format!("{error}"))
             .await?;
         Ok(())
     }

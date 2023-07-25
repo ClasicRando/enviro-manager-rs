@@ -1,4 +1,5 @@
 mod executors;
+mod jobs;
 pub mod workflow_run;
 mod workflow_runs;
 mod workflows;
@@ -10,4 +11,5 @@ pub fn service() -> actix_web::Scope {
         .service(executors::service())
         .service(workflow_run::service())
         .service(workflow_runs::service())
+        .service(jobs::service())
 }
