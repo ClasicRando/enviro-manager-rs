@@ -7,11 +7,9 @@ use serde::Deserialize;
 use users::{data::user::User, service::users::UpdateUserRequest};
 use uuid::Uuid;
 
+use super::{HtmxResponseBuilder, ModalIdQuery};
 use crate::{
-    components::{
-        toast::{Toast, ADD_TOAST_SWAP, ADD_TOAST_TARGET},
-        users::{EditUser, UsersTable},
-    },
+    components::users::{EditUser, UsersTable},
     extract_session_uid, take_if, utils,
     utils::get_user,
     ServerFnError,
@@ -31,14 +29,15 @@ async fn all_users(session: Session) -> HttpResponse {
     let Ok(uid) = extract_session_uid(&session) else {
         return utils::redirect_login_htmx!();
     };
+
     let users = match get_all_users(uid).await {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
-    let html = leptos::ssr::render_to_string(move |cx| {
+
+    HtmxResponseBuilder::new().html_chunk(move |cx| {
         view! { cx, <UsersTable uid=uid users=users/> }
-    });
-    utils::html_chunk!(html)
+    })
 }
 
 pub async fn get_all_users(uid: Uuid) -> Result<Vec<User>, ServerFnError> {
@@ -72,10 +71,9 @@ async fn edit_user_modal(session: Session, get_uid: web::Path<Uuid>) -> HttpResp
         Err(error) => return error.to_response(),
     };
 
-    let html = leptos::ssr::render_to_string(move |cx| {
+    HtmxResponseBuilder::new().html_chunk(move |cx| {
         view! { cx, <EditUser user=get_user/> }
-    });
-    utils::html_chunk!(html)
+    })
 }
 
 #[derive(Deserialize)]
@@ -84,7 +82,11 @@ struct UserEditForm {
     full_name: String,
 }
 
-async fn edit_user(session: Session, form: web::Form<UserEditForm>) -> HttpResponse {
+async fn edit_user(
+    session: Session,
+    form: web::Form<UserEditForm>,
+    query: web::Query<ModalIdQuery>,
+) -> HttpResponse {
     let UserEditForm {
         username,
         full_name,
@@ -96,28 +98,26 @@ async fn edit_user(session: Session, form: web::Form<UserEditForm>) -> HttpRespo
     let update_request = UpdateUserRequest::new(
         session_uid,
         take_if(username, |s| !s.is_empty()),
-        take_if(full_name, |s| !s.is_empty()),
+        take_if(full_name.clone(), |s| !s.is_empty()),
     );
 
     if let Err(error) = update_user(session_uid, update_request).await {
         log::error!("{error}");
-        let html = leptos::ssr::render_to_string(move |cx| {
-            view! { cx, <Toast body="Could not update user"/> }
-        });
-        return HttpResponse::Ok()
-            .insert_header(("HX-Retarget", ADD_TOAST_TARGET))
-            .insert_header(("HX-Reswap", ADD_TOAST_SWAP))
-            .body(html);
+        return HtmxResponseBuilder::modal_error_message("Could not update user");
     }
 
+    let modal_id = query.0.id;
+    let toast_message = format!("Edited User: {full_name}");
     let users = match get_all_users(session_uid).await {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
-    let html = leptos::ssr::render_to_string(move |cx| {
-        view! { cx, <UsersTable uid=session_uid users=users/> }
-    });
-    utils::html_chunk!(html)
+    HtmxResponseBuilder::new()
+        .add_close_modal_event(modal_id)
+        .add_create_toast_event(toast_message)
+        .html_chunk(move |cx| {
+            view! { cx, <UsersTable uid=session_uid users=users/> }
+        })
 }
 
 async fn update_user(

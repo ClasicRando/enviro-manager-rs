@@ -1,4 +1,5 @@
 use leptos::*;
+use serde_json::json;
 use strum::{EnumIter, IntoEnumIterator};
 use workflow_engine::{
     executor::data::Executor,
@@ -391,6 +392,18 @@ pub fn NewJobNextRun(cx: Scope) -> impl IntoView {
 }
 
 #[component]
+pub fn NewScheduledJob(cx: Scope) -> impl IntoView {
+    view! { cx,
+    }
+}
+
+#[component]
+pub fn NewIntervalJob(cx: Scope) -> impl IntoView {
+    view! { cx,
+    }
+}
+
+#[component]
 pub fn NewJobModal(cx: Scope, workflows: Vec<Workflow>) -> impl IntoView {
     let options = workflows
         .into_iter()
@@ -420,19 +433,29 @@ pub fn NewJobModal(cx: Scope, workflows: Vec<Workflow>) -> impl IntoView {
                         <input class="form-control" type="text" name="maintainer" id="maintainer"/>
                     </div>
                 </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="jobType" id="jobTypeScheduled" checked/>
-                    <label class="form-check-label" for="jobTypeScheduled">
-                        "Scheduled"
-                    </label>
+                <div class="row mb-3 ms-2">
+                    <div class="form-check col">
+                        <input class="form-check-input" type="radio" name="jobType"
+                            id="jobTypeScheduled" hx-get="/api/workflow-engine/jobs/job-type"
+                            hx-target="#jobTypeContainer" hx-swap="innerHTML"
+                            hx-vals="{{\"type\": \"scheduled\"}}" checked/>
+                        <label class="form-check-label" for="jobTypeScheduled">
+                            "Scheduled"
+                        </label>
+                    </div>
+                    <div class="form-check col">
+                        <input class="form-check-input" type="radio" name="jobType"
+                            id="jobTypeInterval" hx-get="/api/workflow-engine/jobs/job-type"
+                            hx-target="#jobTypeContainer" hx-swap="innerHTML"
+                            hx-val="{{\"type\": \"interval\"}}"/>
+                        <label class="form-check-label" for="jobTypeInterval">
+                            "Interval"
+                        </label>
+                    </div>
                 </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="jobType" id="jobTypeInterval"/>
-                    <label class="form-check-label" for="jobTypeInterval">
-                        "Interval"
-                    </label>
+                <div id="jobTypeContainer">
+                    <NewScheduledJob />
                 </div>
-                <div id="jobTypeContainer"></div>
                 <div class="row mb-3">
                     <div class="form-check ms-2">
                         <input class="form-check-input" type="checkbox" name="next_run_chk"

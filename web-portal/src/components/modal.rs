@@ -2,6 +2,7 @@ use leptos::*;
 
 pub const ADD_MODAL_TARGET: &str = "#modals";
 pub const ADD_MODAL_SWAP: &str = "beforeend";
+pub const MODAL_ERROR_MESSAGE_ID: &str = "modalErrorMessage";
 
 #[component]
 pub fn EditModal<S1, S2, S3, IV>(
@@ -21,9 +22,10 @@ where
 {
     let id = id.into();
     let patch_url = patch_url.into();
+    let vals = format!("{{\"id\": \"{id}\"}}");
     view! { cx,
         <Modal
-            id=id.clone()
+            id=id
             title=title
             size=size
             body=view! { cx,
@@ -33,10 +35,9 @@ where
                 <button
                     type="button"
                     class="btn btn-secondary"
-                    onclick="closeModal(this)"
-                    data-em-modal=id
                     hx-patch=patch_url
                     hx-include="#editForm"
+                    hx-vals=vals
                     hx-target=target
                 >"Confirm"</button>
             }/>
@@ -61,9 +62,10 @@ where
 {
     let id = id.into();
     let post_url = post_url.into();
+    let vals = format!("{{\"id\": \"{id}\"}}");
     view! { cx,
         <Modal
-            id=id.clone()
+            id=id
             title=title
             size=size
             body=view! { cx,
@@ -73,10 +75,9 @@ where
                 <button
                     type="button"
                     class="btn btn-secondary"
-                    onclick="closeModal(this)"
-                    data-em-modal=id
                     hx-post=post_url
                     hx-include="#createForm"
+                    hx-vals=vals
                     hx-target=target
                 >"Confirm"</button>
             }/>
@@ -132,6 +133,7 @@ where
                         <p>{body}</p>
                     </div>
                     <div class="modal-footer">
+                        <p class="text-danger" id=MODAL_ERROR_MESSAGE_ID></p>
                         {buttons}
                         <button type="button" class="btn btn-secondary" onclick="closeModal(this)" data-em-modal=id>"Close"</button>
                     </div>

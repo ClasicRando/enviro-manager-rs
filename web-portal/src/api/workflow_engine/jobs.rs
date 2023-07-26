@@ -10,8 +10,10 @@ use workflow_engine::{
 };
 
 use crate::{
-    api::workflow_engine::workflows::get_workflows,
-    components::workflow_engine::main_page::{Jobs, JobsTab, NewJobModal, NewJobNextRun},
+    api::{workflow_engine::workflows::get_workflows, ModalIdQuery},
+    components::workflow_engine::main_page::{
+        Jobs, JobsTab, NewIntervalJob, NewJobModal, NewJobNextRun, NewScheduledJob,
+    },
     extract_session_uid, utils, ServerFnError,
 };
 
@@ -25,6 +27,7 @@ pub fn service() -> actix_web::Scope {
         .route("/create-modal", web::post().to(create_job_modal))
         .route("/tab", web::get().to(jobs_tab))
         .route("/next-run", web::get().to(next_run_input))
+        .route("/job-type", web::get().to(job_type_container))
 }
 
 async fn jobs_html(session: Session, is_tab: bool) -> HttpResponse {
@@ -107,6 +110,24 @@ async fn next_run_input(next_run: web::Query<NextRun>) -> HttpResponse {
     utils::html_chunk!("")
 }
 
+#[derive(Deserialize)]
+struct JobTypeQuery {
+    #[serde(rename = "type")]
+    job_type: JobTypeEnum,
+}
+
+async fn job_type_container(query: web::Query<JobTypeQuery>) -> HttpResponse {
+    let html = match query.job_type {
+        JobTypeEnum::Scheduled => leptos::ssr::render_to_string(|cx| {
+            view! { cx, <NewScheduledJob/> }
+        }),
+        JobTypeEnum::Interval => leptos::ssr::render_to_string(|cx| {
+            view! { cx, <NewIntervalJob/> }
+        }),
+    };
+    utils::html_chunk!(html)
+}
+
 #[derive(Deserialize, Debug)]
 struct CreateJob {
     workflow_id: WorkflowId,
@@ -116,7 +137,11 @@ struct CreateJob {
     next_run: Option<String>,
 }
 
-async fn create_job(session: Session) -> HttpResponse {
+async fn create_job(
+    session: Session,
+    form: web::Form<CreateJob>,
+    query: web::Query<ModalIdQuery>,
+) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
         return utils::redirect_login_htmx!();
     }

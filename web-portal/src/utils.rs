@@ -208,6 +208,23 @@ macro_rules! redirect_login_htmx {
     };
 }
 
+macro_rules! close_modal_trigger {
+    ($id:ident) => {
+        (
+            "HX-Trigger",
+            format!("{{\"closeModal\": {{\"id\": \"{}\"}}}}", $id),
+        )
+    };
+}
+
+macro_rules! create_toast_trigger {
+    ($message:ident) => {
+        ("HX-Trigger", $message)
+    };
+}
+
+pub(crate) use close_modal_trigger;
+pub(crate) use create_toast_trigger;
 pub(crate) use html;
 pub(crate) use html_chunk;
 pub(crate) use internal_server_error;
