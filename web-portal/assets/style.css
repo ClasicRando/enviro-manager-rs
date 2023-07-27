@@ -7,3 +7,7 @@
 .data-field {
     text-align: center;
 }
+
+.login-form {
+    width: 400px;
+}

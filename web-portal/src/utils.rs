@@ -1,14 +1,15 @@
 use std::fmt::Display;
 
 use actix_session::Session;
+use actix_web::{HttpResponse, HttpResponseBuilder};
 use common::api::ApiResponseBody;
-use leptos::*;
 use reqwest::{Client, IntoUrl, Method, Response};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use users::data::user::User;
 use uuid::Uuid;
 
-use crate::{extract_session_uid, ServerFnError};
+use crate::{components::modal::MODAL_ERROR_MESSAGE_ID, extract_session_uid, ServerFnError};
 
 async fn send_request<U, D, T>(
     url: U,
@@ -99,6 +100,154 @@ pub async fn get_user(current_uid: Uuid, other_uid: Option<Uuid>) -> Result<User
     Ok(user)
 }
 
+pub const HOME_LOCATION: &str = "/";
+pub const LOGIN_LOCATION: &str = "/login";
+
+pub struct HtmxResponseBuilder {
+    response: HttpResponseBuilder,
+    triggers: Option<Vec<(&'static str, serde_json::Value)>>,
+}
+
+impl Default for HtmxResponseBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl HtmxResponseBuilder {
+    pub fn new() -> Self {
+        let mut response = HttpResponse::Ok();
+        response.content_type(actix_web::http::header::ContentType::html());
+        Self {
+            response,
+            triggers: None,
+        }
+    }
+
+    pub fn add_close_modal_event<S>(&mut self, modal_id: S) -> &mut Self
+    where
+        S: AsRef<str>,
+    {
+        self.add_trigger_event("closeModal", json!({"id": modal_id.as_ref()}))
+    }
+
+    pub fn add_create_toast_event<S>(&mut self, message: S) -> &mut Self
+    where
+        S: AsRef<str>,
+    {
+        self.add_trigger_event("createToast", json!({"message": message.as_ref()}))
+    }
+
+    pub fn add_trigger_event(&mut self, event: &'static str, data: serde_json::Value) -> &mut Self {
+        match self.triggers.as_mut() {
+            Some(triggers) => triggers.push((event, data)),
+            None => self.triggers = Some(vec![(event, data)]),
+        };
+        self
+    }
+
+    pub fn redirect_home() -> HttpResponse {
+        Self::redirect("/")
+    }
+
+    pub fn redirect_login() -> HttpResponse {
+        Self::redirect("/login")
+    }
+
+    pub fn redirect<S>(location: S) -> HttpResponse
+    where
+        S: AsRef<str>,
+    {
+        HttpResponse::Found()
+            .insert_header(("HX-Redirect", location.as_ref()))
+            .finish()
+    }
+
+    pub fn target<S>(&mut self, target: S) -> &mut Self
+    where
+        S: AsRef<str>,
+    {
+        self.response
+            .insert_header(("HX-Retarget", target.as_ref()));
+        self
+    }
+
+    pub fn swap<S>(&mut self, swap: S) -> &mut Self
+    where
+        S: AsRef<str>,
+    {
+        self.response.insert_header(("HX-Swap", swap.as_ref()));
+        self
+    }
+
+    fn finish_triggers(&mut self) -> &mut Self {
+        let triggers_option = self.triggers.take();
+        match triggers_option {
+            Some(triggers) if !triggers.is_empty() => {
+                let data = triggers
+                    .into_iter()
+                    .map(|(key, obj)| format!("\"{key}\": {obj}"))
+                    .collect::<Vec<String>>()
+                    .join(",");
+                log::info!("HX-Trigger {{{data}}}");
+                self.response
+                    .insert_header(("HX-Trigger", format!("{{{data}}}")));
+            }
+            _ => {}
+        }
+        self
+    }
+
+    pub fn modal_error_message<S>(message: S) -> HttpResponse
+    where
+        S: Into<String>,
+    {
+        Self::new()
+            .target(MODAL_ERROR_MESSAGE_ID)
+            .swap("innerHTML")
+            .raw_body(message.into())
+    }
+
+    pub fn static_body(&mut self, html: &'static str) -> HttpResponse {
+        self.finish_triggers();
+        self.response.body(html)
+    }
+
+    pub fn raw_body(&mut self, html: String) -> HttpResponse {
+        self.finish_triggers();
+        self.response.body(html)
+    }
+
+    pub fn html_chunk<F, IV>(&mut self, html: F) -> HttpResponse
+    where
+        F: FnOnce(leptos::Scope) -> IV + 'static,
+        IV: leptos::IntoView,
+    {
+        self.finish_triggers();
+        let html = leptos::ssr::render_to_string(html);
+        self.response.body(html)
+    }
+
+    pub fn location_home() -> HttpResponse {
+        Self::location(HOME_LOCATION)
+    }
+
+    pub fn location_login() -> HttpResponse {
+        Self::location(LOGIN_LOCATION)
+    }
+
+    pub fn location<S>(location: S) -> HttpResponse
+    where
+        S: Into<String>,
+    {
+        let mut builder = Self::new();
+        builder
+            .response
+            .insert_header(("HX-Location", location.into()))
+            .finish()
+    }
+}
+
 macro_rules! server_fn_error {
     ($f:literal, $($item:ident)+) => {
         Err(crate::ServerFnError::Generic(format!($f, $($item)+)))
@@ -132,62 +281,22 @@ macro_rules! internal_server_error {
     };
 }
 
-macro_rules! html {
-    ($html:ident) => {{
-        $html.insert_str(0, "<!DOCTYPE html>");
-        HttpResponse::Ok()
-            .content_type(actix_web::http::header::ContentType::html())
-            .body($html)
-    }};
-}
-
-macro_rules! html_chunk {
-    ($html:ident) => {
-        HttpResponse::Ok()
-            .content_type(actix_web::http::header::ContentType::html())
-            .body($html)
-    };
-    ($html:literal) => {
-        HttpResponse::Ok()
-            .content_type(actix_web::http::header::ContentType::html())
-            .body($html)
-    };
-}
-
-macro_rules! redirect {
-    ($location:literal) => {
-        HttpResponse::Found()
-            .insert_header(("location", $location))
-            .finish()
-    };
-}
-
-macro_rules! redirect_htmx {
-    ($location:literal) => {
-        HttpResponse::Found()
-            .insert_header(("HX-Redirect", $location))
-            .finish()
-    };
-
-    ($f:literal, $($item:ident)+) => {
-        HttpResponse::Found()
-            .insert_header(("HX-Redirect", format!($f, $($item)+)))
-            .finish()
-    };
+pub fn html_page<F, IV>(html: F) -> HttpResponse
+where
+    F: FnOnce(leptos::Scope) -> IV + 'static,
+    IV: leptos::IntoView,
+{
+    let mut html = leptos::ssr::render_to_string(html);
+    html.insert_str(0, "<!DOCTYPE html>");
+    HttpResponse::Ok()
+        .content_type(actix_web::http::header::ContentType::html())
+        .body(html)
 }
 
 macro_rules! redirect_home {
     () => {
         HttpResponse::Found()
             .insert_header(("location", "/"))
-            .finish()
-    };
-}
-
-macro_rules! redirect_home_htmx {
-    () => {
-        HttpResponse::Found()
-            .insert_header(("HX-Redirect", "/"))
             .finish()
     };
 }
@@ -208,30 +317,8 @@ macro_rules! redirect_login_htmx {
     };
 }
 
-macro_rules! close_modal_trigger {
-    ($id:ident) => {
-        (
-            "HX-Trigger",
-            format!("{{\"closeModal\": {{\"id\": \"{}\"}}}}", $id),
-        )
-    };
-}
-
-macro_rules! create_toast_trigger {
-    ($message:ident) => {
-        ("HX-Trigger", $message)
-    };
-}
-
-pub(crate) use close_modal_trigger;
-pub(crate) use create_toast_trigger;
-pub(crate) use html;
-pub(crate) use html_chunk;
 pub(crate) use internal_server_error;
-pub(crate) use redirect;
 pub(crate) use redirect_home;
-pub(crate) use redirect_home_htmx;
-pub(crate) use redirect_htmx;
 pub(crate) use redirect_login;
 pub(crate) use redirect_login_htmx;
 pub(crate) use server_fn_error;

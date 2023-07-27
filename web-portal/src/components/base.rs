@@ -54,7 +54,7 @@ fn UserContext(cx: Scope, user_full_name: String) -> impl IntoView {
                 {user_full_name}
             </a>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="/logout">"Logout"</a></li>
+                <li><a class="dropdown-item" href="/logout" hx-boost="true">"Logout"</a></li>
             </ul>
         </li>
     }
@@ -65,7 +65,7 @@ fn Nav(cx: Scope, #[prop(optional)] user: Option<User>) -> impl IntoView {
     let users_page = match user.as_ref().map(|u| u.check_role(RoleName::Admin)) {
         Some(Ok(_)) => Some(view! { cx,
             <li class="nav-item">
-                <a class="nav-link" href="/users">"Users"</a>
+                <a class="nav-link" href="/users" hx-boost="true">"Users"</a>
             </li>
         }),
         Some(Err(_)) | None => None,
@@ -80,10 +80,10 @@ fn Nav(cx: Scope, #[prop(optional)] user: Option<User>) -> impl IntoView {
                 </a>
                 <ul class="navbar-nav me-auto my-2 my-lg-0 navbar-nav-scroll" style="--bs-scroll-height: 100px;">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">"Home"</a>
+                        <a class="nav-link" href="/" hx-boost="true">"Home"</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/workflow-engine">"Workflow Engine"</a>
+                        <a class="nav-link" href="/workflow-engine" hx-boost="true">"Workflow Engine"</a>
                     </li>
                     {users_page}
                 </ul>
@@ -136,6 +136,7 @@ pub fn BasePage(
                 <script defer src="/assets/fontawesome/js/fontawesome.js"></script>
                 <title>"EnviroManager - "{title}</title>
             </head>
+            <noscript>"Javascript must be enabled for most site features to work"</noscript>
             <body class="p-3 m-0 border-0">
                 <div class="container-fluid">
                     {nav}

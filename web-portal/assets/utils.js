@@ -176,25 +176,9 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-window.addEventListener('DOMContentLoaded', () => {
-    setInterval(() => {
-        for (const element of document.querySelectorAll('div.toast.show')) {
-            let autoDismissTimeout = 500;
-            try {
-                autoDismissTimeout = Number.parseInt(element.getAttribute('data-em-toast-dismiss'));
-            } catch (ex) {
-                console.error(ex);
-            }
-            setTimeout(() => {
-                element.remove();
-            }, autoDismissTimeout);
-        }
-    }, 1000);
-});
-
 document.addEventListener('closeModal', (e) => {
     const id = e.detail?.id;
-    if (typeof id === "string") {
+    if (id) {
         closeModal(document.getElementById(id));
     }
 });
@@ -204,19 +188,19 @@ document.addEventListener('createToast', (e) => {
     if (typeof message !== "string") {
         console.log('Could not create toast', e);
     }
-    createToast(message);
+    const toast = new Toast(message);
+    toast.show();
 });
 
 /** @type {(element: HTMLElement) => void} */
 window.closeModal = (element) => {
     const container = document.getElementById('modals');
-    const modalId = element.getAttribute('data-em-modal');
-    if (!modalId) {
+    const modal = element.classList.contains('modal') ? element : element.closest('.modal');
+    if (!modal) {
         console.warn('Could not find modal to close');
         return;
     }
-    const modal = document.getElementById(modalId);
-    const modalBackdrop = document.getElementById(`${modalId}-backdrop`);
+    const modalBackdrop = document.getElementById(`${modal.id}-backdrop`);
 
     modal.classList.remove(CLASS_NAME_SHOW);
     modalBackdrop.classList.remove(CLASS_NAME_SHOW);
@@ -224,18 +208,6 @@ window.closeModal = (element) => {
     setTimeout(() => {
         container.removeChild(modal);
         container.removeChild(modalBackdrop);
-    }, 200);
-}
-
-/** @type {(element: HTMLElement) => void} */
-window.closeToast = (element) => {
-    const container = document.getElementById('toasts');
-    const toast = element.parentElement.parentElement;
-
-    toast.classList.remove(CLASS_NAME_SHOW);
-
-    setTimeout(() => {
-        container.removeChild(toast);
     }, 200);
 }
 
@@ -283,41 +255,57 @@ class DropDown {
     }
 }
 
-/**
- * 
- * @param {string} body 
- */
-function createToast(body) {
-    const container = document.getElementById('toasts');
-    if (container === null) {
-        return;
+class Toast {
+    /**
+     * @param {string} body
+     */
+    constructor(body) {
+        this.is_closed = false;
+        this.container = document.getElementById('toasts');
+        this.toast = document.createElement('div');
+        this.toast.classList.add('toast', 'fade');
+        this.toast.setAttribute('role', 'alert');
+        this.toast.setAttribute('aria-live', 'assertive');
+        this.toast.setAttribute('aria-atomic', 'true');
+        const header = document.createElement('div');
+        this.toast.appendChild(header);
+        header.classList.add('toast-header');
+        const img = document.createElement('img');
+        header.appendChild(img);
+        img.src = '/assets/bell_icon.png';
+        img.width = 20;
+        img.classList.add('me-1');
+        const title = document.createElement('strong');
+        header.appendChild(title);
+        title.textContent = 'EnviroManager';
+        title.classList.add('me-auto');
+        const dismiss = document.createElement('button');
+        header.appendChild(dismiss);
+        dismiss.type = 'button';
+        dismiss.classList.add('btn-close');
+        dismiss.setAttribute('aria-label', 'Close');
+        dismiss.onclick = (ev) => {
+            ev.preventDefault();
+            this.close();
+        };
+        const content = document.createElement('div');
+        this.toast.appendChild(content);
+        content.classList.add('toast-body');
+        content.textContent = body;
+        this.container.appendChild(this.toast);
     }
-    const toast = document.createElement('div');
-    toast.classList.add('toast', 'fade', 'show');
-    toast.setAttribute('role', 'alert');
-    toast.setAttribute('aria-live', 'assertive');
-    toast.setAttribute('aria-atomic', 'true');
-    const header = document.createElement('div');
-    toast.appendChild(header);
-    header.classList.add('toast-header');
-    const img = document.createElement('img');
-    header.appendChild(img);
-    img.src = '/assets/bell_icon.png';
-    img.width = 20;
-    img.classList.add('me-1');
-    const title = document.createElement('strong');
-    header.appendChild(title);
-    title.textContent = 'EnviroManager';
-    title.classList.add('me-auto');
-    const dismiss = document.createElement('button');
-    header.appendChild(dismiss);
-    dismiss.type = 'button';
-    dismiss.classList.add('btn-close');
-    dismiss.setAttribute('data-bs-dismiss', 'toast');
-    dismiss.setAttribute('aria-label', 'Close');
-    const content = document.createElement('div');
-    toast.appendChild(content);
-    content.classList.add('toast-body');
-    content.textContent = body;
-    container.appendChild(toast);
+
+    show() {
+        this.toast.classList.add(CLASS_NAME_SHOW);
+        setTimeout(() => this.close(), 5000);
+    }
+
+    close() {
+        if (this.is_closed) {
+            return;
+        }
+        this.is_closed = true;
+        this.toast.classList.remove(CLASS_NAME_SHOW);
+        this.container.removeChild(this.toast);
+    }
 }

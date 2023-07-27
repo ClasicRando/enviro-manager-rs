@@ -5,7 +5,6 @@ pub mod grid;
 pub mod login;
 pub mod modal;
 pub mod table;
-pub mod toast;
 pub mod users;
 pub mod workflow_engine;
 

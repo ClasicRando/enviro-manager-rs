@@ -15,24 +15,22 @@ use crate::{
             main_page::default_workflow_engine_tab_url, workflow_run_page::WorkflowRunDisplay,
         },
     },
-    extract_session_uid, utils, ServerFnError,
+    extract_session_uid,
+    utils::{self, html_page, HtmxResponseBuilder, HOME_LOCATION},
+    ServerFnError,
 };
 
 async fn login(session: Session) -> HttpResponse {
     if extract_session_uid(&session).is_ok() {
-        return utils::redirect!("/");
+        return utils::redirect_home!();
     }
-    let mut html = leptos::ssr::render_to_string(|cx| {
+    html_page(|cx| {
         view! { cx,
-            <BasePage
-                title="Index"
-                stylesheet_href="/assets/login.css"
-            >
+            <BasePage title="Index">
                 <LoginForm />
             </BasePage>
         }
-    });
-    utils::html!(html)
+    })
 }
 
 async fn index(session: Session) -> HttpResponse {
@@ -41,13 +39,12 @@ async fn index(session: Session) -> HttpResponse {
         Err(ServerFnError::InvalidUser) => return utils::redirect_login!(),
         Err(error) => return error.to_response(),
     };
-    let mut html = leptos::ssr::render_to_string(move |cx| {
+    html_page(|cx| {
         view! { cx,
             <BasePage title="Index" user=user>
             </BasePage>
         }
-    });
-    utils::html!(html)
+    })
 }
 
 async fn workflow_engine(session: Session) -> HttpResponse {
@@ -56,15 +53,14 @@ async fn workflow_engine(session: Session) -> HttpResponse {
         Err(ServerFnError::InvalidUser) => return utils::redirect_login!(),
         Err(error) => return error.to_response(),
     };
-    let mut html = leptos::ssr::render_to_string(move |cx| {
+    html_page(|cx| {
         view! { cx,
             <BasePage title="Index" user=user>
                 <div id="tabs" hx-get={default_workflow_engine_tab_url()} hx-trigger="load"
                     hx-target="#tabs" hx-swap="innerHTML"></div>
             </BasePage>
         }
-    });
-    utils::html!(html)
+    })
 }
 
 async fn workflow_run(session: Session, workflow_run_id: web::Path<WorkflowRunId>) -> HttpResponse {
@@ -77,14 +73,13 @@ async fn workflow_run(session: Session, workflow_run_id: web::Path<WorkflowRunId
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
-    let mut html = leptos::ssr::render_to_string(move |cx| {
+    html_page(|cx| {
         view! { cx,
             <BasePage title="Workflow Run" user=user>
                 <WorkflowRunDisplay workflow_run=workflow_run/>
             </BasePage>
         }
-    });
-    utils::html!(html)
+    })
 }
 
 async fn users(session: Session) -> HttpResponse {
@@ -105,32 +100,32 @@ async fn users(session: Session) -> HttpResponse {
         Err(error) => return error.to_response(),
     };
     let uid = user.uid;
-    let mut html = leptos::ssr::render_to_string(move |cx| {
+    html_page(move |cx| {
         view! { cx,
             <BasePage title="Users" user=user>
                 <UsersTable uid=uid users=users/>
             </BasePage>
         }
-    });
-    utils::html!(html)
+    })
 }
 
 fn missing_role(user: User, missing_role: RoleName) -> HttpResponse {
-    let mut html = leptos::ssr::render_to_string(move |cx| {
+    html_page(move |cx| {
         view! { cx, <UserMissingRole user=user missing_role=missing_role/> }
-    });
-    utils::html!(html)
+    })
 }
 
 async fn logout_user(session: Option<Session>) -> HttpResponse {
     if let Some(session) = session {
         session.clear()
     }
-    utils::redirect!("/login")
+    HtmxResponseBuilder::location_login()
 }
 
 async fn redirect_home() -> HttpResponse {
-    utils::redirect_home!()
+    HttpResponse::Found()
+        .insert_header(("location", HOME_LOCATION))
+        .finish()
 }
 
 pub trait Pages {

@@ -14,7 +14,9 @@ use crate::{
     components::workflow_engine::main_page::{
         Jobs, JobsTab, NewIntervalJob, NewJobModal, NewJobNextRun, NewScheduledJob,
     },
-    extract_session_uid, utils, ServerFnError,
+    extract_session_uid, utils,
+    utils::HtmxResponseBuilder,
+    ServerFnError,
 };
 
 pub fn service() -> actix_web::Scope {
@@ -32,22 +34,19 @@ pub fn service() -> actix_web::Scope {
 
 async fn jobs_html(session: Session, is_tab: bool) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
+        return HtmxResponseBuilder::location_login();
     }
     let jobs = match get_jobs().await {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
-    let html = if is_tab {
-        leptos::ssr::render_to_string(|cx| {
-            view! { cx, <JobsTab jobs=jobs/> }
-        })
-    } else {
-        leptos::ssr::render_to_string(|cx| {
-            view! { cx, <Jobs jobs=jobs/> }
-        })
-    };
-    utils::html_chunk!(html)
+    HtmxResponseBuilder::new().html_chunk(move |cx| {
+        if is_tab {
+            view! { cx, <JobsTab jobs=jobs/> }.into_view(cx)
+        } else {
+            view! { cx, <Jobs jobs=jobs/> }.into_view(cx)
+        }
+    })
 }
 
 async fn jobs(session: Session) -> HttpResponse {
@@ -80,7 +79,7 @@ async fn get_jobs() -> Result<Vec<Job>, ServerFnError> {
 
 async fn create_job_modal(session: Session) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
+        return HtmxResponseBuilder::location_login();
     }
 
     let workflows = match get_workflows().await {
@@ -88,10 +87,9 @@ async fn create_job_modal(session: Session) -> HttpResponse {
         Err(error) => return error.to_response(),
     };
 
-    let html = leptos::ssr::render_to_string(move |cx| {
+    HtmxResponseBuilder::new().html_chunk(|cx| {
         view! { cx, <NewJobModal workflows=workflows/> }
-    });
-    utils::html_chunk!(html)
+    })
 }
 
 #[derive(Deserialize)]
@@ -102,12 +100,11 @@ struct NextRun {
 
 async fn next_run_input(next_run: web::Query<NextRun>) -> HttpResponse {
     if next_run.next_run_chk.is_some() {
-        let html = leptos::ssr::render_to_string(move |cx| {
+        return HtmxResponseBuilder::new().html_chunk(|cx| {
             view! { cx, <NewJobNextRun/> }
         });
-        return utils::html_chunk!(html);
     }
-    utils::html_chunk!("")
+    HtmxResponseBuilder::new().static_body("")
 }
 
 #[derive(Deserialize)]
@@ -117,15 +114,10 @@ struct JobTypeQuery {
 }
 
 async fn job_type_container(query: web::Query<JobTypeQuery>) -> HttpResponse {
-    let html = match query.job_type {
-        JobTypeEnum::Scheduled => leptos::ssr::render_to_string(|cx| {
-            view! { cx, <NewScheduledJob/> }
-        }),
-        JobTypeEnum::Interval => leptos::ssr::render_to_string(|cx| {
-            view! { cx, <NewIntervalJob/> }
-        }),
-    };
-    utils::html_chunk!(html)
+    HtmxResponseBuilder::new().html_chunk(move |cx| match query.job_type {
+        JobTypeEnum::Scheduled => view! { cx, <NewScheduledJob/> },
+        JobTypeEnum::Interval => view! { cx, <NewIntervalJob/> },
+    })
 }
 
 #[derive(Deserialize, Debug)]
@@ -143,7 +135,7 @@ async fn create_job(
     query: web::Query<ModalIdQuery>,
 ) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
+        return HtmxResponseBuilder::location_login();
     }
     jobs_html(session, false).await
 }

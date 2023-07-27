@@ -7,11 +7,10 @@ use serde::Deserialize;
 use users::{data::user::User, service::users::UpdateUserRequest};
 use uuid::Uuid;
 
-use super::{HtmxResponseBuilder, ModalIdQuery};
 use crate::{
     components::users::{EditUser, UsersTable},
     extract_session_uid, take_if, utils,
-    utils::get_user,
+    utils::{get_user, HtmxResponseBuilder},
     ServerFnError,
 };
 
@@ -80,16 +79,14 @@ async fn edit_user_modal(session: Session, get_uid: web::Path<Uuid>) -> HttpResp
 struct UserEditForm {
     username: String,
     full_name: String,
+    modal_id: String,
 }
 
-async fn edit_user(
-    session: Session,
-    form: web::Form<UserEditForm>,
-    query: web::Query<ModalIdQuery>,
-) -> HttpResponse {
+async fn edit_user(session: Session, form: web::Form<UserEditForm>) -> HttpResponse {
     let UserEditForm {
         username,
         full_name,
+        modal_id,
     } = form.into_inner();
     let Ok(session_uid) = extract_session_uid(&session) else {
         return utils::redirect_login_htmx!();
@@ -106,7 +103,6 @@ async fn edit_user(
         return HtmxResponseBuilder::modal_error_message("Could not update user");
     }
 
-    let modal_id = query.0.id;
     let toast_message = format!("Edited User: {full_name}");
     let users = match get_all_users(session_uid).await {
         Ok(inner) => inner,

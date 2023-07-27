@@ -6,7 +6,9 @@ use reqwest::Method;
 use workflow_engine::workflow_run::data::{WorkflowRun, WorkflowRunId};
 
 use crate::{
-    components::workflow_engine::workflow_run_page::WorkflowRunDisplay, extract_session_uid, utils,
+    components::workflow_engine::workflow_run_page::WorkflowRunDisplay,
+    extract_session_uid,
+    utils::{self, HtmxResponseBuilder},
     ServerFnError,
 };
 
@@ -23,25 +25,25 @@ async fn enter_workflow_run(
     workflow_run_id: web::Path<WorkflowRunId>,
 ) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
+        return HtmxResponseBuilder::location_login();
     }
     let workflow_run_id = workflow_run_id.into_inner();
-    utils::redirect_htmx!("/workflow-engine/workflow-run/{}", workflow_run_id)
+    HtmxResponseBuilder::location(format!("/workflow-engine/workflow-run/{}", workflow_run_id))
 }
 
 async fn workflow_run(session: Session, workflow_run_id: web::Path<WorkflowRunId>) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
+        return HtmxResponseBuilder::location_login();
     }
     let workflow_run_id = workflow_run_id.into_inner();
     let workflow_run = match get_workflow_run(workflow_run_id).await {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
-    let html = leptos::ssr::render_to_string(move |cx| {
+
+    HtmxResponseBuilder::new().html_chunk(|cx| {
         view! { cx, <WorkflowRunDisplay workflow_run=workflow_run/> }
-    });
-    utils::html_chunk!(html)
+    })
 }
 
 pub async fn get_workflow_run(

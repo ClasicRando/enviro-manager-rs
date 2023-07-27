@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 use users::data::user::User;
 
 use crate::{
-    utils, ServerFnError, EM_UID_SESSION_KEY, INTERNAL_SERVICE_ERROR, USERNAME_SESSION_KEY,
+    utils, utils::HtmxResponseBuilder, ServerFnError, EM_UID_SESSION_KEY, INTERNAL_SERVICE_ERROR,
+    USERNAME_SESSION_KEY,
 };
 
 pub fn service() -> actix_web::Scope {
@@ -22,7 +23,7 @@ pub struct Credentials {
 pub async fn login_user(session: Session, credentials: web::Form<Credentials>) -> HttpResponse {
     let user = match login_user_api(credentials.0).await {
         Ok(inner) => inner,
-        Err(_) => return utils::html_chunk!("Could not login user"),
+        Err(_) => return HtmxResponseBuilder::new().static_body("Could not login user"),
     };
     if let Err(error) = session.insert(EM_UID_SESSION_KEY, *user.uid()) {
         log::error!("{error}");
@@ -32,7 +33,7 @@ pub async fn login_user(session: Session, credentials: web::Form<Credentials>) -
         log::error!("{error}");
         return utils::internal_server_error!();
     }
-    utils::redirect_home_htmx!()
+    HtmxResponseBuilder::location_home()
 }
 
 async fn login_user_api(credentials: Credentials) -> Result<User, ServerFnError> {

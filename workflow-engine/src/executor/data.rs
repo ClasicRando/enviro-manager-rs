@@ -69,7 +69,7 @@ pub struct Executor {
 
 /// Wrapper for an `executor_id` value. Made to ensure data passed as the id of an executor is
 /// correct and not just any i64 value.
-#[derive(sqlx::Type, Clone, Deserialize, Serialize)]
+#[derive(sqlx::Type, Clone, Deserialize, Serialize, Copy)]
 #[sqlx(transparent)]
 pub struct ExecutorId(i64);
 

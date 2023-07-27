@@ -7,7 +7,9 @@ use workflow_engine::executor::data::{Executor, ExecutorId};
 
 use crate::{
     components::workflow_engine::main_page::{ActiveExecutors, ActiveExecutorsTab},
-    extract_session_uid, utils, ServerFnError,
+    extract_session_uid, utils,
+    utils::HtmxResponseBuilder,
+    ServerFnError,
 };
 
 pub fn service() -> actix_web::Scope {
@@ -19,32 +21,44 @@ pub fn service() -> actix_web::Scope {
         .route("/shutdown/{executor_id}", web::post().to(shutdown_executor))
 }
 
-async fn active_executors(session: Session) -> HttpResponse {
-    if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
-    }
+async fn active_executors_html(is_tab: bool) -> HttpResponse {
+    active_executors_html_with_toast(is_tab, "").await
+}
+
+async fn active_executors_html_with_toast<S>(is_tab: bool, toast_message: S) -> HttpResponse
+where
+    S: AsRef<str>,
+{
     let executors = match get_active_executors().await {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
-    let html = leptos::ssr::render_to_string(|cx| {
-        view! { cx, <ActiveExecutors executors=executors /> }
-    });
-    utils::html_chunk!(html)
+
+    let mut builder = HtmxResponseBuilder::new();
+    if !toast_message.as_ref().is_empty() {
+        builder.add_create_toast_event(toast_message.as_ref());
+    }
+    builder.html_chunk(move |cx| {
+        if is_tab {
+            view! { cx, <ActiveExecutorsTab executors=executors/> }
+        } else {
+            view! { cx, <ActiveExecutors executors=executors/> }
+        }
+    })
+}
+
+async fn active_executors(session: Session) -> HttpResponse {
+    if extract_session_uid(&session).is_err() {
+        return HtmxResponseBuilder::location_login();
+    }
+    active_executors_html(false).await
 }
 
 async fn active_executors_tab(session: Session) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
+        return HtmxResponseBuilder::location_login();
     }
-    let executors = match get_active_executors().await {
-        Ok(inner) => inner,
-        Err(error) => return error.to_response(),
-    };
-    let html = leptos::ssr::render_to_string(|cx| {
-        view! { cx, <ActiveExecutorsTab executors=executors /> }
-    });
-    utils::html_chunk!(html)
+    active_executors_html(true).await
 }
 
 async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
@@ -69,12 +83,13 @@ async fn get_active_executors() -> Result<Vec<Executor>, ServerFnError> {
 
 async fn clean_executors(session: Session) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
+        return HtmxResponseBuilder::location_login();
     }
     if let Err(error) = post_clean_executors().await {
         return error.to_response();
     }
-    active_executors(session).await
+
+    active_executors_html_with_toast(false, "Cleaned inactive executors").await
 }
 
 async fn post_clean_executors() -> Result<(), ServerFnError> {
@@ -101,12 +116,14 @@ async fn post_clean_executors() -> Result<(), ServerFnError> {
 
 async fn cancel_executor(session: Session, executor_id: web::Path<ExecutorId>) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
+        return HtmxResponseBuilder::location_login();
     }
-    if let Err(error) = post_cancel_executor(executor_id.into_inner()).await {
+    let executor_id = executor_id.into_inner();
+    if let Err(error) = post_cancel_executor(executor_id).await {
         return error.to_response();
     }
-    active_executors(session).await
+
+    active_executors_html_with_toast(false, format!("Canceled Executor ID: {executor_id}")).await
 }
 
 async fn post_cancel_executor(executor_id: ExecutorId) -> Result<(), ServerFnError> {
@@ -133,12 +150,14 @@ async fn post_cancel_executor(executor_id: ExecutorId) -> Result<(), ServerFnErr
 
 async fn shutdown_executor(session: Session, executor_id: web::Path<ExecutorId>) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
+        return HtmxResponseBuilder::location_login();
     }
-    if let Err(error) = post_shutdown_executor(executor_id.into_inner()).await {
+    let executor_id = executor_id.into_inner();
+    if let Err(error) = post_shutdown_executor(executor_id).await {
         return error.to_response();
     }
-    active_executors(session).await
+
+    active_executors_html_with_toast(false, format!("Shutdown Executor ID: {executor_id}")).await
 }
 
 async fn post_shutdown_executor(executor_id: ExecutorId) -> Result<(), ServerFnError> {

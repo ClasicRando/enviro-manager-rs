@@ -22,7 +22,7 @@ where
 {
     let id = id.into();
     let patch_url = patch_url.into();
-    let vals = format!("{{\"id\": \"{id}\"}}");
+    let vals = format!("{{\"modal_id\": \"{id}\"}}");
     view! { cx,
         <Modal
             id=id
@@ -62,7 +62,7 @@ where
 {
     let id = id.into();
     let post_url = post_url.into();
-    let vals = format!("{{\"id\": \"{id}\"}}");
+    let vals = format!("{{\"modal_id\": \"{id}\"}}");
     view! { cx,
         <Modal
             id=id
@@ -123,7 +123,7 @@ where
     let id = id.into();
     view! { cx,
         <div id=format!("{id}-backdrop") class="modal-backdrop fade show" style="display: block;"></div>
-        <div id=id.clone() class="modal fade show" tabindex="-1" style="display:block;">
+        <div id=id class="modal fade show" tabindex="-1" style="display:block;">
             <div class=format!("modal-dialog {} modal-dialog-centered", size.as_str())>
                 <div class="modal-content">
                     <div class="modal-header">
@@ -135,7 +135,7 @@ where
                     <div class="modal-footer">
                         <p class="text-danger" id=MODAL_ERROR_MESSAGE_ID></p>
                         {buttons}
-                        <button type="button" class="btn btn-secondary" onclick="closeModal(this)" data-em-modal=id>"Close"</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeModal(this)">"Close"</button>
                     </div>
                 </div>
             </div>

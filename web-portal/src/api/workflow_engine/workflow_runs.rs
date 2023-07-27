@@ -14,7 +14,9 @@ use crate::{
     components::workflow_engine::main_page::{
         ActiveWorkflowRuns, ActiveWorkflowRunsTab, NewWorkflowRunModal,
     },
-    extract_session_uid, utils, ServerFnError,
+    extract_session_uid,
+    utils::{self, HtmxResponseBuilder},
+    ServerFnError,
 };
 
 pub fn service() -> actix_web::Scope {
@@ -37,36 +39,32 @@ pub fn service() -> actix_web::Scope {
         .route("/init", web::post().to(new_workflow_run))
 }
 
-async fn active_workflow_runs_html() -> Result<String, ServerFnError> {
-    let workflow_runs = get_active_workflow_runs().await?;
-    Ok(leptos::ssr::render_to_string(|cx| {
-        view! { cx, <ActiveWorkflowRuns workflow_runs=workflow_runs /> }
-    }))
-}
-
-async fn active_workflow_runs(session: Session) -> HttpResponse {
-    if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
-    }
-    let html = match active_workflow_runs_html().await {
-        Ok(inner) => inner,
-        Err(error) => return error.to_response(),
-    };
-    utils::html_chunk!(html)
-}
-
-async fn active_workflow_runs_tab(session: Session) -> HttpResponse {
-    if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
-    }
+async fn active_workflow_runs_html(is_tab: bool) -> HttpResponse {
     let workflow_runs = match get_active_workflow_runs().await {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
-    let html = leptos::ssr::render_to_string(|cx| {
-        view! { cx, <ActiveWorkflowRunsTab workflow_runs=workflow_runs /> }
-    });
-    utils::html_chunk!(html)
+    HtmxResponseBuilder::new().html_chunk(move |cx| {
+        if is_tab {
+            view! { cx, <ActiveWorkflowRunsTab workflow_runs=workflow_runs /> }
+        } else {
+            view! { cx, <ActiveWorkflowRuns workflow_runs=workflow_runs /> }
+        }
+    })
+}
+
+async fn active_workflow_runs(session: Session) -> HttpResponse {
+    if extract_session_uid(&session).is_err() {
+        return HtmxResponseBuilder::location_login();
+    }
+    active_workflow_runs_html(false).await
+}
+
+async fn active_workflow_runs_tab(session: Session) -> HttpResponse {
+    if extract_session_uid(&session).is_err() {
+        return HtmxResponseBuilder::location_login();
+    }
+    active_workflow_runs_html(true).await
 }
 
 async fn get_active_workflow_runs() -> Result<Vec<WorkflowRun>, ServerFnError> {
@@ -94,17 +92,13 @@ async fn schedule_workflow_run(
     workflow_run_id: web::Path<WorkflowRunId>,
 ) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
+        return HtmxResponseBuilder::location_login();
     }
     if let Err(error) = post_schedule_workflow_run(workflow_run_id.into_inner()).await {
         return error.to_response();
     }
 
-    let html = match active_workflow_runs_html().await {
-        Ok(inner) => inner,
-        Err(error) => return error.to_response(),
-    };
-    utils::html_chunk!(html)
+    active_workflow_runs_html(false).await
 }
 
 async fn post_schedule_workflow_run(workflow_run_id: WorkflowRunId) -> Result<(), ServerFnError> {
@@ -134,17 +128,13 @@ async fn cancel_workflow_run(
     workflow_run_id: web::Path<WorkflowRunId>,
 ) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
+        return HtmxResponseBuilder::location_login();
     }
     if let Err(error) = post_cancel_workflow_run(workflow_run_id.into_inner()).await {
         return error.to_response();
     }
 
-    let html = match active_workflow_runs_html().await {
-        Ok(inner) => inner,
-        Err(error) => return error.to_response(),
-    };
-    utils::html_chunk!(html)
+    active_workflow_runs_html(false).await
 }
 
 async fn post_cancel_workflow_run(workflow_run_id: WorkflowRunId) -> Result<(), ServerFnError> {
@@ -174,17 +164,13 @@ async fn restart_workflow_run(
     workflow_run_id: web::Path<WorkflowRunId>,
 ) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
+        return HtmxResponseBuilder::location_login();
     }
     if let Err(error) = post_restart_workflow_run(workflow_run_id.into_inner()).await {
         return error.to_response();
     }
 
-    let html = match active_workflow_runs_html().await {
-        Ok(inner) => inner,
-        Err(error) => return error.to_response(),
-    };
-    utils::html_chunk!(html)
+    active_workflow_runs_html(false).await
 }
 
 async fn post_restart_workflow_run(workflow_run_id: WorkflowRunId) -> Result<(), ServerFnError> {
@@ -214,10 +200,9 @@ async fn new_workflow_run_modal() -> HttpResponse {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
-    let html = leptos::ssr::render_to_string(|cx| {
+    HtmxResponseBuilder::new().html_chunk(|cx| {
         view! { cx, <NewWorkflowRunModal workflows=workflows /> }
-    });
-    utils::html_chunk!(html)
+    })
 }
 
 #[derive(Deserialize)]
@@ -231,7 +216,7 @@ async fn new_workflow_run(
     query: web::Query<ModalIdQuery>,
 ) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
-        return utils::redirect_login_htmx!();
+        return HtmxResponseBuilder::location_login();
     }
     let NewWorkflowForm { workflow_id } = form.into_inner();
 
@@ -241,15 +226,16 @@ async fn new_workflow_run(
     };
 
     let modal_id = query.0.id;
-    let html = match active_workflow_runs_html().await {
+    let workflow_runs = match get_active_workflow_runs().await {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
     };
-    HttpResponse::Ok()
-        .content_type(actix_web::http::header::ContentType::html())
-        .insert_header(utils::close_modal_trigger!(modal_id))
-        .insert_header(utils::create_toast_trigger!(toast_message))
-        .body(html)
+    HtmxResponseBuilder::new()
+        .add_close_modal_event(modal_id)
+        .add_create_toast_event(toast_message)
+        .html_chunk(move |cx| {
+            view! { cx, <ActiveWorkflowRuns workflow_runs=workflow_runs /> }
+        })
 }
 
 async fn post_init_workflow_run(workflow_id: WorkflowId) -> Result<WorkflowRunId, ServerFnError> {
