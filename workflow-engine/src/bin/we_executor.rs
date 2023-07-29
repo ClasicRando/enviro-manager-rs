@@ -28,7 +28,7 @@ async fn main() -> EmResult<()> {
             return Ok(());
         }
     };
-    let executor_id = executor.executor_id().clone();
+    let executor_id = *executor.executor_id();
 
     info!("Running Executor, id = {}", executor_id);
     executor.run().await;
