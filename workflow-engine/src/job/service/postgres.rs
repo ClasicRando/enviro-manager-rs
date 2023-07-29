@@ -90,11 +90,11 @@ impl JobService for PgJobsService {
             next_run,
         } = request;
         let job_id = match job_type {
-            JobType::Scheduled(schedule) => {
-                self.create_scheduled_job(workflow_id, maintainer, schedule)
+            JobType::Scheduled { entries } => {
+                self.create_scheduled_job(workflow_id, maintainer, entries)
                     .await?
             }
-            JobType::Interval(interval) => {
+            JobType::Interval { interval } => {
                 self.create_interval_job(workflow_id, maintainer, interval, next_run)
                     .await?
             }

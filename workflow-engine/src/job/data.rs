@@ -183,12 +183,34 @@ where
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum JobType {
-    Scheduled(Vec<ScheduleEntry>),
+    Scheduled {
+        entries: Vec<ScheduleEntry>,
+    },
     #[serde(
         serialize_with = "serialize_interval",
         deserialize_with = "deserialize_interval"
     )]
-    Interval(PgInterval),
+    Interval {
+        interval: PgInterval,
+    },
+}
+
+impl JobType {
+    /// Create a new instance of an [Interval][JobType::Interval] job type
+    pub const fn new_interval(months: i32, days: i32, microseconds: i64) -> Self {
+        Self::Interval {
+            interval: PgInterval {
+                months,
+                days,
+                microseconds,
+            },
+        }
+    }
+
+    /// Create a new instance of a [Scheduled][JobType::Scheduled] job type
+    pub const fn new_scheduled(entries: Vec<ScheduleEntry>) -> Self {
+        Self::Scheduled { entries }
+    }
 }
 
 /// Job details as fetched from `job.v_jobs`. Contains the job and underlining workflow details as
@@ -236,8 +258,12 @@ where
     fn from_row(row: &'r R) -> Result<Self, sqlx::Error> {
         let cron_job_type: JobTypeEnum = row.try_get("job_type")?;
         let job_type = match cron_job_type {
-            JobTypeEnum::Scheduled => JobType::Scheduled(row.try_get("job_schedule")?),
-            JobTypeEnum::Interval => JobType::Interval(row.try_get("job_interval")?),
+            JobTypeEnum::Scheduled => JobType::Scheduled {
+                entries: row.try_get("job_schedule")?,
+            },
+            JobTypeEnum::Interval => JobType::Interval {
+                interval: row.try_get("job_interval")?,
+            },
         };
         Ok(Self {
             job_id: row.try_get("job_id")?,
@@ -298,10 +324,13 @@ impl ApiRequestValidator for JobRequestValidator {
             return Err("Maintainer must not be empty or whitespace");
         }
 
-        let JobType::Scheduled(entries) = &request.job_type else {
+        let JobType::Scheduled { entries } = &request.job_type else {
             return Ok(());
         };
 
+        if entries.is_empty() {
+            return Err("Schedule cannot be empty");
+        }
         let mut seen = std::collections::HashSet::new();
         for entry in entries {
             if entry.day_of_the_week > 7 || entry.day_of_the_week < 1 {
