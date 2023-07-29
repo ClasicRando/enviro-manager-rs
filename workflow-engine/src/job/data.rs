@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use chrono::{NaiveDateTime, NaiveTime};
 use common::{api::ApiRequestValidator, error::EmError};
 use serde::{
     de::{MapAccess, Visitor},
@@ -46,7 +47,17 @@ impl FromStr for JobTypeEnum {
 #[sqlx(type_name = "schedule_entry")]
 pub struct ScheduleEntry {
     day_of_the_week: i16,
-    time_of_day: NaiveDateTime,
+    time_of_day: NaiveTime,
+}
+
+impl ScheduleEntry {
+    /// Create a new [ScheduleEntry]
+    pub const fn new(day_of_the_week: i16, time_of_day: NaiveTime) -> Self {
+        Self {
+            day_of_the_week,
+            time_of_day,
+        }
+    }
 }
 
 impl sqlx::postgres::PgHasArrayType for ScheduleEntry {
