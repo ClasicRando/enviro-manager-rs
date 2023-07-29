@@ -10,7 +10,7 @@ use workflow_engine::{
 };
 
 use crate::{
-    api::{workflow_engine::workflows::get_workflows, ModalIdQuery},
+    api::workflow_engine::workflows::get_workflows,
     components::workflow_engine::main_page::{
         ActiveWorkflowRuns, ActiveWorkflowRunsTab, NewWorkflowRunModal,
     },
@@ -208,24 +208,23 @@ async fn new_workflow_run_modal() -> HttpResponse {
 #[derive(Deserialize)]
 struct NewWorkflowForm {
     workflow_id: WorkflowId,
+    modal_id: String,
 }
 
-async fn new_workflow_run(
-    session: Session,
-    form: web::Form<NewWorkflowForm>,
-    query: web::Query<ModalIdQuery>,
-) -> HttpResponse {
+async fn new_workflow_run(session: Session, form: web::Form<NewWorkflowForm>) -> HttpResponse {
     if extract_session_uid(&session).is_err() {
         return HtmxResponseBuilder::location_login();
     }
-    let NewWorkflowForm { workflow_id } = form.into_inner();
+    let NewWorkflowForm {
+        workflow_id,
+        modal_id,
+    } = form.into_inner();
 
     let toast_message = match post_init_workflow_run(workflow_id).await {
         Ok(workflow_run_id) => format!("Created new Workflow Run. ID: {workflow_run_id}"),
         Err(error) => return error.to_response(),
     };
 
-    let modal_id = query.0.id;
     let workflow_runs = match get_active_workflow_runs().await {
         Ok(inner) => inner,
         Err(error) => return error.to_response(),
