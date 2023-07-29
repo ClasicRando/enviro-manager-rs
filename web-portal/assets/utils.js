@@ -177,10 +177,19 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('closeModal', (e) => {
-    const id = e.detail?.id;
-    if (id) {
-        closeModal(document.getElementById(id));
+    const id = e.detail?.id || '';
+    /** @type {HTMLElement} */
+    const target = e.target;
+    if (!id && !target) {
+        console.log('Could not find modal by id', id, e);
+        return;
     }
+    const element = document.getElementById(id) || target.closest('.modal');
+    if (!element) {
+        console.log('Could not find modal', e);
+        return;
+    }
+    closeModal(element);
 });
 
 document.addEventListener('createToast', (e) => {
@@ -309,3 +318,9 @@ class Toast {
         this.container.removeChild(this.toast);
     }
 }
+
+/** @type {(button: HTMLButtonElement) => void} */
+window.removeJobScheduleEntry = (button) => {
+    const row = button.closest('.schedule-entry');
+    row.remove();
+};
