@@ -1,5 +1,6 @@
-use chrono::NaiveDateTime;
-use common::api::ApiRequestValidator;
+use std::str::FromStr;
+
+use common::{api::ApiRequestValidator, error::EmError};
 use serde::{
     de::{MapAccess, Visitor},
     ser::SerializeStruct,
@@ -22,6 +23,20 @@ pub enum JobTypeEnum {
     Scheduled,
     #[serde(rename = "interval")]
     Interval,
+}
+
+impl FromStr for JobTypeEnum {
+    type Err = EmError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "scheduled" => Ok(Self::Scheduled),
+            "interval" => Ok(Self::Interval),
+            _ => Err(EmError::Generic(format!(
+                "Parse JobTypeEnum from string. Expected `scheduled` or `interval` but got `{s}`"
+            ))),
+        }
+    }
 }
 
 /// Details of a [JobType::Scheduled] job. Specifies a single run of the job as a `day_of_the_week`
