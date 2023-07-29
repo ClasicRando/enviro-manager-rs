@@ -1,5 +1,4 @@
 use leptos::*;
-use serde_json::json;
 use strum::{EnumIter, IntoEnumIterator};
 use workflow_engine::{
     executor::data::Executor,
@@ -9,6 +8,7 @@ use workflow_engine::{
 };
 
 use crate::components::{
+    grid::{Col, Row},
     into_view, into_view_option,
     modal::{CreateModal, ADD_MODAL_SWAP, ADD_MODAL_TARGET},
     table::{DataTableExtras, ExtraTableButton, RowAction, RowWithDetails},
@@ -104,11 +104,13 @@ fn WorkflowRun(cx: Scope, workflow_run: WorkflowRun) -> impl IntoView {
     }
 }
 
+const WORKFLOW_RUNS_TABLE_ID: &str = "active-workflow-runs-tbl";
+
 #[component]
 pub fn ActiveWorkflowRuns(cx: Scope, workflow_runs: Vec<WorkflowRun>) -> impl IntoView {
     view! { cx,
         <DataTableExtras
-            id="active-workflow-runs-tbl"
+            id=WORKFLOW_RUNS_TABLE_ID
             caption="Active Workflow Runs"
             header=view! { cx,
                 <tr>
@@ -240,11 +242,13 @@ fn Job(cx: Scope, job: Job) -> impl IntoView {
     }
 }
 
+const JOBS_TABLE_ID: &str = "jobs-tbl";
+
 #[component]
 pub fn Jobs(cx: Scope, jobs: Vec<Job>) -> impl IntoView {
     view! { cx,
         <DataTableExtras
-            id="jobs-tbl"
+            id=JOBS_TABLE_ID
             caption="Jobs"
             header=view! { cx,
                 <tr>
@@ -356,22 +360,35 @@ pub fn default_workflow_engine_tab_url() -> &'static str {
 }
 
 #[component]
-pub fn NewWorkflowRunModal(cx: Scope, workflows: Vec<Workflow>) -> impl IntoView {
+fn WorkflowOptions(cx: Scope, workflows: Vec<Workflow>) -> impl IntoView {
     let options = workflows
         .into_iter()
-        .map(|w| view! { cx, <option value=w.workflow_id.to_string()>{w.name}</option> })
+        .enumerate()
+        .map(|(i, w)| {
+            view! { cx,
+                <option value=w.workflow_id.to_string() selected=i == 0>{w.name}</option>
+            }
+        })
         .collect_view(cx);
+    view! { cx,
+        <select class="form-select" id="workflow" name="workflow_id" required>
+            {options}
+        </select>
+    }
+}
+
+#[component]
+pub fn NewWorkflowRunModal(cx: Scope, workflows: Vec<Workflow>) -> impl IntoView {
     view! { cx,
         <CreateModal
             id="initWorkflowRun"
             title="New Workflow Run"
+            target=format!("#{WORKFLOW_RUNS_TABLE_ID}Container")
             form=view! { cx,
                 <div class="row mb-3">
                     <label for="workflow" class="col-sm-3 col-form-label">"Workflow"</label>
                     <div class="col-sm-9">
-                        <select class="form-select" id="workflow" name="workflow_id">
-                            {options}
-                        </select>
+                        <WorkflowOptions workflows=workflows/>
                     </div>
                 </div>
             }
@@ -385,46 +402,104 @@ pub fn NewJobNextRun(cx: Scope) -> impl IntoView {
         <div class="row mb-3">
             <label for="next_run" class="col-sm-3 col-form-label">"Next Run"</label>
             <div class="col-sm-9">
-                <input class="form-control" type="datetime-local" name="next_run" id="next_run"/>
+                <input class="form-control" type="datetime-local" name="next_run" id="next_run" required/>
             </div>
         </div>
     }
 }
 
 #[component]
+pub fn JobScheduleEntry(cx: Scope) -> impl IntoView {
+    view! { cx,
+        <Row class="schedule-entry mb-1">
+            <Col>
+                <select name="day_of_the_week">
+                    <option value="1" selected>"Monday"</option>
+                    <option value="2">"Tuesday"</option>
+                    <option value="3">"Wednesday"</option>
+                    <option value="4">"Thursday"</option>
+                    <option value="5">"Friday"</option>
+                    <option value="6">"Saturday"</option>
+                    <option value="7">"Sunday"</option>
+                </select>
+            </Col>
+            <Col>
+                <input name="time_of_day" type="time"/>
+            </Col>
+            <Col>
+                <button class="btn btn-primary" onclick="removeJobScheduleEntry(this)">
+                    <i class="fa-solid fa-minus"></i>
+                </button>
+            </Col>
+        </Row>
+    }
+}
+
+#[component]
 pub fn NewScheduledJob(cx: Scope) -> impl IntoView {
     view! { cx,
+        <div id="jobSchedule">
+            <Row class="mb-1">
+                <Col size=8>
+                    <label>"Schedule Entries"</label>
+                </Col>
+                <Col size=4>
+                    <button class="btn btn-primary" hx-get="/api/workflow-engine/jobs/job-schedule-entry"
+                        hx-target="#scheduleEntries" hx-swap="beforeend"
+                    >
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </Col>
+            </Row>
+            <div id="scheduleEntries"></div>
+        </div>
     }
 }
 
 #[component]
 pub fn NewIntervalJob(cx: Scope) -> impl IntoView {
     view! { cx,
+        <Row>
+            <Row>
+                <Col>
+                    <label class="form-label" for="months">"Months"</label>
+                </Col>
+                <Col>
+                    <input class="form-control" id="months" name="months" type="text"/>
+                </Col>
+            </Row>
+            <Row>
+                <Col>
+                    <label class="form-label" for="days">"Days"</label>
+                </Col>
+                <Col>
+                    <input class="form-control" id="days" name="days" type="text"/>
+                </Col>
+            </Row>
+            <Row>
+                <Col>
+                    <label class="form-label" for="minutes">"Minutes"</label>
+                </Col>
+                <Col>
+                    <input class="form-control" id="minutes" name="minutes" type="text"/>
+                </Col>
+            </Row>
+        </Row>
     }
 }
 
 #[component]
 pub fn NewJobModal(cx: Scope, workflows: Vec<Workflow>) -> impl IntoView {
-    let options = workflows
-        .into_iter()
-        .enumerate()
-        .map(|(i, w)| {
-            view! { cx,
-                <option value=w.workflow_id.to_string() selected=i == 0>{w.name}</option>
-            }
-        })
-        .collect_view(cx);
     view! { cx,
         <CreateModal
             id="createJob"
             title="Create Job"
+            target=format!("#{JOBS_TABLE_ID}Container")
             form=view! { cx,
                 <div class="row mb-3">
                     <label for="workflow" class="col-sm-3 col-form-label">"Workflow"</label>
                     <div class="col-sm-9">
-                        <select class="form-select" id="workflow" name="workflow_id" required>
-                            {options}
-                        </select>
+                        <WorkflowOptions workflows=workflows/>
                     </div>
                 </div>
                 <div class="row mb-3">
@@ -435,27 +510,27 @@ pub fn NewJobModal(cx: Scope, workflows: Vec<Workflow>) -> impl IntoView {
                 </div>
                 <div class="row mb-3 ms-2">
                     <div class="form-check col">
-                        <input class="form-check-input" type="radio" name="jobType"
-                            id="jobTypeScheduled" hx-get="/api/workflow-engine/jobs/job-type"
-                            hx-target="#jobTypeContainer" hx-swap="innerHTML"
-                            hx-vals="{{\"type\": \"scheduled\"}}" checked/>
+                        <input class="form-check-input" type="radio" name="job_type"
+                            id="jobTypeScheduled" value="scheduled"
+                            hx-get="/api/workflow-engine/jobs/job-type"
+                            hx-target="#jobTypeContainer" hx-swap="innerHTML" checked/>
                         <label class="form-check-label" for="jobTypeScheduled">
                             "Scheduled"
                         </label>
                     </div>
                     <div class="form-check col">
-                        <input class="form-check-input" type="radio" name="jobType"
-                            id="jobTypeInterval" hx-get="/api/workflow-engine/jobs/job-type"
-                            hx-target="#jobTypeContainer" hx-swap="innerHTML"
-                            hx-val="{{\"type\": \"interval\"}}"/>
+                        <input class="form-check-input" type="radio" name="job_type"
+                            id="jobTypeInterval" value="interval"
+                            hx-get="/api/workflow-engine/jobs/job-type"
+                            hx-target="#jobTypeContainer" hx-swap="innerHTML"/>
                         <label class="form-check-label" for="jobTypeInterval">
                             "Interval"
                         </label>
                     </div>
                 </div>
-                <div id="jobTypeContainer">
-                    <NewScheduledJob />
-                </div>
+                <fieldset id="jobTypeContainer" class="text-center">
+                    <NewScheduledJob/>
+                </fieldset>
                 <div class="row mb-3">
                     <div class="form-check ms-2">
                         <input class="form-check-input" type="checkbox" name="next_run_chk"
