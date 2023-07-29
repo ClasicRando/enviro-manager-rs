@@ -69,3 +69,14 @@ where
     }
     None
 }
+
+fn error_if<T, F, E, M>(value: T, predicate: F, error_message: M) -> Result<T, E>
+where
+    F: FnOnce(&T) -> bool,
+    M: FnOnce(&T) -> E,
+{
+    if predicate(&value) {
+        return Err(error_message(&value));
+    }
+    Ok(value)
+}
