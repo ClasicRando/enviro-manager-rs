@@ -1,10 +1,11 @@
+use chrono::NaiveDateTime;
 use leptos::*;
 use strum::{EnumIter, IntoEnumIterator};
 use workflow_engine::{
-    executor::data::Executor,
-    job::data::Job,
-    workflow::data::Workflow,
-    workflow_run::data::{WorkflowRun, WorkflowRunStatus, WorkflowRunTask},
+    executor::data::{Executor, ExecutorId},
+    job::data::{Job, JobId, JobType, ScheduleEntry},
+    workflow::data::{Workflow, WorkflowId},
+    workflow_run::data::{WorkflowRun, WorkflowRunId, WorkflowRunStatus, WorkflowRunTask},
 };
 
 use crate::components::{
@@ -224,21 +225,141 @@ pub fn ActiveExecutorsTab(cx: Scope, executors: Vec<Executor>) -> impl IntoView 
 }
 
 #[component]
-fn Job(cx: Scope, job: Job) -> impl IntoView {
+fn ScheduledJob(
+    cx: Scope,
+    job_id: JobId,
+    workflow_id: WorkflowId,
+    workflow_name: String,
+    maintainer: String,
+    is_paused: bool,
+    next_run: NaiveDateTime,
+    current_workflow_run_id: Option<WorkflowRunId>,
+    workflow_run_status: Option<WorkflowRunStatus>,
+    executor_id: Option<ExecutorId>,
+    progress: Option<i16>,
+    entries: Vec<ScheduleEntry>,
+) -> impl IntoView {
     view! { cx,
-        <tr>
-            <td>{into_view(job.job_id)}</td>
-            <td>{into_view(job.workflow_id)}</td>
-            <td>{job.workflow_name}</td>
-            <td>""</td>
-            <td>{job.maintainer}</td>
-            <td>{into_view(job.is_paused)}</td>
-            <td>{into_view(job.next_run)}</td>
-            <td>{into_view_option(job.current_workflow_run_id)}</td>
-            <td>{into_view_option(job.workflow_run_status)}</td>
-            <td>{into_view_option(job.executor_id)}</td>
-            <td>{into_view_option(job.progress)}</td>
-        </tr>
+        <RowWithDetails
+            details_id=job_id.to_string()
+            details_header=view! { cx,
+                <tr>
+                    <th>"Day of the Week"</th>
+                    <th>"Time of the Day"</th>
+                </tr>
+            }
+            details=entries
+            details_row_builder=|cx, entry| view! { cx,
+                <tr>
+                    <td>{entry.day_of_the_week_display()}</td>
+                    <td>{into_view(entry.time_of_day)}</td>
+                </tr>
+            }
+            column_count=13
+        >
+            <td>{into_view(job_id)}</td>
+            <td>{into_view(workflow_id)}</td>
+            <td>{workflow_name}</td>
+            <td>"Scheduled"</td>
+            <td>{maintainer}</td>
+            <td>{into_view(is_paused)}</td>
+            <td>{into_view(next_run)}</td>
+            <td>{into_view_option(current_workflow_run_id)}</td>
+            <td>{into_view_option(workflow_run_status)}</td>
+            <td>{into_view_option(executor_id)}</td>
+            <td>{into_view_option(progress)}</td>
+        </RowWithDetails>
+    }
+}
+
+#[component]
+fn IntervalJob(
+    cx: Scope,
+    job_id: JobId,
+    workflow_id: WorkflowId,
+    workflow_name: String,
+    maintainer: String,
+    is_paused: bool,
+    next_run: NaiveDateTime,
+    current_workflow_run_id: Option<WorkflowRunId>,
+    workflow_run_status: Option<WorkflowRunStatus>,
+    executor_id: Option<ExecutorId>,
+    progress: Option<i16>,
+    months: i32,
+    days: i32,
+    minutes: i32,
+) -> impl IntoView {
+    view! { cx,
+        <RowWithDetails
+            details_id=job_id.to_string()
+            details_header=view! { cx,
+                <tr>
+                    <th>"Months"</th>
+                    <th>"Days"</th>
+                    <th>"Minutes"</th>
+                </tr>
+            }
+            details=vec![(months, days, minutes)]
+            details_row_builder=|cx, interval| view! { cx,
+                <tr>
+                    <td>{interval.0}</td>
+                    <td>{interval.1}</td>
+                    <td>{interval.2}</td>
+                </tr>
+            }
+            column_count=13
+        >
+            <td>{into_view(job_id)}</td>
+            <td>{into_view(workflow_id)}</td>
+            <td>{workflow_name}</td>
+            <td>"Interval"</td>
+            <td>{maintainer}</td>
+            <td>{into_view(is_paused)}</td>
+            <td>{into_view(next_run)}</td>
+            <td>{into_view_option(current_workflow_run_id)}</td>
+            <td>{into_view_option(workflow_run_status)}</td>
+            <td>{into_view_option(executor_id)}</td>
+            <td>{into_view_option(progress)}</td>
+        </RowWithDetails>
+    }
+}
+
+#[component]
+fn JobRow(cx: Scope, job: Job) -> impl IntoView {
+    match job.job_type {
+        JobType::Scheduled { entries } => view! { cx,
+            <ScheduledJob
+                job_id=job.job_id
+                workflow_id=job.workflow_id
+                workflow_name=job.workflow_name
+                maintainer=job.maintainer
+                is_paused=job.is_paused
+                next_run=job.next_run
+                current_workflow_run_id=job.current_workflow_run_id
+                workflow_run_status=job.workflow_run_status
+                executor_id=job.executor_id
+                progress=job.progress
+                entries=entries/>
+        },
+        JobType::Interval { interval } => {
+            let minutes = (interval.microseconds / 60 * 1_000_000) as i32;
+            view! { cx,
+                <IntervalJob
+                    job_id=job.job_id
+                    workflow_id=job.workflow_id
+                    workflow_name=job.workflow_name
+                    maintainer=job.maintainer
+                    is_paused=job.is_paused
+                    next_run=job.next_run
+                    current_workflow_run_id=job.current_workflow_run_id
+                    workflow_run_status=job.workflow_run_status
+                    executor_id=job.executor_id
+                    progress=job.progress
+                    months=interval.months
+                    days=interval.days
+                    minutes=minutes/>
+            }
+        }
     }
 }
 
@@ -252,6 +373,7 @@ pub fn Jobs(cx: Scope, jobs: Vec<Job>) -> impl IntoView {
             caption="Jobs"
             header=view! { cx,
                 <tr>
+                    <th rowspan=2>"Details"</th>
                     <th rowspan=2>"ID"</th>
                     <th rowspan=2>"Workflow ID"</th>
                     <th rowspan=2>"Workflow Name"</th>
@@ -269,7 +391,7 @@ pub fn Jobs(cx: Scope, jobs: Vec<Job>) -> impl IntoView {
                 </tr>
             }
             items=jobs
-            row_builder=|cx, job| view! { cx, <Job job=job/> }
+            row_builder=|cx, job| view! { cx, <JobRow job=job/> }
             data_source=WorkflowEngineMainPageTabs::Jobs.get_url().trim_end_matches("/tab").to_owned()
             refresh=true
             extra_buttons=vec![

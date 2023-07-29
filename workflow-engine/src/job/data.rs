@@ -46,8 +46,8 @@ impl FromStr for JobTypeEnum {
 #[derive(sqlx::Type, Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]
 #[sqlx(type_name = "schedule_entry")]
 pub struct ScheduleEntry {
-    day_of_the_week: i16,
-    time_of_day: NaiveTime,
+    pub day_of_the_week: i16,
+    pub time_of_day: NaiveTime,
 }
 
 impl ScheduleEntry {
@@ -56,6 +56,20 @@ impl ScheduleEntry {
         Self {
             day_of_the_week,
             time_of_day,
+        }
+    }
+
+    /// Get the current day_of_the_week attribute as human readable
+    pub const fn day_of_the_week_display(&self) -> &'static str {
+        match self.day_of_the_week {
+            1 => "Monday",
+            2 => "Tuesday",
+            3 => "Wednesday",
+            4 => "Thursday",
+            5 => "Friday",
+            6 => "Saturday",
+            7 => "Sunday",
+            _ => "Illegal day_of_the_week",
         }
     }
 }
