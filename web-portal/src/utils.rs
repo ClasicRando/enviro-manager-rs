@@ -203,7 +203,7 @@ impl HtmxResponseBuilder {
         S: Into<String>,
     {
         Self::new()
-            .target(MODAL_ERROR_MESSAGE_ID)
+            .target(format!("#{MODAL_ERROR_MESSAGE_ID}"))
             .swap("innerHTML")
             .raw_body(message.into())
     }
