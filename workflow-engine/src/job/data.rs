@@ -102,6 +102,26 @@ where
             formatter.write_str("struct PgInterval")
         }
 
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::SeqAccess<'de>,
+        {
+            let months = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+            let days = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+            let microseconds = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
+            Ok(PgInterval {
+                months,
+                days,
+                microseconds,
+            })
+        }
+
         fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
         where
             V: MapAccess<'de>,
