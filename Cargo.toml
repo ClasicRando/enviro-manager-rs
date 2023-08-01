@@ -1,5 +1,6 @@
 [workspace]
-members = ["workflow-engine", "common", "users"]
+members = ["workflow-engine", "common", "users", "web-portal"]
+resolver = "2"
 
 [workspace.dependencies]
 sqlx = { version = "0.6.2", features = ["postgres", "runtime-tokio-rustls", "json", "macros", "chrono", "ipnetwork", "uuid"] }
@@ -23,3 +24,4 @@ mockall = "0.11.4"
 lazy-regex = "2.5.0"
 rstest = "0.17.0"
 uuid = { version = "1.3.2", features = ["serde", "v4"] }
+strum = { version = "0.24.1", features = ["derive"] }

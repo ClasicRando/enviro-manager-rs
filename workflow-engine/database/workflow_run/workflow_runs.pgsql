@@ -39,6 +39,7 @@ begin
     if new.progress is not null and new.progress != coalesce(old.progress,0) then
         perform pg_notify('wr_progress', new.workflow_run_id::text);
     end if;
+    return new;
 end;
 $$;
 

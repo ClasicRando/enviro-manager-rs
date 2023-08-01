@@ -1,3 +1,4 @@
+use actix_web::{web, Scope};
 use common::api::{request::ApiRequest, ApiResponse, QueryApiFormat};
 use log::error;
 
@@ -6,8 +7,21 @@ use crate::job::{
     service::JobService,
 };
 
+pub fn service<J>() -> Scope
+where
+    J: JobService + Send + Sync + 'static,
+{
+    web::scope("/jobs")
+        .service(
+            web::resource("")
+                .route(web::get().to(jobs::<J>))
+                .route(web::post().to(create_job::<J>)),
+        )
+        .route("/{job_id}", web::get().to(job::<J>))
+}
+
 /// API endpoint to fetch all `Job`s currently registered
-pub async fn jobs<J>(
+async fn jobs<J>(
     service: actix_web::web::Data<J>,
     query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<Vec<Job>>
@@ -25,7 +39,7 @@ where
 }
 
 /// API endpoint to fetch the [Job] details of a cron job specified by `job_id`
-pub async fn job<J>(
+async fn job<J>(
     job_id: actix_web::web::Path<JobId>,
     service: actix_web::web::Data<J>,
     query: actix_web::web::Query<QueryApiFormat>,
@@ -44,7 +58,7 @@ where
 }
 
 /// API endpoint to create a new [Job] using the provided [JobRequest] details
-pub async fn create_job<J>(
+async fn create_job<J>(
     api_request: ApiRequest<JobRequest>,
     service: actix_web::web::Data<J>,
     query: actix_web::web::Query<QueryApiFormat>,

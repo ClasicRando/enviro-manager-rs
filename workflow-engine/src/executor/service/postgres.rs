@@ -1,20 +1,14 @@
 use common::{
-    database::{
-        connection::finalize_transaction,
-        postgres::{listener::PgChangeListener, Postgres},
-    },
+    database::postgres::{listener::PgChangeListener, Postgres},
     error::{EmError, EmResult},
 };
 use log::error;
-use sqlx::{postgres::PgListener, PgPool, Transaction};
+use sqlx::{postgres::PgListener, PgPool};
 
-use crate::{
-    executor::{
-        data::{Executor, ExecutorId, ExecutorStatus},
-        service::ExecutorService,
-        utilities::ExecutorStatusUpdate,
-    },
-    workflow_run::data::WorkflowRunId,
+use crate::executor::{
+    data::{Executor, ExecutorId, ExecutorStatus},
+    service::ExecutorService,
+    utilities::ExecutorStatusUpdate,
 };
 
 /// Postgresql implementation of the [ExecutorService]. Wraps a [PgPool] and provides interaction
@@ -28,44 +22,6 @@ impl PgExecutorService {
     /// Create a new instance of [PgExecutorService] using the data source provided
     pub fn new(pool: &PgPool) -> Self {
         Self { pool: pool.clone() }
-    }
-}
-
-impl PgExecutorService {
-    /// Start a workflow run by executing the named procedure. Takes ownership of the `transaction`
-    /// and completes the transaction before exiting.
-    /// # Errors
-    /// This function will return an error if the `start_workflow_run` procedure fails or the an
-    /// error is returning completing the `transaction`
-    async fn start_workflow_run<'c>(
-        executor_id: &ExecutorId,
-        workflow_run_id: &WorkflowRunId,
-        mut transaction: Transaction<'c, sqlx::Postgres>,
-    ) -> EmResult<()> {
-        let result = sqlx::query("call executor.start_workflow_run($1, $2)")
-            .bind(workflow_run_id)
-            .bind(executor_id)
-            .execute(&mut transaction)
-            .await;
-        finalize_transaction(result, transaction).await?;
-        Ok(())
-    }
-
-    /// Complete a workflow run by executing the named procedure. Takes ownership of the
-    /// `transaction` and completes the transaction before exiting.
-    /// # Errors
-    /// This function will return an error if the `complete_workflow_run` procedure fails or the an
-    /// error is returning completing the `transaction`
-    async fn complete_workflow_run<'c>(
-        workflow_run_id: &WorkflowRunId,
-        mut transaction: Transaction<'c, sqlx::Postgres>,
-    ) -> EmResult<()> {
-        let result = sqlx::query("call executor.complete_workflow_run($1)")
-            .bind(workflow_run_id)
-            .execute(&mut transaction)
-            .await;
-        finalize_transaction(result, transaction).await?;
-        Ok(())
     }
 }
 
@@ -147,27 +103,6 @@ impl ExecutorService for PgExecutorService {
         .fetch_all(&self.pool)
         .await?;
         Ok(result)
-    }
-
-    async fn next_workflow_run(&self, executor_id: &ExecutorId) -> EmResult<Option<WorkflowRunId>> {
-        let mut transaction = self.pool.begin().await?;
-        let next_workflow: Option<(WorkflowRunId, bool)> =
-            sqlx::query_as("call workflow.next_workflow($1)")
-                .bind(executor_id)
-                .fetch_optional(&mut transaction)
-                .await?;
-        let Some((workflow_run_id, is_valid)) = next_workflow else {
-            transaction.commit().await?;
-            return Ok(None)
-        };
-
-        if is_valid {
-            Self::start_workflow_run(executor_id, &workflow_run_id, transaction).await?;
-        } else {
-            Self::complete_workflow_run(&workflow_run_id, transaction).await?;
-        }
-
-        Ok(Some(workflow_run_id))
     }
 
     async fn shutdown(&self, executor_id: &ExecutorId) -> EmResult<Executor> {

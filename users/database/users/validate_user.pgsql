@@ -5,6 +5,7 @@ create or replace function users.validate_user(
 returns table
 (
     uid uuid,
+    username text,
     full_name text,
     roles text[]
 )
@@ -12,7 +13,7 @@ immutable
 security definer
 language sql
 as $$
-select u.uid, u.full_name, u.roles
+select u.uid, u.username, u.full_name, u.roles
 from users.v_users u
 where
     u.uid in (

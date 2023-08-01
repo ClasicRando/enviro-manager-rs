@@ -9,7 +9,7 @@ create or replace function workflow_run.next_task(
 ) returns record
 security definer
 language sql
-stable
+volatile
 as $$
 select tq.workflow_run_id, tq.task_order, tq.task_id, tq.status, tq.parameters, t.url
 from (

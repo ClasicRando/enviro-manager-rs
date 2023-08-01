@@ -10,19 +10,19 @@ use serde_json::Value;
 #[sqlx(type_name = "workflow_task")]
 pub struct WorkflowTask {
     /// Order of a task within a workflow run
-    pub(crate) task_order: i32,
+    pub task_order: i32,
     /// ID of the task to be executed
-    pub(crate) task_id: TaskId,
+    pub task_id: TaskId,
     /// Name of the task
-    pub(crate) name: String,
+    pub name: String,
     /// Short description of the task
-    pub(crate) description: String,
+    pub description: String,
     /// Optional parameters passed to the task executor to allow for custom behaviour
-    pub(crate) parameters: Option<Value>,
+    pub parameters: Option<Value>,
     /// Name of the task service that executes this task
-    pub(crate) service_name: String,
+    pub service_name: String,
     /// Url to be called as per the task execution
-    pub(crate) url: String,
+    pub url: String,
 }
 
 /// Task information required to create a `task.workflow_tasks` entry
@@ -112,16 +112,16 @@ pub struct WorkflowDeprecationRequest {
 #[derive(sqlx::FromRow, Serialize, Deserialize, Debug)]
 pub struct Workflow {
     /// ID of the workflow
-    pub(crate) workflow_id: WorkflowId,
+    pub workflow_id: WorkflowId,
     /// Name of the workflow
-    pub(crate) name: String,
+    pub name: String,
     /// Flag denoting if the workflow is deprecated and should be replaced by the `new_workflow`
     /// value
-    pub(crate) is_deprecated: bool,
+    pub is_deprecated: bool,
     /// Pointer to the new workflow that should replaced this deprecated workflow
-    pub(crate) new_workflow: Option<WorkflowId>,
+    pub new_workflow: Option<WorkflowId>,
     /// Tasks that are executed as part of this workflow
-    pub(crate) tasks: Vec<WorkflowTask>,
+    pub tasks: Vec<WorkflowTask>,
 }
 
 /// Wrapper for a `workflow_id` value. Made to ensure data passed as the id of a workflow is correct

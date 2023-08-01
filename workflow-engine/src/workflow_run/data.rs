@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use chrono::NaiveDateTime;
 use common::error::EmError;
@@ -8,7 +8,7 @@ use serde_json::Value;
 use crate::workflow::data::TaskId;
 
 /// Status of a workflow run as found in the database as a simple Postgresql enum type
-#[derive(sqlx::Type, PartialEq, Eq, Serialize)]
+#[derive(sqlx::Type, PartialEq, Eq, Serialize, Deserialize)]
 #[sqlx(type_name = "workflow_run_status")]
 pub enum WorkflowRunStatus {
     Waiting,
@@ -20,48 +20,63 @@ pub enum WorkflowRunStatus {
     Canceled,
 }
 
+impl Display for WorkflowRunStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let value = match self {
+            Self::Waiting => "Waiting",
+            Self::Scheduled => "Scheduled",
+            Self::Running => "Running",
+            Self::Paused => "Paused",
+            Self::Failed => "Failed",
+            Self::Complete => "Complete",
+            Self::Canceled => "Canceled",
+        };
+        write!(f, "{value}")
+    }
+}
+
 /// Task information for entries under a [WorkflowRun]
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct WorkflowRunTask {
     /// Order of a task within a workflow run
-    pub(crate) task_order: i32,
+    pub task_order: i32,
     /// ID of the task to be executed
-    pub(crate) task_id: TaskId,
+    pub task_id: TaskId,
     /// Name of the task
-    pub(crate) name: String,
+    pub name: String,
     /// Short description of the task
-    pub(crate) description: String,
+    pub description: String,
     /// Status of the task
-    pub(crate) task_status: TaskStatus,
+    pub task_status: TaskStatus,
     /// Optional parameters passed to the task executor to allow for custom behaviour
-    pub(crate) parameters: Option<Value>,
+    pub parameters: Option<Value>,
     /// Optional output message for the task
-    pub(crate) output: Option<String>,
+    pub output: Option<String>,
     /// Optional list of task rules for the workflow run task
-    pub(crate) rules: Option<Vec<TaskRule>>,
+    pub rules: Option<Vec<TaskRule>>,
     /// Start of the task execution
-    pub(crate) task_start: Option<NaiveDateTime>,
+    pub task_start: Option<NaiveDateTime>,
     /// End of the task execution
-    pub(crate) task_end: Option<NaiveDateTime>,
+    pub task_end: Option<NaiveDateTime>,
     /// Optional progress value passed back from the task executor
-    pub(crate) progress: Option<i16>,
+    pub progress: Option<i16>,
 }
 
 /// Workflow run data as fetched from `workflow.v_workflow_runs`
-#[derive(sqlx::FromRow, Serialize)]
+#[derive(sqlx::FromRow, Serialize, Deserialize)]
 pub struct WorkflowRun {
     /// ID of the workflow run
-    pub(crate) workflow_run_id: WorkflowRunId,
+    pub workflow_run_id: WorkflowRunId,
     /// ID of the workflow that is executed for this workflow run
-    pub(crate) workflow_id: i64,
+    pub workflow_id: i64,
     /// Status of the workflow run
-    pub(crate) status: WorkflowRunStatus,
+    pub status: WorkflowRunStatus,
     /// Optional ID of the executor that owns this workflow run, [None] if not currently running
-    pub(crate) executor_id: Option<i64>,
+    pub executor_id: Option<i64>,
     /// Optional Progress of the workflow run
-    pub(crate) progress: Option<i16>,
+    pub progress: Option<i16>,
     /// Tasks that are part of this workflow run
-    pub(crate) tasks: Vec<WorkflowRunTask>,
+    pub tasks: Vec<WorkflowRunTask>,
 }
 
 /// Workflow run data as fetched from the function `executor.all_executor_workflows`. Contains the
@@ -119,6 +134,21 @@ pub enum TaskStatus {
     Canceled,
 }
 
+impl Display for TaskStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let val = match self {
+            Self::Waiting => "Waiting",
+            Self::Running => "Running",
+            Self::Complete => "Complete",
+            Self::Failed => "Failed",
+            Self::RuleBroken => "Rule Broken",
+            Self::Paused => "Paused",
+            Self::Canceled => "Canceled",
+        };
+        write!(f, "{val}")
+    }
+}
+
 /// Check performed during a task run to validate the current state of a task or the system that the
 /// task is operating on. Rules must always have a non-empty and unique `name` per task, as well as
 /// a `failed` status and optional `message` to provide details of what the rule checked.
@@ -130,6 +160,18 @@ pub struct TaskRule {
     pub(crate) failed: bool,
     /// Optional message included in the task rule completion
     pub(crate) message: Option<String>,
+}
+
+impl Display for TaskRule {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Name: {}\nFailed: {}\nMessage: {}",
+            self.name,
+            self.failed,
+            self.message.as_deref().unwrap_or("")
+        )
+    }
 }
 
 /// Represents a row from the `task.task_queue` table

@@ -52,14 +52,7 @@
             ]
         },
         {
-            "name": "users/update_full_name.pgsql",
-            "dependencies": [
-                "schema.pgsql",
-                "users/users.pgsql"
-            ]
-        },
-        {
-            "name": "users/update_username.pgsql",
+            "name": "users/update_user.pgsql",
             "dependencies": [
                 "schema.pgsql",
                 "users/users.pgsql"

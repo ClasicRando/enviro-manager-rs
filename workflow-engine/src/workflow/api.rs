@@ -1,3 +1,4 @@
+use actix_web::{web, Scope};
 use common::api::{request::ApiRequest, ApiResponse, QueryApiFormat};
 
 use super::data::WorkflowUpdateRequest;
@@ -9,8 +10,36 @@ use crate::workflow::{
     service::{TaskService, WorkflowsService},
 };
 
+pub fn workflows_service<W>() -> Scope
+where
+    W: WorkflowsService + Send + Sync + 'static,
+{
+    web::scope("/workflows")
+        .service(
+            web::resource("")
+                .route(web::get().to(workflows::<W>))
+                .route(web::post().to(create_workflow::<W>))
+                .route(web::patch().to(update_workflow::<W>)),
+        )
+        .route("/{workflow_id}", web::get().to(workflow::<W>))
+        .route("/deprecate", web::post().to(deprecate_workflow::<W>))
+}
+
+pub fn tasks_service<T>() -> Scope
+where
+    T: TaskService + Send + Sync + 'static,
+{
+    web::scope("/tasks")
+        .service(
+            web::resource("")
+                .route(web::get().to(tasks::<T>))
+                .route(web::post().to(create_task::<T>)),
+        )
+        .route("/{task_id}", web::get().to(task::<T>))
+}
+
 /// API endpoint to fetch all workflows. Returns an array of [WorkFlow] records.
-pub async fn workflows<W>(
+async fn workflows<W>(
     service: actix_web::web::Data<W>,
     query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<Vec<Workflow>>
@@ -26,7 +55,7 @@ where
 
 /// API endpoint to fetch a workflow specified by `workflow_id`. Returns a single [Workflow] record
 /// if any exists.
-pub async fn workflow<W>(
+async fn workflow<W>(
     workflow_id: actix_web::web::Path<WorkflowId>,
     service: actix_web::web::Data<W>,
     query: actix_web::web::Query<QueryApiFormat>,
@@ -42,7 +71,7 @@ where
 }
 
 /// API endpoint to create a new workflow using encoded data from `workflow`
-pub async fn create_workflow<W>(
+async fn create_workflow<W>(
     api_request: ApiRequest<WorkflowCreateRequest>,
     service: actix_web::web::Data<W>,
     query: actix_web::web::Query<QueryApiFormat>,
@@ -59,7 +88,7 @@ where
 }
 
 /// API endpoint to update an existing workflow using encoded data from `workflow`
-pub async fn update_workflow<W>(
+async fn update_workflow<W>(
     api_request: ApiRequest<WorkflowUpdateRequest>,
     service: actix_web::web::Data<W>,
     query: actix_web::web::Query<QueryApiFormat>,
@@ -76,7 +105,7 @@ where
 }
 
 /// API endpoint to deprecate a workflow specified by the encoded data from `request`
-pub async fn deprecate_workflow<W>(
+async fn deprecate_workflow<W>(
     api_request: ApiRequest<WorkflowDeprecationRequest>,
     service: actix_web::web::Data<W>,
     query: actix_web::web::Query<QueryApiFormat>,
@@ -96,7 +125,7 @@ where
 }
 
 /// API endpoint to fetch all tasks. Return an array of [Task] entries
-pub async fn tasks<T>(
+async fn tasks<T>(
     service: actix_web::web::Data<T>,
     query: actix_web::web::Query<QueryApiFormat>,
 ) -> ApiResponse<Vec<Task>>
@@ -112,7 +141,7 @@ where
 
 /// API endpoint to fetch a task specified by `task_id`. Returns a single [Task] if a task with
 /// that id exists
-pub async fn task<T>(
+async fn task<T>(
     task_id: actix_web::web::Path<TaskId>,
     service: actix_web::web::Data<T>,
     query: actix_web::web::Query<QueryApiFormat>,
@@ -128,7 +157,7 @@ where
 }
 
 /// API endpoint to create a new task
-pub async fn create_task<T>(
+async fn create_task<T>(
     api_request: ApiRequest<TaskRequest>,
     service: actix_web::web::Data<T>,
     query: actix_web::web::Query<QueryApiFormat>,

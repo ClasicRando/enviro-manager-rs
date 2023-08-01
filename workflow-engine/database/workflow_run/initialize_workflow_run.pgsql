@@ -8,9 +8,9 @@ as $$
 declare
     v_workflow_run_id bigint;
 begin
-    insert into workflow_run.workflow_runs(workflow_id)
+    insert into workflow_run.workflow_runs as wr(workflow_id)
     values($1)
-    returning workflow_run_id into v_workflow_run_id;
+    returning wr.workflow_run_id into v_workflow_run_id;
 
     execute format(
         'create table "workflow_run".%I partition of workflow_run.task_queue for values in (%L)',
@@ -24,7 +24,7 @@ begin
     join workflow.tasks t on wt.task_id = t.task_id
     where wt.workflow_id = $1;
 
-    return v_workflow_run_id;
+    $2 := v_workflow_run_id;
 end;
 $$;
 

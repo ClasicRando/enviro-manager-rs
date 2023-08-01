@@ -16,7 +16,7 @@ use sqlx::{
         types::{PgRecordDecoder, PgRecordEncoder},
         PgArgumentBuffer, PgHasArrayType, PgListener, PgTypeInfo, PgValueRef,
     },
-    PgPool, Type,
+    PgPool, Transaction, Type,
 };
 
 use crate::{
@@ -131,6 +131,42 @@ impl PgWorkflowRunsService {
             workflow_service: workflow_service.clone(),
         }
     }
+
+    /// Start a workflow run by executing the named procedure. Takes ownership of the `transaction`
+    /// and completes the transaction before exiting.
+    /// # Errors
+    /// This function will return an error if the `start_workflow_run` procedure fails or the an
+    /// error is returning completing the `transaction`
+    async fn start_workflow_run<'c>(
+        executor_id: &ExecutorId,
+        workflow_run_id: &WorkflowRunId,
+        mut transaction: Transaction<'c, sqlx::Postgres>,
+    ) -> EmResult<()> {
+        let result = sqlx::query("call workflow_run.start_workflow_run($1, $2)")
+            .bind(workflow_run_id)
+            .bind(executor_id)
+            .execute(&mut transaction)
+            .await;
+        finalize_transaction(result, transaction).await?;
+        Ok(())
+    }
+
+    /// Complete a workflow run by executing the named procedure. Takes ownership of the
+    /// `transaction` and completes the transaction before exiting.
+    /// # Errors
+    /// This function will return an error if the `complete_workflow_run` procedure fails or the an
+    /// error is returning completing the `transaction`
+    async fn complete_workflow_run<'c>(
+        workflow_run_id: &WorkflowRunId,
+        mut transaction: Transaction<'c, sqlx::Postgres>,
+    ) -> EmResult<()> {
+        let result = sqlx::query("call workflow_run.complete_workflow_run($1)")
+            .bind(workflow_run_id)
+            .execute(&mut transaction)
+            .await;
+        finalize_transaction(result, transaction).await?;
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait]
@@ -180,17 +216,40 @@ impl WorkflowRunsService for PgWorkflowRunsService {
         )
     }
 
-    async fn read_many(&self) -> EmResult<Vec<WorkflowRun>> {
+    async fn read_active(&self) -> EmResult<Vec<WorkflowRun>> {
         let result = sqlx::query_as(
             r#"
             select
                 wr.workflow_run_id, wr.workflow_id, wr.status, wr.executor_id, wr.progress,
                 wr.tasks
-            from workflow_run.v_workflow_runs wr"#,
+            from workflow_run.v_workflow_runs wr
+            where wr.status != 'Complete'::workflow_run.workflow_run_status"#,
         )
         .fetch_all(&self.pool)
         .await?;
         Ok(result)
+    }
+
+    async fn next_workflow_run(&self, executor_id: &ExecutorId) -> EmResult<Option<WorkflowRunId>> {
+        let mut transaction = self.pool.begin().await?;
+        let next_workflow: Option<(WorkflowRunId, bool)> = sqlx::query_as(
+            "select workflow_run_id, is_valid from workflow_run.next_workflow_run($1)",
+        )
+        .bind(executor_id)
+        .fetch_optional(&mut transaction)
+        .await?;
+        let Some((workflow_run_id, is_valid)) = next_workflow else {
+            transaction.commit().await?;
+            return Ok(None);
+        };
+
+        if is_valid {
+            Self::start_workflow_run(executor_id, &workflow_run_id, transaction).await?;
+        } else {
+            Self::complete_workflow_run(&workflow_run_id, transaction).await?;
+        }
+
+        Ok(Some(workflow_run_id))
     }
 
     async fn cancel(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun> {

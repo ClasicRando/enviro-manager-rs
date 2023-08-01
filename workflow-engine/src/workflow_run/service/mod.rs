@@ -33,7 +33,10 @@ where
     /// `workflow_run_id`. Will return [Err] when the id does not match a record.
     async fn read_one(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun>;
     /// Read all [WorkflowRun] records found from `workflow.v_workflow_runs`
-    async fn read_many(&self) -> EmResult<Vec<WorkflowRun>>;
+    async fn read_active(&self) -> EmResult<Vec<WorkflowRun>>;
+    /// Process the next workflow run, setting it's state for execution before returning the
+    /// [WorkflowRunId]. If no workflow run is available, then the function returns [None].
+    async fn next_workflow_run(&self, executor_id: &ExecutorId) -> EmResult<Option<WorkflowRunId>>;
     /// Update the status of the workflow run to 'Canceled' and send a notification to the
     /// [Executor][crate::executor::Executor] handling the workflow run to stop operations.
     async fn cancel(&self, workflow_run_id: &WorkflowRunId) -> EmResult<WorkflowRun>;
